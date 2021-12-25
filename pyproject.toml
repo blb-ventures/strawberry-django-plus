@@ -32,6 +32,7 @@ django = "^3.2"
 strawberry-graphql = "^0.93.4"
 strawberry-graphql-django = "^0.2.5"
 makefun = "^1.12.1"
+typing-extensions = "^4.0.1"
 
 [tool.poetry.dev-dependencies]
 black = "^21.6b"

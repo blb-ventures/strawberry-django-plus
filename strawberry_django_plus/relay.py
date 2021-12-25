@@ -29,6 +29,7 @@ from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryContainer
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
+from typing_extensions import Annotated
 
 _T = TypeVar("_T")
 _N = TypeVar("_N")
@@ -86,7 +87,7 @@ class PageInfo:
     )
 
 
-@strawberry.type
+@strawberry.type(description="An edge in a connection.")
 class Edge(Generic[_N]):
     cursor: str = strawberry.field(
         description="A cursor for use in pagination",
@@ -96,7 +97,7 @@ class Edge(Generic[_N]):
     )
 
 
-@strawberry.type
+@strawberry.type(description="A connection to a list of items.")
 class Connection(Generic[_N]):
     page_info: PageInfo = strawberry.field(
         description="Pagination data for this connection",
@@ -139,10 +140,15 @@ class ConnectionField(StrawberryField):
 
 
 def node_resolver(field: StrawberryField):
-    def resolver(id: strawberry.ID):  # noqa:A002
+    def resolver(
+        id: Annotated[  # noqa:A002
+            strawberry.ID,
+            strawberry.argument(description="The ID of the object."),
+        ]
+    ):
         type_, node_id = _from_b64(id)
         field_type = field.type
-        if isinstance(field_type, StrawberryContainer):
+        while isinstance(field_type, StrawberryContainer):
             field_type = field_type.of_type
         # FIXME: isinstance(field.type, Node) is not working
         return field_type.get_node(node_id)  # type:ignore
@@ -152,10 +158,28 @@ def node_resolver(field: StrawberryField):
 
 def connection_resolver(field: StrawberryField):
     def resolver(
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-        first: Optional[int] = None,
-        last: Optional[int] = None,
+        before: Annotated[
+            Optional[str],
+            strawberry.argument(
+                description="Returns the items in the list that come before the specified cursor."
+            ),
+        ] = None,
+        after: Annotated[
+            Optional[str],
+            strawberry.argument(
+                description="Returns the items in the list that come after the specified cursor."
+            ),
+        ] = None,
+        first: Annotated[
+            Optional[int],
+            strawberry.argument(description="Returns the first n items from the list."),
+        ] = None,
+        last: Annotated[
+            Optional[int],
+            strawberry.argument(
+                description="Returns the items in the list that come after the specified cursor."
+            ),
+        ] = None,
         __nodes: Optional[Collection[Any]] = None,
         **kwargs,
     ):
