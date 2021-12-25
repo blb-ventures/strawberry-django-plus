@@ -7,6 +7,7 @@ from typing import (
     Dict,
     Generic,
     List,
+    Literal,
     Optional,
     Protocol,
     Sequence,
@@ -15,6 +16,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
     runtime_checkable,
 )
 
@@ -26,6 +28,7 @@ from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryContainer
 from strawberry.types import Info
+from strawberry.types.fields.resolver import StrawberryResolver
 
 _T = TypeVar("_T")
 _N = TypeVar("_N")
@@ -104,6 +107,35 @@ class Connection(Generic[_N]):
     total_count: int = strawberry.field(
         description="Total quantity of existing nodes",
     )
+
+
+class ConnectionField(StrawberryField):
+    def __call__(
+        self,
+        resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod, None] = None,
+    ) -> "ConnectionField":
+        conn_resolver = connection_resolver(self)
+
+        if resolver is None:
+
+            @makefun.wraps(conn_resolver, remove_args=["__nodes", "kwargs"])
+            def wrapper(*args, **kwargs):
+                return conn_resolver(*args, **kwargs)
+
+        else:
+            params = {
+                p: v
+                for p, v in inspect.signature(conn_resolver).parameters.items()
+                if p not in ["__nodes", "kwargs"]
+            }
+
+            @makefun.wraps(resolver, append_args=params.values())
+            def wrapper(*args, **kwargs):
+                conn_kwargs = {p: kwargs.pop(p, None) for p in params}
+                nodes = resolver(*args, **kwargs)  # type:ignore
+                return conn_resolver(__nodes=nodes, **conn_kwargs)
+
+        return cast("ConnectionField", super().__call__(wrapper))
 
 
 def node_resolver(field: StrawberryField):
@@ -213,6 +245,55 @@ def node(
     return f(resolver)
 
 
+@overload
+def connection(
+    *,
+    resolver: Callable[[], _T],
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[False] = False,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+) -> _T:
+    ...
+
+
+@overload
+def connection(
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[True] = True,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+) -> Any:
+    ...
+
+
+@overload
+def connection(
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+) -> StrawberryField:
+    ...
+
+
 def connection(
     resolver=None,
     *,
@@ -224,37 +305,20 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init=None,
 ) -> Any:
-    f = strawberry.field(
-        name=name,
-        is_subscription=is_subscription,
+    return ConnectionField(
+        python_name=None,
+        graphql_name=name,
+        type_annotation=None,
         description=description,
-        permission_classes=permission_classes,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
-        directives=directives,
-    )
-
-    conn_resolver = connection_resolver(f)
-
-    if resolver is not None:
-        params = {
-            p: v
-            for p, v in inspect.signature(conn_resolver).parameters.items()
-            if p not in ["__nodes", "kwargs"]
-        }
-
-        @makefun.wraps(resolver, append_args=params.values())
-        def wrapper(*args, **kwargs):
-            conn_kwargs = {p: kwargs.pop(p, None) for p in params}
-            nodes = resolver(*args, **kwargs)
-            return conn_resolver(__nodes=nodes, **conn_kwargs)
-
-    else:
-
-        @makefun.wraps(conn_resolver, remove_args=["__nodes", "kwargs"])
-        def wrapper(*args, **kwargs):
-            return conn_resolver(*args, **kwargs)
-
-    return f(wrapper)
+        directives=directives or (),
+    )(resolver)
