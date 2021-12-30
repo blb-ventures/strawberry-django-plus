@@ -28,8 +28,8 @@ from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
 
-from strawberry_django_plus.resolvers import qs_resolver
-
+from ._relay import Connection, NodeType
+from .resolvers import qs_resolver
 from .utils import get_model_fields
 
 _T = TypeVar("_T")
@@ -107,6 +107,19 @@ class DjangoOptimizer(Generic[_T]):
         # TODO: This should never be scalar/enum. But what to do for unions?
         if isinstance(type_def, TypeDefinition):
             selection = convert_selections(self._info, self.info.field_nodes[:1])[0]
+
+            concrete_type_def = type_def.concrete_of
+            concrete_type = concrete_type_def and concrete_type_def.origin
+            if concrete_type and issubclass(concrete_type, Connection):
+                try:
+                    edges = next(s for s in selection.selections if s.name == "edges")
+                    node = next(s for s in edges.selections if s.name == "node")
+                except StopIteration:
+                    pass
+                else:
+                    selection = node
+                    type_def = type_def.type_var_map[NodeType]._type_definition  # type:ignore
+                    assert type_def
 
             only, select_related, prefetch_related = self._get_model_hints(
                 qs.model,
@@ -230,14 +243,6 @@ class DjangoOptimizerExtension(Extension):
 
     def on_request_start(self) -> AwaitableOrValue[None]:
         self.execution_context.context._django_optimizer_config = self._config
-        import time
-
-        self._t = time.time()
-
-    def on_request_end(self) -> AwaitableOrValue[None]:
-        import time
-
-        print(time.time() - self._t)
 
     def resolve(
         self,

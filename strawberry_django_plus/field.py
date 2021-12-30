@@ -115,7 +115,7 @@ def _get_result(
         result = self.base_resolver(*args, **kwargs)
     elif source is None:
         assert self.django_model
-        result = self.django_model.objects.all()[:50]
+        result = self.django_model.objects.all()
     else:
         # Small optimization to async resolvers avoid having to call it in an sync_to_async
         # context if the value is already cached, since it will not hit the db anymore

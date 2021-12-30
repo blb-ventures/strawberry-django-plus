@@ -1,247 +1,108 @@
-import base64
-import inspect
+from functools import cached_property
 from typing import (
     Any,
     Callable,
-    Collection,
     Dict,
-    Generic,
+    Iterable,
     List,
     Literal,
     Optional,
-    Protocol,
     Sequence,
-    Tuple,
     Type,
     TypeVar,
     Union,
     cast,
     overload,
-    runtime_checkable,
 )
 
-import makefun
-import strawberry
+from django.db.models.base import Model
+from django.db.models.manager import BaseManager
+from django.db.models.query import QuerySet
 from strawberry.arguments import UNSET
-from strawberry.field import StrawberryField
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryContainer
-from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
-from typing_extensions import Annotated
+from strawberry.types.info import Info
+from strawberry.utils.await_maybe import AwaitableOrValue
+
+from ._relay import Connection, ConnectionField, NodeField
+from ._relay import connection as _connection
+from ._relay import node as _node
+from .optimizer import DjangoOptimizer, DjangoOptimizerConfig
+from .resolvers import callable_resolver, qs_resolver
 
 _T = TypeVar("_T")
-_N = TypeVar("_N")
-_connection_type = "arrayconnection"
-_nodes: Dict[str, "Node"] = {}
 
 
-def _to_b64(type_: str, value: str) -> str:
-    return base64.b64encode(f"{type_}:{value}".encode()).decode()
-
-
-def _from_b64(value: str) -> Tuple[str, str]:
-    type_, v = base64.b64decode(value.encode()).decode().split(":")
-    return type_, v
-
-
-@runtime_checkable
-class _Countable(Protocol):
-    def count(self) -> int:
-        ...
-
-
-@strawberry.interface(description="An object with a Globally Unique ID")
-class Node(Generic[_T]):
-    # FIXME: This should have a resolver to convert it to base64
-    id: strawberry.ID  # noqa:A003
-
-    @classmethod
-    def is_type_of(cls, other: _T, info: Info) -> bool:
-        # FIXME: How to properly check this?
-        return True
-
-    @classmethod
-    def get_node(cls, node_id: Any) -> Optional[_T]:
-        raise NotImplementedError
-
-    @classmethod
-    def get_edges(cls) -> Collection[_T]:
-        raise NotImplementedError
-
-
-@strawberry.type(description="Information to aid in pagination.")
-class PageInfo:
-    has_next_page: bool = strawberry.field(
-        description="When paginating forwards, are there more items?",
-    )
-    has_previous_page: bool = strawberry.field(
-        description="When paginating backwards, are there more items?",
-    )
-    start_cursor: Optional[str] = strawberry.field(
-        description="When paginating backwards, the cursor to continue.",
-    )
-    end_cursor: Optional[str] = strawberry.field(
-        description="When paginating forwards, the cursor to continue.",
-    )
-
-
-@strawberry.type(description="An edge in a connection.")
-class Edge(Generic[_N]):
-    cursor: str = strawberry.field(
-        description="A cursor for use in pagination",
-    )
-    node: _N = strawberry.field(
-        description="The item at the end of the edge",
-    )
-
-
-@strawberry.type(description="A connection to a list of items.")
-class Connection(Generic[_N]):
-    page_info: PageInfo = strawberry.field(
-        description="Pagination data for this connection",
-    )
-    edges: List[Edge[_N]] = strawberry.field(
-        description="Contains the nodes in this connection",
-    )
-    total_count: int = strawberry.field(
-        description="Total quantity of existing nodes",
-    )
-
-
-class ConnectionField(StrawberryField):
-    def __call__(
-        self,
-        resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod, None] = None,
-    ) -> "ConnectionField":
-        conn_resolver = connection_resolver(self)
-
-        if resolver is None:
-
-            @makefun.wraps(conn_resolver, remove_args=["__nodes", "kwargs"])
-            def wrapper(*args, **kwargs):
-                return conn_resolver(*args, **kwargs)
-
-        else:
-            params = {
-                p: v
-                for p, v in inspect.signature(conn_resolver).parameters.items()
-                if p not in ["__nodes", "kwargs"]
-            }
-
-            @makefun.wraps(resolver, append_args=params.values())
-            def wrapper(*args, **kwargs):
-                conn_kwargs = {p: kwargs.pop(p, None) for p in params}
-                nodes = resolver(*args, **kwargs)  # type:ignore
-                return conn_resolver(__nodes=nodes, **conn_kwargs)
-
-        return cast("ConnectionField", super().__call__(wrapper))
-
-
-def node_resolver(field: StrawberryField):
-    def resolver(
-        id: Annotated[  # noqa:A002
-            strawberry.ID,
-            strawberry.argument(description="The ID of the object."),
-        ]
-    ):
-        type_, node_id = _from_b64(id)
-        field_type = field.type
+class DjangoNodeField(NodeField):
+    @cached_property
+    def model(self) -> Type[Model]:
+        field_type = self.type
         while isinstance(field_type, StrawberryContainer):
             field_type = field_type.of_type
-        # FIXME: isinstance(field.type, Node) is not working
-        return field_type.get_node(node_id)  # type:ignore
 
-    return resolver
+        return field_type._django_type.model  # type:ignore
 
+    @qs_resolver(get_one=True)
+    def resolve_node(self, info: Info, node_id: str) -> Any:
+        field_type = self.type
+        while isinstance(field_type, StrawberryContainer):
+            field_type = field_type.of_type
 
-def connection_resolver(field: StrawberryField):
-    def resolver(
-        before: Annotated[
-            Optional[str],
-            strawberry.argument(
-                description="Returns the items in the list that come before the specified cursor."
+        model = self.model
+        qs = model.objects
+        config = cast(
+            Optional[DjangoOptimizerConfig],
+            getattr(
+                info.context,
+                "_django_optimizer_config",
+                None,
             ),
-        ] = None,
-        after: Annotated[
-            Optional[str],
-            strawberry.argument(
-                description="Returns the items in the list that come after the specified cursor."
-            ),
-        ] = None,
-        first: Annotated[
-            Optional[int],
-            strawberry.argument(description="Returns the first n items from the list."),
-        ] = None,
-        last: Annotated[
-            Optional[int],
-            strawberry.argument(
-                description="Returns the items in the list that come after the specified cursor."
-            ),
-        ] = None,
-        __nodes: Optional[Collection[Any]] = None,
-        **kwargs,
-    ):
-        nodes = __nodes
+        )
+        if config is not None:
+            qs = DjangoOptimizer(
+                info=info,
+                config=config,
+                qs=qs,
+            ).optimize()
 
-        if nodes is None:
-            # The user's resolver did not pass a list of edges, retrieve them from the field.
-            field_type = field.type_annotation.annotation.__args__[0]
-            # FIXME: isinstance(field.type, Node) is not working
-            nodes = cast(Collection[Any], field_type.get_edges())  # type:ignore
+        return qs.filter(pk=node_id)
 
-        if isinstance(nodes, _Countable):
-            # Support ORMs that define .count() (e.g. django)
-            total_count = nodes.count()
-        else:
-            total_count = len(nodes)
 
-        # https://relay.dev/graphql/connections.htm#sec-Pagination-algorithm
-        start = 0
-        end = total_count
+class DjangoConnectionField(ConnectionField):
+    @cached_property
+    def model(self) -> Type[Model]:
+        field_type = self.type_annotation.annotation.__args__[0]
+        return field_type._django_type.model
 
-        if after:
-            after_type, after = _from_b64(after)
-            assert after_type == _connection_type
-            start = max(start, int(after))
-        if before:
-            before_type, before = _from_b64(before)
-            assert before_type == _connection_type
-            end = min(end, int(before))
+    def resolve_edges(self, info: Info) -> QuerySet[Any]:
+        return self.model.objects.all()
 
-        if isinstance(first, int):
-            if first < 0:
-                raise ValueError("Argument 'first' must be a non-negative integer.")
-
-            end = min(end, start + first)
-        if isinstance(last, int):
-            if last < 0:
-                raise ValueError("Argument 'last' must be a non-negative integer.")
-
-            start = max(start, end - last)
-
-        edges = [
-            Edge(
-                cursor=_to_b64(_connection_type, str(start + i)),
-                node=v,
+    @callable_resolver
+    def resolve_connection(
+        self,
+        info: Info,
+        edges: AwaitableOrValue[Iterable[Any]],
+        **kwargs: Dict[str, Any],
+    ) -> AwaitableOrValue[Connection[Any]]:
+        if isinstance(edges, (QuerySet, BaseManager)):
+            config = cast(
+                Optional[DjangoOptimizerConfig],
+                getattr(
+                    info.context,
+                    "_django_optimizer_config",
+                    None,
+                ),
             )
-            for i, v in enumerate(cast(Sequence, nodes)[start:end])
-        ]
-        page_info = PageInfo(
-            start_cursor=edges[0].cursor if edges else None,
-            end_cursor=edges[-1].cursor if edges else None,
-            has_previous_page=start > 0,
-            has_next_page=end < total_count,
-        )
+            if config is not None:
+                edges = DjangoOptimizer(
+                    info=info,
+                    config=config,
+                    qs=edges,
+                ).optimize()
 
-        return Connection(
-            edges=edges,
-            page_info=page_info,
-            total_count=total_count,
-        )
-
-    return resolver
+        return super().resolve_connection(info, edges, **kwargs)
 
 
 def node(
@@ -254,8 +115,9 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    base_field: Type[DjangoNodeField] = DjangoNodeField,
 ) -> Any:
-    f = strawberry.field(
+    return _node(
         name=name,
         is_subscription=is_subscription,
         description=description,
@@ -264,9 +126,8 @@ def node(
         default=default,
         default_factory=default_factory,
         directives=directives,
+        base_field=base_field,
     )
-    resolver = node_resolver(f)
-    return f(resolver)
 
 
 @overload
@@ -282,6 +143,7 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    base_field: Type[DjangoConnectionField] = DjangoConnectionField,
 ) -> _T:
     ...
 
@@ -298,6 +160,7 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    base_field: Type[DjangoConnectionField] = DjangoConnectionField,
 ) -> Any:
     ...
 
@@ -314,7 +177,8 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-) -> StrawberryField:
+    base_field: Type[DjangoConnectionField] = DjangoConnectionField,
+) -> DjangoConnectionField:
     ...
 
 
@@ -329,20 +193,21 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    base_field: Type[DjangoConnectionField] = DjangoConnectionField,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
     init=None,
 ) -> Any:
-    return ConnectionField(
-        python_name=None,
-        graphql_name=name,
-        type_annotation=None,
-        description=description,
+    return _connection(
+        resolver=resolver,
+        name=name,
         is_subscription=is_subscription,
-        permission_classes=permission_classes or [],
+        description=description,
+        permission_classes=permission_classes,
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
-        directives=directives or (),
-    )(resolver)
+        directives=directives,
+        base_field=base_field,
+    )
