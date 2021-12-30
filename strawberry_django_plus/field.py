@@ -1,7 +1,9 @@
+from collections import defaultdict
 from typing import (
     Any,
     Awaitable,
     Callable,
+    DefaultDict,
     Dict,
     List,
     Literal,
@@ -19,6 +21,7 @@ from django.db.models import QuerySet
 from django.db.models.manager import BaseManager
 from django.db.models.query_utils import DeferredAttribute
 from strawberry.arguments import UNSET
+from strawberry.field import StrawberryField
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
@@ -32,6 +35,7 @@ from .resolvers import callable_resolver, qs_resolver
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
 _original_call = StrawberryDjangoField.__call__
+_field_opts: DefaultDict[StrawberryField, Dict[str, Any]] = defaultdict(dict)
 
 
 _get_list = qs_resolver(
@@ -93,7 +97,11 @@ def _call(
     self: StrawberryDjangoField,
     resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
 ) -> StrawberryDjangoField:
-    return cast(StrawberryDjangoField, _original_call(self, callable_resolver(resolver)))
+    thread_sensitive = _field_opts[self].get("thread_sensitive", True)
+    return cast(
+        StrawberryDjangoField,
+        _original_call(self, callable_resolver(resolver, thread_sensitive=thread_sensitive)),
+    )
 
 
 def _get_result(
@@ -149,6 +157,7 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    thread_sensitive: bool = True,
 ) -> _T:
     ...
 
@@ -167,6 +176,7 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    thread_sensitive: bool = True,
 ) -> Any:
     ...
 
@@ -185,6 +195,7 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    thread_sensitive: bool = True,
 ) -> StrawberryDjangoField:
     ...
 
@@ -202,6 +213,7 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    thread_sensitive: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -220,6 +232,7 @@ def field(
         default_factory=default_factory,
         directives=directives,
     )
+    _field_opts[f]["thread_sensitive"] = thread_sensitive
     if resolver:
         f = f(resolver)
     return f

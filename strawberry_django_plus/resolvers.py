@@ -124,16 +124,24 @@ def qs_resolver(f=None, *, get_list=False, get_one=False):  # type:ignore
 
 
 @overload
-def callable_resolver(f: Callable[_P, _R]) -> Callable[_P, AwaitableOrValue[_R]]:
+def callable_resolver(
+    f: Callable[_P, _R],
+    *,
+    thread_sensitive: bool = True,
+) -> Callable[_P, AwaitableOrValue[_R]]:
     ...
 
 
 @overload
-def callable_resolver(f=None) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
+def callable_resolver(
+    f=None,
+    *,
+    thread_sensitive: bool = True,
+) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
     ...
 
 
-def callable_resolver(f=None):
+def callable_resolver(f=None, *, thread_sensitive=True):
     def make_resolver(func):
         if inspect.iscoroutinefunction(func) or inspect.isasyncgenfunction(func):
             return func
@@ -142,7 +150,7 @@ def callable_resolver(f=None):
         def wrapper(*args, **kwargs):
             resolver = func
             if is_async():
-                resolver = sync_to_async(func, thread_sensitive=True)
+                resolver = sync_to_async(func, thread_sensitive=thread_sensitive)
             return resolver(*args, **kwargs)
 
         return wrapper
