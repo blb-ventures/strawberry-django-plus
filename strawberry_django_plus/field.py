@@ -1,6 +1,8 @@
 from typing import (
     Any,
+    Awaitable,
     Callable,
+    Dict,
     List,
     Literal,
     Optional,
@@ -13,68 +15,123 @@ from typing import (
 )
 
 from django.db import models
+from django.db.models import QuerySet
+from django.db.models.manager import BaseManager
+from django.db.models.query_utils import DeferredAttribute
 from strawberry.arguments import UNSET
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
+from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.fields.field import StrawberryDjangoField
-from strawberry_django.resolvers import django_resolver
 
 from .optimizer import DjangoOptimizer, DjangoOptimizerConfig
+from .resolvers import callable_resolver, qs_resolver
 
 _T = TypeVar("_T")
+_M = TypeVar("_M", bound=models.Model)
+_original_call = StrawberryDjangoField.__call__
 
 
-@django_resolver
-def _qs_resolver(qs: models.QuerySet, field: StrawberryDjangoField):
-    ret = qs
-    if not field.is_list:
-        ret = qs.get()
+_get_list = qs_resolver(
+    StrawberryDjangoField.get_queryset,
+    get_list=True,
+)
+_get_one = qs_resolver(
+    lambda *args, **kwargs: StrawberryDjangoField.get_queryset(*args, **kwargs).get(),
+    get_one=True,
+)
+_attr_getter = callable_resolver(lambda obj, attr: getattr(obj, attr))
+
+
+def _resolver(
+    ret: object,
+    info: Info,
+    qs_resolver: Callable[
+        [Union[BaseManager[_M], QuerySet[_M]]],
+        AwaitableOrValue[Union[DjangoOptimizer, List[_M], _M]],
+    ],
+):
+    if isinstance(ret, (BaseManager, QuerySet)):
+        config = cast(
+            Optional[DjangoOptimizerConfig],
+            getattr(
+                info.context,
+                "_django_optimizer_config",
+                None,
+            ),
+        )
+        if config is not None:
+            return DjangoOptimizer(
+                info=info,
+                config=config,
+                qs=ret,
+                qs_resolver=qs_resolver,
+            )
+        return qs_resolver(ret)
+    elif callable(ret):
+        return _resolver(callable_resolver(ret)(), info, qs_resolver)
+    elif info._raw_info.is_awaitable(ret):
+        return _async_resolver(cast(Awaitable, ret), info, qs_resolver)
+
     return ret
 
 
-def _resolver(self: StrawberryDjangoField, source: Any, info: Info, *args, **kwargs):
-    config = cast(
-        Optional[DjangoOptimizerConfig],
-        getattr(
-            info.context,
-            "_django_optimizer_config",
-            None,
-        ),
-    )
+async def _async_resolver(
+    ret: Awaitable,
+    info: Info,
+    qs_resolver: Callable[
+        [Union[BaseManager[_M], QuerySet[_M]]],
+        AwaitableOrValue[Union[DjangoOptimizer, List[_M], _M]],
+    ],
+):
+    return _resolver(await ret, info, qs_resolver)
 
-    if source is None:
+
+def _call(
+    self: StrawberryDjangoField,
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
+) -> StrawberryDjangoField:
+    return cast(StrawberryDjangoField, _original_call(self, callable_resolver(resolver)))
+
+
+def _get_result(
+    self: StrawberryDjangoField,
+    source: Any,
+    info: Info,
+    args: List[Any],
+    kwargs: Dict[str, Any],
+) -> Union[Awaitable[Any], Any]:
+    if self.base_resolver is not None:
+        result = self.base_resolver(*args, **kwargs)
+    elif source is None:
         assert self.django_model
-        result = self.django_model.objects.all()[:20]
+        result = self.django_model.objects.all()[:50]
     else:
-        result = getattr(source, self.django_name or self.python_name)
+        # Small optimization to async resolvers avoid having to call it in an sync_to_async
+        # context if the value is already cached, since it will not hit the db anymore
+        attname = self.django_name or self.python_name
+        attr = getattr(source.__class__, attname, None)
+        if isinstance(attr, DeferredAttribute):
+            try:
+                result = source.__dict__[attr.field.attname]
+            except KeyError:
+                result = _attr_getter(source, self.django_name or self.python_name)
+        else:
+            result = getattr(source, self.django_name or self.python_name)
 
-    if config is not None and isinstance(result, (models.QuerySet, models.manager.BaseManager)):
-        result = DjangoOptimizer(
-            info=info,
-            config=config,
-            qs=result,
-            qs_resolver=lambda qs: _qs_resolver(
-                self.get_queryset(qs, info=info, **kwargs) if source is None else qs,
-                self,
-            ),
-        )
-    elif isinstance(result, models.manager.BaseManager):
-        result = result.all()
-    elif callable(result):
-        result = django_resolver(result)()
-
-    if isinstance(result, models.QuerySet):
-        result = _qs_resolver(
-            self.get_queryset(result, info=info, **kwargs) if source is None else result,
-            self,
-        )
-
-    return result
+    qs_resolver = lambda qs: (_get_list if self.is_list else _get_one)(
+        self,
+        qs,
+        info=info,
+        **kwargs,
+    )
+    return _resolver(result, info, qs_resolver)
 
 
-StrawberryDjangoField.get_django_result = _resolver
+StrawberryDjangoField.get_result = _get_result
+StrawberryDjangoField.__call__ = _call
 
 
 @overload
@@ -164,5 +221,5 @@ def field(
         directives=directives,
     )
     if resolver:
-        f = f(django_resolver(resolver))
+        f = f(resolver)
     return f

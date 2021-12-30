@@ -1,3 +1,4 @@
+import asyncio
 import functools
 from typing import Dict, Type, Union
 
@@ -5,6 +6,15 @@ from django.db import models
 from django.db.models.fields import Field
 from django.db.models.fields.reverse_related import ManyToOneRel
 from strawberry.utils.str_converters import to_camel_case
+
+
+def is_async():
+    """Check if an asyncio loop is currently running."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
 
 
 @functools.lru_cache(maxsize=250)

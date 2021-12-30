@@ -1,6 +1,4 @@
-import contextlib
 import dataclasses
-import inspect
 from typing import (
     Any,
     Awaitable,
@@ -30,9 +28,12 @@ from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
 
+from strawberry_django_plus.resolvers import qs_resolver
+
 from .utils import get_model_fields
 
 _T = TypeVar("_T")
+_get_list = qs_resolver(lambda qs: qs, get_list=True)
 
 
 def _get_gql_types(
@@ -91,30 +92,15 @@ class DjangoOptimizer(Generic[_T]):
 
     def optimize(self) -> Union[models.QuerySet, _T]:
         config = self.config
+
         qs = self.qs
-
         if isinstance(qs, models.manager.BaseManager):
-            # Only RelatedManager has field/instance
-            m_instance: Optional[models.Model] = getattr(qs, "instance", None)
-            m_field: Optional[models.Field] = getattr(qs, "field", None)
-            if m_instance:
-                # If the results are prefetched, return them the way they are
-                # This is exactly what RelatedManager.get_queryset does
-                with contextlib.suppress(AttributeError, KeyError):
-                    cache_name = getattr(qs, "prefetch_cache_name", None)  # type:ignore
-                    if cache_name is None:
-                        cache_name = m_field.remote_field.get_cache_name()  # type:ignore
-                    cached_value = m_instance._prefetched_objects_cache[cache_name]  # type:ignore
+            qs = cast(models.QuerySet, qs.all())
 
-                    if self.qs_resolver:
-                        cached_value = self.qs_resolver(cached_value)
+        # If the queryset already has cached results, just return it
+        if qs._result_cache:  # type:ignore
+            return self._get_qs(qs)
 
-                    return cached_value
-
-            # If none of the above is True, convert this to a queryset and continue
-            qs = qs.all()
-
-        assert isinstance(qs, models.QuerySet)
         gql_type = get_named_type(self._info.return_type)
         type_def = self._schema.get_type_by_name(gql_type.name)
 
@@ -145,9 +131,11 @@ class DjangoOptimizer(Generic[_T]):
                 if prefetch_related:
                     qs = qs.prefetch_related(*_norm_prefetch_related(prefetch_related))
 
-        if self.qs_resolver is not None:
-            qs = self.qs_resolver(qs)
+        return self._get_qs(qs)
 
+    def _get_qs(self, qs):
+        if self.qs_resolver:
+            return self.qs_resolver(qs)
         return qs
 
     def _get_model_hints(
@@ -201,7 +189,7 @@ class DjangoOptimizer(Generic[_T]):
                 f_types = list(_get_gql_type_definitions(gql_field.type))
                 if len(f_types) > 1:
                     # TODO: What to do in this case? Can this ever happen?
-                    prefetch_related.add(path)
+                    prefetch_related.add(f_name)
                 elif len(f_types) == 1:
                     f_type = f_types[0]
                     f_model = selected_field.remote_field.model
@@ -242,6 +230,14 @@ class DjangoOptimizerExtension(Extension):
 
     def on_request_start(self) -> AwaitableOrValue[None]:
         self.execution_context.context._django_optimizer_config = self._config
+        import time
+
+        self._t = time.time()
+
+    def on_request_end(self) -> AwaitableOrValue[None]:
+        import time
+
+        print(time.time() - self._t)
 
     def resolve(
         self,
@@ -251,25 +247,26 @@ class DjangoOptimizerExtension(Extension):
         *args,
         **kwargs,
     ) -> AwaitableOrValue[object]:
-        ret = _next(root, info, *args, **kwargs)
-
-        if inspect.isawaitable(ret):
-            ret = self._async_resolver(ret, info)
-        else:
-            ret = self._resolver(ret, info)
-
-        return ret
+        return self._resolver(
+            _next(root, info, *args, **kwargs),
+            info,
+        )
 
     def _resolver(self, ret: object, info: GraphQLResolveInfo):
         if isinstance(ret, (models.QuerySet, models.manager.BaseManager)):
-            ret = DjangoOptimizer(info=info, config=self._config, qs=ret)
+            ret = DjangoOptimizer(
+                info=info,
+                config=self._config,
+                qs=ret,
+                qs_resolver=_get_list,
+            )
+
         if isinstance(ret, DjangoOptimizer):
-            ret = ret.optimize()
+            return self._resolver(ret.optimize(), info)
+        elif info.is_awaitable(ret):
+            return self._async_resolver(cast(Awaitable, ret), info)
+
         return ret
 
-    async def _async_resolver(self, aret: Awaitable, info: GraphQLResolveInfo):
-        ret = await aret
-        ret = self._resolver(ret, info)
-        while inspect.isawaitable(ret):
-            ret = await self._async_resolver(ret, info)
-        return ret
+    async def _async_resolver(self, ret: Awaitable, info: GraphQLResolveInfo):
+        return self._resolver(await ret, info)
