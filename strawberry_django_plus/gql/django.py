@@ -8,7 +8,6 @@ from strawberry_django import (
     OneToOneInput,
     auth,
     auto,
-    fields,
     filter,
     filters,
     input,
@@ -20,9 +19,8 @@ from strawberry_django import (
     types,
 )
 
-from strawberry_django_plus.field import field
-from strawberry_django_plus.relay import connection, node
-from strawberry_django_plus.resolvers import callable_resolver, qs_resolver
+from strawberry_django_plus import fields, resolvers
+from strawberry_django_plus.fields import connection, field, node
 
 __all__ = [
     # strawberry_django
@@ -40,15 +38,14 @@ __all__ = [
     "OneToManyInput",
     "ManyToOneInput",
     "ManyToManyInput",
-    "fields",
     "mutations",
     "type",
     "input",
     "mutation",
     # strawberry_django_plus
-    "connection",
-    "node",
+    "fields",
     "field",
-    "qs_resolver",
-    "callable_resolver",
+    "node",
+    "connection",
+    "resolvers",
 ]

@@ -28,12 +28,11 @@ from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
 
-from ._relay import Connection, NodeType
-from .resolvers import qs_resolver
+from .relay import Connection, NodeType
+from .resolvers import resolve_qs_list
 from .utils import get_model_fields
 
-_T = TypeVar("_T")
-_get_list = qs_resolver(lambda qs: qs, get_list=True)
+_T = TypeVar("_T", bound=models.Model)
 
 
 def _get_gql_types(
@@ -68,6 +67,18 @@ def _norm_prefetch_related(pr_set: Set[Union[str, Prefetch]]) -> Set[Union[str, 
     return pr_set - {p.prefetch_to for p in pr_set if isinstance(p, Prefetch)}  # type:ignore
 
 
+def optimize(
+    qs: Union[models.QuerySet[_T], models.manager.BaseManager[_T]],
+    *,
+    info: Union[GraphQLResolveInfo, Info],
+    config: Optional["DjangoOptimizerConfig"] = None,
+    **kwargs,
+) -> models.QuerySet[_T]:
+    config = config or DjangoOptimizerConfig()
+    optimizer = DjangoOptimizer(qs=qs, info=info, config=config, **kwargs)
+    return optimizer.optimize()
+
+
 @dataclasses.dataclass
 class DjangoOptimizerConfig:
     enable_only: bool = dataclasses.field(default=True)
@@ -77,20 +88,19 @@ class DjangoOptimizerConfig:
 
 @dataclasses.dataclass
 class DjangoOptimizer(Generic[_T]):
+    qs: Union[models.QuerySet[_T], models.manager.BaseManager[_T]]
     info: Union[GraphQLResolveInfo, Info]
-    qs: Union[models.QuerySet, models.manager.Manager]
-    qs_resolver: Optional[Callable[[models.QuerySet], _T]] = dataclasses.field(default=None)
+    config: DjangoOptimizerConfig = dataclasses.field(default_factory=DjangoOptimizerConfig)
     only: List[str] = dataclasses.field(default_factory=list)
     select_related: List[str] = dataclasses.field(default_factory=list)
     prefetch_related: List[Union[str, Prefetch]] = dataclasses.field(default_factory=list)
-    config: DjangoOptimizerConfig = dataclasses.field(default_factory=DjangoOptimizerConfig)
 
     def __post_init__(self):
         self._info = self.info._raw_info if isinstance(self.info, Info) else self.info
         self._schema: Schema = self._info.schema._strawberry_schema  # type:ignore
         self._name_converter = self._schema.config.name_converter
 
-    def optimize(self) -> Union[models.QuerySet, _T]:
+    def optimize(self) -> models.QuerySet[_T]:
         config = self.config
 
         qs = self.qs
@@ -99,7 +109,7 @@ class DjangoOptimizer(Generic[_T]):
 
         # If the queryset already has cached results, just return it
         if qs._result_cache:  # type:ignore
-            return self._get_qs(qs)
+            return qs
 
         gql_type = get_named_type(self._info.return_type)
         type_def = self._schema.get_type_by_name(gql_type.name)
@@ -144,11 +154,6 @@ class DjangoOptimizer(Generic[_T]):
                 if prefetch_related:
                     qs = qs.prefetch_related(*_norm_prefetch_related(prefetch_related))
 
-        return self._get_qs(qs)
-
-    def _get_qs(self, qs):
-        if self.qs_resolver:
-            return self.qs_resolver(qs)
         return qs
 
     def _get_model_hints(
@@ -252,22 +257,15 @@ class DjangoOptimizerExtension(Extension):
         *args,
         **kwargs,
     ) -> AwaitableOrValue[object]:
-        return self._resolver(
-            _next(root, info, *args, **kwargs),
-            info,
-        )
+        return self._resolver(_next(root, info, *args, **kwargs), info)
 
     def _resolver(self, ret: object, info: GraphQLResolveInfo):
         if isinstance(ret, (models.QuerySet, models.manager.BaseManager)):
-            ret = DjangoOptimizer(
-                info=info,
-                config=self._config,
-                qs=ret,
-                qs_resolver=_get_list,
-            )
+            # This will get optimized below
+            ret = DjangoOptimizer(qs=ret, info=info, config=self._config)
 
         if isinstance(ret, DjangoOptimizer):
-            return self._resolver(ret.optimize(), info)
+            return resolve_qs_list(ret.optimize())
         elif info.is_awaitable(ret):
             return self._async_resolver(cast(Awaitable, ret), info)
 

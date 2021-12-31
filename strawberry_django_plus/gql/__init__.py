@@ -21,7 +21,8 @@ from strawberry import (
     union,
 )
 
-from strawberry_django_plus import _relay as relay
+from strawberry_django_plus import relay
+from strawberry_django_plus.relay import Connection, Node, connection, node
 
 from . import django
 
@@ -49,5 +50,9 @@ __all__ = [
     "union",
     # strawberry_django_plus
     "relay",
+    "Node",
+    "Connection",
+    "node",
+    "connection",
     "django",
 ]
