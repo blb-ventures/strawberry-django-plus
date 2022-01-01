@@ -16,7 +16,13 @@ from typing import (
 
 from django.db import models
 from django.db.models import Prefetch
-from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
+from django.db.models.fields.reverse_related import (
+    ManyToManyRel,
+    ManyToOneRel,
+    OneToOneRel,
+)
+from django.db.models.manager import BaseManager
+from django.db.models.query import QuerySet
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry.extensions.base_extension import Extension
 from strawberry.lazy_type import LazyType
@@ -27,6 +33,7 @@ from strawberry.types.nodes import Selection, convert_selections
 from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
+from strawberry_django.fields.types import resolve_model_field_name
 
 from .relay import Connection, NodeType
 from .resolvers import resolve_qs_list
@@ -68,12 +75,12 @@ def _norm_prefetch_related(pr_set: Set[Union[str, Prefetch]]) -> Set[Union[str, 
 
 
 def optimize(
-    qs: Union[models.QuerySet[_T], models.manager.BaseManager[_T]],
+    qs: Union[QuerySet[_T], BaseManager[_T]],
     *,
     info: Union[GraphQLResolveInfo, Info],
     config: Optional["DjangoOptimizerConfig"] = None,
     **kwargs,
-) -> models.QuerySet[_T]:
+) -> QuerySet[_T]:
     config = config or DjangoOptimizerConfig()
     optimizer = DjangoOptimizer(qs=qs, info=info, config=config, **kwargs)
     return optimizer.optimize()
@@ -88,7 +95,7 @@ class DjangoOptimizerConfig:
 
 @dataclasses.dataclass
 class DjangoOptimizer(Generic[_T]):
-    qs: Union[models.QuerySet[_T], models.manager.BaseManager[_T]]
+    qs: Union[QuerySet[_T], BaseManager[_T]]
     info: Union[GraphQLResolveInfo, Info]
     config: DjangoOptimizerConfig = dataclasses.field(default_factory=DjangoOptimizerConfig)
     only: List[str] = dataclasses.field(default_factory=list)
@@ -100,12 +107,12 @@ class DjangoOptimizer(Generic[_T]):
         self._schema: Schema = self._info.schema._strawberry_schema  # type:ignore
         self._name_converter = self._schema.config.name_converter
 
-    def optimize(self) -> models.QuerySet[_T]:
+    def optimize(self) -> QuerySet[_T]:
         config = self.config
 
         qs = self.qs
-        if isinstance(qs, models.manager.BaseManager):
-            qs = cast(models.QuerySet, qs.all())
+        if isinstance(qs, BaseManager):
+            qs = cast(QuerySet[_T], qs.all())
 
         # If the queryset already has cached results, just return it
         if qs._result_cache:  # type:ignore
@@ -140,8 +147,6 @@ class DjangoOptimizer(Generic[_T]):
             if config.enable_only:
                 only |= set(self.only)
                 if only:
-                    # If optimizing only, make sure that our pk is always selected
-                    only.add(qs.model._meta.pk.attname)
                     qs = qs.only(*only)
 
             if config.enable_select_related:
@@ -170,21 +175,31 @@ class DjangoOptimizer(Generic[_T]):
         fields = get_model_fields(model)
         gql_fields = {self._name_converter.get_graphql_name(f): f for f in type_def.fields}
 
-        select_related = set()
+        # Make sure that the model's pk is always selected when using only
+        pk = model._meta.pk
+        if pk is not None:
+            only.add(pk.attname)
+
         for s in selection.selections:
             gql_field = gql_fields[s.name]
             f_name: str = getattr(gql_field, "django_name", gql_field.python_name)
-            selected_field = fields.get(f_name, None)
-            if selected_field is None:
+            field = fields.get(f_name, None)
+            if field is None:
                 continue
 
             path = f"{prefix}{f_name}"
-            if isinstance(selected_field, models.ForeignKey):
+            if isinstance(field, (models.ForeignKey, OneToOneRel)):
                 only.add(path)
                 select_related.add(path)
 
+                # If adding a reverse relation, make sure to select its pointer to us,
+                # or else this might causa a refetch from the database
+                if isinstance(field, OneToOneRel):
+                    remote_field = field.remote_field
+                    only.add(f"{path}__{resolve_model_field_name(remote_field)}")
+
                 for f_type in _get_gql_type_definitions(gql_field.type):
-                    f_model = selected_field.related_model
+                    f_model = field.related_model
                     f_only, f_select_related, f_prefetch_related = self._get_model_hints(
                         model=f_model,
                         type_def=f_type,
@@ -192,34 +207,26 @@ class DjangoOptimizer(Generic[_T]):
                         prefix=f"{path}__",
                     )
                     only |= f_only
-                    # If optimizing only, make sure that our pk is always selected
-                    only.add(f_model._meta.pk.attname)
                     select_related |= f_select_related
                     prefetch_related |= f_prefetch_related
-            elif isinstance(selected_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel)):
-                selected_model = cast(Type[models.Model], selected_field.model)
-                selected_pk = selected_model._meta.pk
-                assert selected_pk
-                # Make sure the object's pk is on only list, or else Django will need to
-                # refetch the object again just to get it...
-                only.add(f"{prefix}{selected_pk.name}")
-
+            elif isinstance(field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel)):
                 f_types = list(_get_gql_type_definitions(gql_field.type))
                 if len(f_types) > 1:
-                    # TODO: What to do in this case? Can this ever happen?
+                    # This might be a generic foreign key. In this case, just prefetch it
                     prefetch_related.add(f_name)
                 elif len(f_types) == 1:
+                    remote_field = field.remote_field
                     f_type = f_types[0]
-                    f_model = selected_field.remote_field.model
                     f_only, f_select_related, f_prefetch_related = self._get_model_hints(
-                        f_model,
+                        remote_field.model,
                         f_type,
                         selection=s,
                     )
-                    f_qs = f_model.objects.all()
+                    f_qs = remote_field.model.objects.all()
                     if self.config.enable_only and f_only:
-                        # If optimizing only, make sure that our pk is always selected
-                        f_only.add(selected_field.remote_field.name)
+                        # If adding a reverse relation, make sure to select its pointer to us,
+                        # or else this might causa a refetch from the database
+                        f_only.add(cast(str, resolve_model_field_name(remote_field)))
                         f_qs = f_qs.only(*f_only)
                     if self.config.enable_select_related and f_select_related:
                         f_qs = f_qs.select_related(*f_select_related)
@@ -247,7 +254,15 @@ class DjangoOptimizerExtension(Extension):
         )
 
     def on_request_start(self) -> AwaitableOrValue[None]:
+        import time
+
+        self._t = time.time()
         self.execution_context.context._django_optimizer_config = self._config
+
+    def on_request_end(self) -> AwaitableOrValue[None]:
+        import time
+
+        print(time.time() - self._t)
 
     def resolve(
         self,
@@ -260,7 +275,7 @@ class DjangoOptimizerExtension(Extension):
         return self._resolver(_next(root, info, *args, **kwargs), info)
 
     def _resolver(self, ret: object, info: GraphQLResolveInfo):
-        if isinstance(ret, (models.QuerySet, models.manager.BaseManager)):
+        if isinstance(ret, (QuerySet, BaseManager)):
             # This will get optimized below
             ret = DjangoOptimizer(qs=ret, info=info, config=self._config)
 

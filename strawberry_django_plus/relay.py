@@ -38,8 +38,8 @@ from typing_extensions import Annotated
 
 _T = TypeVar("_T")
 NodeType = TypeVar("NodeType")
-_connection_type = "arrayconnection"
-_nodes: Dict[str, "Node"] = {}
+
+_connection_typename = "arrayconnection"
 
 
 def _to_b64(type_: str, value: str) -> str:
@@ -51,6 +51,13 @@ def _from_b64(value: str) -> Tuple[str, str]:
     return type_, v
 
 
+async def _async_resolver(ret: Awaitable[_T], callback: Optional[Callable[[_T], Any]]):
+    resolved = await ret
+    if callback is not None:
+        resolved = callback(resolved)
+    return resolved
+
+
 @runtime_checkable
 class _Countable(Protocol):
     def count(self) -> int:
@@ -59,24 +66,41 @@ class _Countable(Protocol):
 
 @strawberry.interface(description="An object with a Globally Unique ID")  # type:ignore
 class Node(Generic[NodeType]):
-    # FIXME: This should have a resolver to convert it to base64
-    id: strawberry.ID  # noqa:A003
+    @strawberry.field(description="The Globally Unique ID of this object")
+    def id(self, info: Info) -> strawberry.ID:  # noqa:A003
+        type_ = info.path.typename
+        assert type_
 
-    # @strawberry.field
-    # def id(self) -> strawberry.ID:  # noqa:A003
-    #     return "dsafdsa"
+        # self might not be an instance of Node in case of ORMs
+        id_getter = getattr(self, "get_node_id", None)
+        if id_getter is None:
+            # but in this case, the field must implement it
+            id_getter = getattr(info._field, "get_node_id", None)
+
+        assert id_getter
+        node_id = id_getter(info, self)
+
+        # We are testing str first because the resolver is expected to return this,
+        # and is_awaitable has a lot more overhead.
+        if isinstance(node_id, str):
+            return cast(strawberry.ID, _to_b64(type_, node_id))
+        elif info._raw_info.is_awaitable(node_id):
+            return _async_resolver(
+                node_id,
+                lambda resolved: _to_b64(type_, resolved),
+            )  # type:ignore
+
+        raise AssertionError(f"expected either str or Awaitable, found: {repr(node_id)}")
 
     @classmethod
-    def is_type_of(cls, other: NodeType, info: Info) -> bool:
-        # FIXME: How to properly check this?
-        return True
-
-    @classmethod
-    def get_node(cls, info: Info, node_id: Any) -> Optional[NodeType]:
+    def get_edges(cls, info: Info) -> AwaitableOrValue[Iterable[NodeType]]:
         raise NotImplementedError
 
     @classmethod
-    def get_edges(cls, info: Info) -> Iterable[NodeType]:
+    def get_node(cls, info: Info, node_id: Any) -> Optional[AwaitableOrValue[NodeType]]:
+        raise NotImplementedError
+
+    def get_node_id(self, info: Info, source: Any) -> AwaitableOrValue[str]:
         raise NotImplementedError
 
 
@@ -245,11 +269,11 @@ def connection_resolver(field: ConnectionField):
 
             if after:
                 after_type, after_parsed = _from_b64(after)
-                assert after_type == _connection_type
+                assert after_type == _connection_typename
                 start = max(start, int(after_parsed))
             if before:
                 before_type, before_parsed = _from_b64(before)
-                assert before_type == _connection_type
+                assert before_type == _connection_typename
                 end = min(end, int(before_parsed))
 
             if isinstance(first, int):
@@ -265,7 +289,7 @@ def connection_resolver(field: ConnectionField):
 
             edges = [
                 Edge(
-                    cursor=_to_b64(_connection_type, str(start + i)),
+                    cursor=_to_b64(_connection_typename, str(start + i)),
                     node=v,
                 )
                 for i, v in enumerate(cast(Sequence, nodes)[start:end])

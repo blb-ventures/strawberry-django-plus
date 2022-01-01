@@ -10,17 +10,16 @@ from strawberry_django import (
     auto,
     filter,
     filters,
-    input,
     is_auto,
     mutation,
     mutations,
     ordering,
-    type,
     types,
 )
 
 from strawberry_django_plus import fields, resolvers
 from strawberry_django_plus.fields import connection, field, node
+from strawberry_django_plus.types import input, interface, type
 
 __all__ = [
     # strawberry_django
@@ -40,7 +39,6 @@ __all__ = [
     "ManyToManyInput",
     "mutations",
     "type",
-    "input",
     "mutation",
     # strawberry_django_plus
     "fields",
@@ -48,4 +46,7 @@ __all__ = [
     "node",
     "connection",
     "resolvers",
+    "type",
+    "interface",
+    "input",
 ]

@@ -1,5 +1,7 @@
+import dataclasses
 from functools import cached_property
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -12,14 +14,17 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
     overload,
 )
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
-from django.db.models.base import Model
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.db.models.query_utils import DeferredAttribute
-from strawberry.arguments import UNSET
+from strawberry.annotation import StrawberryAnnotation
+from strawberry.arguments import UNSET, is_unset
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryContainer
@@ -29,20 +34,155 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.fields.field import (
     StrawberryDjangoField as _StrawberryDjangoField,
 )
+from strawberry_django.fields.types import (
+    get_model_field,
+    is_auto,
+    is_optional,
+    resolve_model_field_name,
+    resolve_model_field_type,
+)
+from strawberry_django.utils import is_similar_django_type
+from typing_extensions import Self
 
 from .relay import Connection, ConnectionField, NodeField
 from .relay import connection as _connection
 from .relay import node as _node
 from .resolvers import callable_resolver, qs_resolver, resolve_qs_one, resolve_result
 
+if TYPE_CHECKING:
+    from .types import StrawberryDjangoType
+
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
+_getattr = callable_resolver(lambda obj, key: getattr(obj, key))
+_getattr_str = callable_resolver(lambda obj, key: str(getattr(obj, key)))
 
 
 class StrawberryDjangoField(_StrawberryDjangoField):
+    @cached_property
+    def model(self) -> Type[models.Model]:
+        model = self.django_model
+        if model:
+            return model
+
+        origin = self.origin_django_type or self.origin._django_type  # type:ignore
+        return origin.model
+
+    @cached_property
+    def model_pk(self):
+        pk = self.model._meta.pk
+        assert pk
+        return pk
+
+    @classmethod
+    def from_django_type(
+        cls,
+        django_type: "StrawberryDjangoType",
+        name: str,
+        *,
+        type_annotation: Optional[StrawberryAnnotation] = None,
+    ) -> Self:
+        origin = django_type.origin
+
+        attr = getattr(origin, name, UNSET)
+        if is_unset(attr):
+            attr = getattr(cls, "__dataclass_fields__", {}).get(name, UNSET)
+        if attr is dataclasses.MISSING:
+            attr = UNSET
+
+        if isinstance(attr, cls) and not attr.origin_django_type:
+            field = cast(Self, attr)
+        elif isinstance(attr, dataclasses.Field):
+            default = getattr(attr, "default", UNSET)
+            if default is dataclasses.MISSING:
+                default = UNSET
+
+            default_factory = getattr(attr, "default_factory", UNSET)
+            if default_factory is dataclasses.MISSING:
+                default_factory = UNSET
+
+            if type_annotation is None:
+                type_annotation = getattr(attr, "type_annotation", None)
+            if type_annotation is None:
+                type_annotation = StrawberryAnnotation(attr.type)
+
+            field = cls(
+                django_name=getattr(attr, "django_name", attr.name),
+                graphql_name=getattr(attr, "graphql_name", None),
+                origin=getattr(attr, "origin", None),
+                is_subscription=getattr(attr, "is_subscription", False),
+                description=getattr(attr, "description", None),
+                base_resolver=getattr(attr, "base_resolver", None),
+                permission_classes=getattr(attr, "permission_classes", ()),
+                default=default,
+                default_factory=default_factory,
+                deprecation_reason=getattr(attr, "deprecation_reason", None),
+                directives=getattr(attr, "directives", ()),
+                type_annotation=type_annotation,
+            )
+        elif isinstance(attr, StrawberryResolver):
+            field = cls(base_resolver=attr)
+        elif callable(attr):
+            field = cast(Self, cls()(attr))
+        else:
+            field = cls(default=attr)
+
+        field.python_name = name
+        # store origin django type for further usage
+        if name in origin.__dict__.get("__annotations__", {}):
+            field.origin_django_type = django_type
+
+        # annotation of field is used as a class type
+        if type_annotation is not None:
+            field.type_annotation = type_annotation
+            field.is_auto = is_auto(field.type_annotation)
+
+        # resolve the django_name and check if it is relation field. django_name
+        # is used to access the field data in resolvers
+        try:
+            model_field = get_model_field(django_type.model, field.django_name or name)
+        except FieldDoesNotExist:
+            if field.django_name or field.is_auto:
+                raise  # field should exist, reraise caught exception
+        else:
+            field.is_relation = model_field.is_relation
+            field.django_name = resolve_model_field_name(
+                model_field,
+                is_input=django_type.is_input,
+                is_filter=django_type.is_filter,
+            )
+
+            # change relation field type to auto if field is inherited from another
+            # type. for example if field is inherited from output type but we are
+            # configuring field for input type
+            if field.is_relation and not is_similar_django_type(
+                django_type, field.origin_django_type
+            ):
+                field.is_auto = True
+
+            # resolve type of auto field
+            if field.is_auto:
+                field_type = resolve_model_field_type(model_field, django_type)
+                field.type_annotation = StrawberryAnnotation(field_type)
+
+            if is_optional(model_field, django_type.is_input, django_type.is_partial):
+                assert field.type_annotation
+                field.type_annotation.annotation = Optional[
+                    field.type_annotation.annotation  # type:ignore
+                ]
+
+            if field.description is None:
+                field.description = (
+                    model_field.field.help_text
+                    if isinstance(model_field, (ManyToOneRel, ManyToManyRel))
+                    else model_field.help_text
+                )
+
+        return field
+
     def get_result(
         self,
-        source: Any,
+        source: Optional[models.Model],
         info: Info,
         args: List[Any],
         kwargs: Dict[str, Any],
@@ -53,8 +193,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             # to decide what to do...
             result = self.base_resolver(*args, **kwargs)
         elif source is None:
-            assert self.django_model
-            result = self.django_model.objects.all()
+            result = self.model.objects.all()
         else:
             # Small optimization to async resolvers avoid having to call it in an sync_to_async
             # context if the value is already cached, since it will not hit the db anymore
@@ -64,9 +203,9 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 try:
                     result = source.__dict__[attr.field.attname]
                 except KeyError:
-                    result = lambda: getattr(source, self.django_name or self.python_name)
+                    result = _getattr(source, self.django_name or self.python_name)
             else:
-                result = lambda: getattr(source, self.django_name or self.python_name)
+                result = _getattr(source, self.django_name or self.python_name)
 
         if self.is_list:
             qs_resolver = lambda qs: self.get_list(info, qs, **kwargs)
@@ -85,10 +224,17 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         # The qs_resolver will ensure this returns a single result
         return self.get_queryset(qs, info, **kwargs)
 
+    def get_node_id(self, info: Info, source: models.Model) -> AwaitableOrValue[str]:
+        attr = self.model_pk.attname
+        try:
+            return str(source.__dict__[attr])
+        except KeyError:
+            return _getattr_str(source, attr)
+
 
 class StrawberryDjangoNodeField(NodeField):
     @cached_property
-    def model(self) -> Type[Model]:
+    def model(self) -> Type[models.Model]:
         field_type = self.type
         while isinstance(field_type, StrawberryContainer):
             field_type = field_type.of_type
@@ -103,7 +249,7 @@ class StrawberryDjangoNodeField(NodeField):
 
 class StrawberryDjangoConnectionField(ConnectionField):
     @cached_property
-    def model(self) -> Type[Model]:
+    def model(self) -> Type[models.Model]:
         field_type = self.type_annotation.annotation.__args__[0]
         return field_type._django_type.model
 
