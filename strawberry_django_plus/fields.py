@@ -27,7 +27,6 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, is_unset
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
-from strawberry.type import StrawberryContainer
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
@@ -44,7 +43,7 @@ from strawberry_django.fields.types import (
 from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
-from .relay import Connection, ConnectionField, NodeField
+from .relay import Connection, ConnectionField, Node, NodeField, NodeType
 from .relay import connection as _connection
 from .relay import node as _node
 from .resolvers import callable_resolver, qs_resolver, resolve_qs_one, resolve_result
@@ -224,7 +223,11 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         # The qs_resolver will ensure this returns a single result
         return self.get_queryset(qs, info, **kwargs)
 
-    def get_node_id(self, info: Info, source: models.Model) -> AwaitableOrValue[str]:
+    def resolve_node(self, info: Info, node_id: Any) -> Optional[AwaitableOrValue[models.Model]]:
+        qs = self.model.objects.filter(pk=node_id)
+        return resolve_result(qs, info, resolve_qs_func=resolve_qs_one)
+
+    def resolve_node_id(self, info: Info, source: models.Model) -> AwaitableOrValue[str]:
         attr = self.model_pk.attname
         try:
             return str(source.__dict__[attr])
@@ -233,50 +236,32 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
 
 class StrawberryDjangoNodeField(NodeField):
-    @cached_property
-    def model(self) -> Type[models.Model]:
-        field_type = self.type
-        while isinstance(field_type, StrawberryContainer):
-            field_type = field_type.of_type
-
-        return field_type._django_type.model  # type:ignore
-
-    def resolve_node(self, info: Info, node_id: str) -> Any:
-        model = self.model
-        qs = model.objects.filter(pk=node_id)
+    def resolve_node(
+        self,
+        info: Info,
+        source: Node[NodeType],
+        node_id: str,
+    ) -> Optional[AwaitableOrValue[NodeType]]:
+        django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
+        qs = django_type.model.objects.filter(pk=node_id)
         return resolve_result(qs, info, resolve_qs_func=resolve_qs_one)
 
 
 class StrawberryDjangoConnectionField(ConnectionField):
-    @cached_property
-    def model(self) -> Type[models.Model]:
-        field_type = self.type_annotation.annotation.__args__[0]
-        return field_type._django_type.model
-
-    def resolve_edges(self, info: Info) -> AwaitableOrValue[QuerySet[Any]]:
+    def resolve_nodes(self, info: Info, source: Node) -> AwaitableOrValue[QuerySet[Any]]:
+        django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
         # We don't want this to be prefetched yet, just to be optimized
-        return resolve_result(self.model.objects.all(), info, resolve_qs_func=lambda qs: qs)
+        return resolve_result(django_type.model.objects.all(), info, resolve_qs_func=lambda qs: qs)
 
     @callable_resolver
     def resolve_connection(
         self,
         info: Info,
-        edges: AwaitableOrValue[Iterable[Any]],
-        **kwargs: Dict[str, Any],
-    ) -> AwaitableOrValue[Connection[Any]]:
-        # Because we are decrated with callable_resolver, any calls to the db should be safe
-        return super().resolve_connection(info, edges, **kwargs)
-
-    async def async_resolve_connection(
-        self,
-        info: Info,
-        edges: Awaitable[Iterable[_T]],
-        **kwargs: Dict[str, Any],
-    ) -> AwaitableOrValue[Connection[_T]]:
-        # Make sure that, if super().resolve_connection call from above calls this,
-        # we call it again instead of our implementation. There's no need for a double
-        # callable_resolver.
-        return super().resolve_connection(info, await edges, **kwargs)
+        nodes: Iterable[NodeType],
+        **kwargs,
+    ) -> AwaitableOrValue[Connection[NodeType]]:
+        # Because we are inside a callable_resolver, any calls to the db should be safe
+        return super().resolve_connection(info, nodes, **kwargs)
 
 
 @overload
@@ -370,7 +355,44 @@ def field(
     return f
 
 
+@overload
 def node(
+    *,
+    resolver: Callable[[], _T],
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[False] = False,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
+) -> _T:
+    ...
+
+
+@overload
+def node(
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[True] = True,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
+) -> Any:
+    ...
+
+
+@overload
+def node(
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
     *,
     name: Optional[str] = None,
     is_subscription: bool = False,
@@ -381,8 +403,29 @@ def node(
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
+) -> ConnectionField:
+    ...
+
+
+def node(
+    resolver=None,
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init=None,
 ) -> Any:
     return _node(
+        resolver=resolver,
         name=name,
         is_subscription=is_subscription,
         description=description,
