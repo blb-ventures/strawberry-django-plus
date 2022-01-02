@@ -262,15 +262,7 @@ class DjangoOptimizerExtension(Extension):
         )
 
     def on_request_start(self) -> AwaitableOrValue[None]:
-        import time
-
-        self._t = time.time()
         self.execution_context.context._django_optimizer_config = self._config
-
-    def on_request_end(self) -> AwaitableOrValue[None]:
-        import time
-
-        print(time.time() - self._t)
 
     def resolve(
         self,
