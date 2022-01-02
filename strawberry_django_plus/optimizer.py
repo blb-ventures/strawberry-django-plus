@@ -183,6 +183,14 @@ class DjangoOptimizer(Generic[_T]):
         for s in selection.selections:
             gql_field = gql_fields[s.name]
             f_name: str = getattr(gql_field, "django_name", gql_field.python_name)
+
+            only |= {f"{prefix}{i}" for i in getattr(gql_field, "only", [])}
+            select_related |= {f"{prefix}{i}" for i in getattr(gql_field, "select_related", [])}
+            prefetch_related |= {  # type:ignore
+                f"{prefix}{i}" if isinstance(i, str) else i
+                for i in getattr(gql_field, "prefetch_related", [])
+            }
+
             field = fields.get(f_name, None)
             if field is None:
                 continue

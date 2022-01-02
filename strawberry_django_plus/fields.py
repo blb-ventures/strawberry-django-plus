@@ -21,6 +21,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
+from django.db.models.query import Prefetch
 from django.db.models.query_utils import DeferredAttribute
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, is_unset
@@ -39,7 +40,7 @@ from strawberry_django.fields.types import (
     resolve_model_field_type,
 )
 from strawberry_django.utils import is_similar_django_type
-from typing_extensions import Self
+from typing_extensions import Self, TypeAlias
 
 from .resolvers import qs_resolver, resolve_getattr, resolve_result
 
@@ -49,8 +50,21 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
 
+TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
+
 
 class StrawberryDjangoField(_StrawberryDjangoField):
+    only: List[str]
+    select_related: List[str]
+    prefetch_related: List[Union[str, Prefetch]]
+
+    def __init__(self, *args, **kwargs):
+        for attr in ["only", "select_related", "prefetch_related"]:
+            value = kwargs.pop(attr, None) or []
+            setattr(self, attr, [value] if not isinstance(value, Sequence) else value)
+
+        super().__init__(*args, **kwargs)
+
     @cached_property
     def model(self) -> Type[models.Model]:
         model = self.django_model
@@ -232,6 +246,9 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
 ) -> _T:
     ...
 
@@ -250,6 +267,9 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
 ) -> Any:
     ...
 
@@ -268,6 +288,9 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
 ) -> StrawberryDjangoField:
     ...
 
@@ -285,6 +308,9 @@ def field(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -302,6 +328,9 @@ def field(
         default=default,
         default_factory=default_factory,
         directives=directives,
+        only=only,
+        select_related=select_related,
+        prefetch_related=prefetch_related,
     )
     if resolver:
         f = f(resolver)
