@@ -1,6 +1,7 @@
 # This should go to its own module or be contributed back to strawberry
 
 import base64
+import dataclasses
 from typing import (
     Any,
     Awaitable,
@@ -23,34 +24,58 @@ from typing import (
     runtime_checkable,
 )
 
+from graphql import GraphQLID
 import strawberry
 from strawberry.arguments import UNSET, StrawberryArgument
+from strawberry.custom_scalar import ScalarDefinition
 from strawberry.field import StrawberryField
 from strawberry.permission import BasePermission
+from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import Annotated
+from typing_extensions import Annotated, TypeGuard
 
-_T = TypeVar("_T")
 NodeType = TypeVar("NodeType")
 
+_T = TypeVar("_T")
+_R = TypeVar("_R")
 _connection_typename = "arrayconnection"
+_node_cache: Dict[str, Type["Node[Any]"]] = {}
 
 
-def _from_b64(node_id: str) -> Tuple[str, str]:
-    node_type, v = base64.b64decode(node_id.encode()).decode().split(":")
-    return node_type, v
+def _is_awaitable(info: Info, value: _T) -> TypeGuard[Awaitable[_T]]:
+    return info._raw_info.is_awaitable(value)
 
 
-def _to_b64(node_type: str, node_id: str) -> str:
-    return base64.b64encode(f"{node_type}:{node_id}".encode()).decode()
+async def _async_callback(res: Awaitable[_T], callback: Callable[[_T], _R]) -> _R:
+    return callback(await res)
 
 
-async def _to_b64_async(node_type: str, node_id: Awaitable[str]) -> str:
-    return _to_b64(node_type, await node_id)
+def _from_base64(value: str) -> Tuple[str, str]:
+    type_name, node_id = base64.b64decode(value.encode()).decode().split(":")
+    return type_name, node_id
+
+
+def _to_base64(type_name: str, node_id: Any) -> str:
+    return base64.b64encode(f"{type_name}:{node_id}".encode()).decode()
+
+
+class NodeException(Exception):
+    """Base node exceptions."""
+
+
+def _ensure_type(info: Info, n_type: Type[NodeType], res: Any) -> AwaitableOrValue[NodeType]:
+    if not isinstance(res, n_type):
+        if _is_awaitable(info, res):
+            return _async_callback(  # type:ignore
+                res,
+                lambda resolved: _ensure_type(info, n_type, resolved),
+            )
+        raise NodeException(f"{n_type} expected, found {repr(res)}")
+    return res
 
 
 @runtime_checkable
@@ -59,44 +84,128 @@ class _Countable(Protocol):
         ...
 
 
+@dataclasses.dataclass(order=True, frozen=True)
+class GlobalID:
+    type_name: str
+    node_id: str
+
+    def __str__(self):
+        return _to_base64(self.type_name, self.node_id)
+
+    @property
+    def as_id(self) -> strawberry.ID:
+        return cast(strawberry.ID, self.__str__())
+
+    @classmethod
+    def from_id(cls, value: Union[str, strawberry.ID]):
+        type_name, node_id = _from_base64(value)
+        return cls(type_name=type_name, node_id=node_id)
+
+    @classmethod
+    async def from_node_id_async(cls, type_name: str, value: Awaitable[Union[str, strawberry.ID]]):
+        return cls(type_name=type_name, node_id=await value)
+
+    def get_type(self, info: Info) -> Type["Node[Any]"]:
+        origin = _node_cache.get(self.type_name, None)
+        if origin is None:
+            type_def = info.schema.get_type_by_name(self.type_name)
+            assert isinstance(type_def, TypeDefinition)
+            origin = type_def.origin
+            assert issubclass(origin, Node)
+            _node_cache[self.type_name] = origin
+        return origin
+
+    @overload
+    def resolve_node(self, info: Info, node_type: NodeType) -> NodeType:
+        ...
+
+    @overload
+    def resolve_node(self, info: Info, node_type: Awaitable[NodeType]) -> Awaitable[NodeType]:
+        ...
+
+    @overload
+    def resolve_node(self, info: Info, node_type=None) -> AwaitableOrValue[Any]:
+        ...
+
+    def resolve_node(self, info, node_type=None):
+        n_type = self.get_type(info)
+        node = n_type.resolve_node(info, self.node_id)
+
+        if node_type is not None:
+            return _ensure_type(info, node_type, node)
+
+        return node
+
+
+# Register our GlobalID scalar
+DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
+    # Use the same name/description/parse_literal from GraphQLID
+    name=GraphQLID.name,
+    description=GraphQLID.description,
+    parse_literal=lambda v: GlobalID.from_id(GraphQLID.parse_literal(v)),
+    parse_value=GlobalID.from_id,
+    serialize=str,
+)
+
+
 @strawberry.interface(description="An object with a Globally Unique ID")  # type:ignore
 class Node(Generic[NodeType]):
     @strawberry.field(description="The Globally Unique ID of this object")
-    def id(self, info: Info) -> strawberry.ID:  # noqa:A003
-        node_type = info.path.typename
-        assert node_type
+    @classmethod
+    def id(cls, info: Info, root: "Node[NodeType]") -> GlobalID:  # noqa:A003
+        type_name = info.path.typename
+        assert type_name
 
-        # self might not be an instance of Node in case of ORMs
-        node_id_getter = getattr(self, "resolve_node_id", None)
-        if node_id_getter is not None:
-            node_id = node_id_getter(info)
-        else:
-            # but in this case, the field must implement it
-            field_id_getter = getattr(info._field, "resolve_node_id", None)
-            if field_id_getter is None:
-                raise NotImplementedError
-
-            node_id = field_id_getter(info, self)
-
+        node_id = cls.resolve_id(info, root)
         # We are testing str first because the resolver is expected to return this,
         # and is_awaitable has a lot more overhead.
         if isinstance(node_id, str):
-            return _to_b64(node_type, node_id)  # type:ignore
-        elif info._raw_info.is_awaitable(node_id):
-            return _to_b64_async(node_type, node_id)  # type:ignore
+            return GlobalID(type_name=type_name, node_id=node_id)
+        elif _is_awaitable(info, node_id):
+            return GlobalID.from_node_id_async(type_name=type_name, value=node_id)  # type:ignore
 
         raise AssertionError(f"expected either str or Awaitable, found: {repr(node_id)}")
 
     @classmethod
-    def resolve_nodes(cls, info: Info) -> AwaitableOrValue[Iterable[NodeType]]:
+    def resolve_id(
+        cls,
+        info: Info,
+        root: "Node[NodeType]",
+    ) -> AwaitableOrValue[Any]:
         raise NotImplementedError
 
     @classmethod
-    def resolve_node(cls, info: Info, node_id: str) -> AwaitableOrValue[Optional[NodeType]]:
+    def resolve_node(
+        cls,
+        info: Info,
+        node_id: Union[str, GlobalID],
+    ) -> AwaitableOrValue[Optional[NodeType]]:
         raise NotImplementedError
 
-    def resolve_node_id(self, info: Info) -> AwaitableOrValue[str]:
+    @classmethod
+    def resolve_nodes(
+        cls,
+        info: Info,
+        node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
+    ) -> AwaitableOrValue[Iterable[NodeType]]:
         raise NotImplementedError
+
+    @classmethod
+    def get_connection_resolver(
+        cls,
+        info: Info,
+        *,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+    ) -> Callable[[Iterable[NodeType]], AwaitableOrValue["Connection[NodeType]"]]:
+        return Connection.from_nodes_resolver(  # type:ignore
+            before=before,
+            after=after,
+            first=first,
+            last=last,
+        )
 
 
 @strawberry.type(description="Information to aid in pagination.")
@@ -179,11 +288,11 @@ class Connection(Generic[NodeType]):
         end = total_count
 
         if after:
-            after_type, after_parsed = _from_b64(after)
+            after_type, after_parsed = _from_base64(after)
             assert after_type == _connection_typename
             start = max(start, int(after_parsed))
         if before:
-            before_type, before_parsed = _from_b64(before)
+            before_type, before_parsed = _from_base64(before)
             assert before_type == _connection_typename
             end = min(end, int(before_parsed))
 
@@ -199,10 +308,7 @@ class Connection(Generic[NodeType]):
             start = max(start, end - last)
 
         edges = [
-            Edge(
-                cursor=_to_b64(_connection_typename, str(start + i)),
-                node=v,
-            )
+            Edge(cursor=_to_base64(_connection_typename, start + i), node=v)
             for i, v in enumerate(cast(Sequence, nodes)[start:end])
         ]
         page_info = PageInfo(
@@ -245,7 +351,7 @@ class Connection(Generic[NodeType]):
             ),
         ] = None,
     ):
-        def resolver(nodes: Iterable[Any]):
+        def resolver(nodes: Iterable[NodeType]):
             return cls.from_nodes(nodes, before=before, after=after, first=first, last=last)
 
         return resolver
@@ -263,22 +369,11 @@ class NodeField(StrawberryField):
         self,
         info: Info,
         id: Annotated[  # noqa:A002
-            strawberry.ID,
+            GlobalID,
             strawberry.argument(description="The ID of the object."),
         ],
     ):
-        node_type, node_id = _from_b64(id)
-        type_def = info.schema.get_type_by_name(node_type)
-        assert isinstance(type_def, TypeDefinition)
-        return self.resolve_node(info, type_def.origin, node_id)
-
-    def resolve_node(
-        self,
-        info: Info,
-        source: Node[NodeType],
-        node_id: str,
-    ) -> AwaitableOrValue[Optional[NodeType]]:
-        return source.resolve_node(info, node_id)
+        return id.resolve_node(info)
 
 
 class ConnectionField(StrawberryField):
@@ -304,59 +399,39 @@ class ConnectionField(StrawberryField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
+        type_def = info.return_type._type_definition  # type:ignore
+        assert isinstance(type_def, TypeDefinition)
+        field_type = cast(Node, type_def.type_var_map[NodeType])
+
         # If self.base_resolver is our connection_resolver, let super handle it
         if self.base_resolver is self.connection_resolver:
-            type_def = info.return_type._type_definition  # type:ignore
-            assert isinstance(type_def, TypeDefinition)
-            field_type = type_def.type_var_map[NodeType]
-            nodes = self.resolve_nodes(info, field_type)  # type:ignore
+            nodes = field_type.resolve_nodes(info)
         else:
             # If base_resolver is not self.conn_resolver, then it is defined to something
             assert self.base_resolver
+
             default_args = ["before", "after", "first", "last"]
+            base_kwargs = {k: v for k, v in kwargs.items() if k not in default_args}
             kwargs = {k: v for k, v in kwargs.items() if k in default_args}
 
-            base_kwargs = {k: v for k, v in kwargs.items() if k not in default_args}
             nodes = self.base_resolver(*args, **base_kwargs)
 
         if nodes is None:
             return nodes
 
-        if info._raw_info.is_awaitable(nodes):
-            return self.resolve_connection_async(info, cast(Awaitable, nodes), **kwargs)
+        resolver = field_type.get_connection_resolver(info, **kwargs)
 
-        return self.resolve_connection(info, cast(Any, nodes), **kwargs)
+        if _is_awaitable(info, nodes):
 
-    def resolve_nodes(
-        self,
-        info: Info,
-        source: Node[NodeType],
-    ) -> AwaitableOrValue[Iterable[NodeType]]:
-        return source.resolve_nodes(info)
+            async def _async_resolver(res):
+                res = resolver(await res)
+                if _is_awaitable(info, res):
+                    return await res  # type:ignore
+                return res
 
-    def resolve_connection(
-        self,
-        info: Info,
-        nodes: Iterable[NodeType],
-        **kwargs,
-    ) -> AwaitableOrValue[Connection[NodeType]]:
-        resolver = self.connection_resolver(**kwargs)
+            return _async_resolver
+
         return resolver(nodes)  # type:ignore
-
-    async def resolve_connection_async(
-        self,
-        info: Info,
-        nodes: AwaitableOrValue[Iterable[NodeType]],
-        **kwargs,
-    ) -> AwaitableOrValue[Connection[NodeType]]:
-        if info._raw_info.is_awaitable(nodes):
-            nodes = await cast(Awaitable[Iterable[NodeType]], nodes)
-
-        res = self.resolve_connection(info, cast(Iterable[NodeType], nodes), **kwargs)
-        if info._raw_info.is_awaitable(res):
-            res = await cast(Awaitable[Connection[NodeType]], res)
-
-        return res
 
 
 @overload
@@ -372,7 +447,6 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[NodeField] = NodeField,
 ) -> _T:
     ...
 
@@ -389,7 +463,6 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[NodeField] = NodeField,
 ) -> Any:
     ...
 
@@ -406,7 +479,6 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[NodeField] = NodeField,
 ) -> ConnectionField:
     ...
 
@@ -422,13 +494,12 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[NodeField] = NodeField,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
     init=None,
 ) -> Any:
-    f = base_field(
+    f = NodeField(
         python_name=None,
         graphql_name=name,
         type_annotation=None,
@@ -458,7 +529,6 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[ConnectionField] = ConnectionField,
 ) -> _T:
     ...
 
@@ -475,7 +545,6 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[ConnectionField] = ConnectionField,
 ) -> Any:
     ...
 
@@ -492,7 +561,6 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[ConnectionField] = ConnectionField,
 ) -> ConnectionField:
     ...
 
@@ -508,13 +576,12 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[ConnectionField] = ConnectionField,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
     init=None,
 ) -> Any:
-    f = base_field(
+    f = ConnectionField(
         python_name=None,
         graphql_name=name,
         type_annotation=None,

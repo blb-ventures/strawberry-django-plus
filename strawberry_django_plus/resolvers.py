@@ -1,12 +1,15 @@
 import functools
 import inspect
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
+    Iterable,
     List,
     Literal,
     Optional,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -20,6 +23,11 @@ from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.utils import is_async
 from typing_extensions import ParamSpec
+
+from .relay import GlobalID, Node
+
+if TYPE_CHECKING:
+    from strawberry_django_plus.types import StrawberryDjangoType
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -177,6 +185,8 @@ resolve_qs = qs_resolver(lambda qs: qs)
 resolve_qs_list = qs_resolver(lambda qs: qs, get_list=True)
 resolve_qs_one = qs_resolver(lambda qs: qs, get_one=True)
 resolve_callable = callable_resolver(lambda f, *args, **kwargs: f(*args, **kwargs))
+resolve_getattr = callable_resolver(lambda obj, key, *args: getattr(obj, key, *args))
+resolve_getattr_str = callable_resolver(lambda obj, key, *args: str(getattr(obj, key, *args)))
 
 
 def resolve_result(
@@ -242,3 +252,42 @@ async def resolve_result_async(
         resolve_callable_func=resolve_callable_func,
         resolve_qs_func=resolve_qs_func,
     )
+
+
+def resolve_model_nodes(
+    source: Type[Node[_M]],
+    info: Info,
+    node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
+) -> AwaitableOrValue[QuerySet[_M]]:
+    django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
+    qs = django_type.model.objects.all()
+    if node_ids is not None:
+        qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
+
+    # We don't want this to be prefetched yet, just to be optimized
+    return resolve_result(qs, info, resolve_qs_func=lambda qs: qs)
+
+
+def resolve_model_node(
+    source: Type[Node[_M]],
+    info: Info,
+    node_id: Union[str, GlobalID],
+) -> Optional[AwaitableOrValue[_M]]:
+    if isinstance(node_id, GlobalID):
+        node_id = node_id.node_id
+
+    django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
+    qs = django_type.model.objects.filter(pk=node_id)
+    return resolve_result(qs, info, resolve_qs_func=resolve_qs_one)
+
+
+def resolve_model_id(
+    source: Node[_M],
+    info: Info,
+    root: _M,
+) -> AwaitableOrValue[str]:
+    attr = root._meta.pk.attname  # type:ignore
+    try:
+        return str(root.__dict__[attr])
+    except KeyError:
+        return resolve_getattr_str(root, attr)

@@ -46,15 +46,19 @@ from typing_extensions import Self
 from .relay import Connection, ConnectionField, Node, NodeField, NodeType
 from .relay import connection as _connection
 from .relay import node as _node
-from .resolvers import callable_resolver, qs_resolver, resolve_qs_one, resolve_result
+from .resolvers import (
+    callable_resolver,
+    qs_resolver,
+    resolve_getattr,
+    resolve_qs_one,
+    resolve_result,
+)
 
 if TYPE_CHECKING:
     from .types import StrawberryDjangoType
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
-_getattr = callable_resolver(lambda obj, key: getattr(obj, key))
-_getattr_str = callable_resolver(lambda obj, key: str(getattr(obj, key)))
 
 
 class StrawberryDjangoField(_StrawberryDjangoField):
@@ -202,9 +206,9 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 try:
                     result = source.__dict__[attr.field.attname]
                 except KeyError:
-                    result = _getattr(source, self.django_name or self.python_name)
+                    result = resolve_getattr(source, self.django_name or self.python_name)
             else:
-                result = _getattr(source, self.django_name or self.python_name)
+                result = resolve_getattr(source, self.django_name or self.python_name)
 
         if self.is_list:
             qs_resolver = lambda qs: self.get_list(info, qs, **kwargs)
@@ -222,17 +226,6 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     def get_one(self, info: Info, qs: QuerySet[Any], **kwargs) -> QuerySet[Any]:
         # The qs_resolver will ensure this returns a single result
         return self.get_queryset(qs, info, **kwargs)
-
-    def resolve_node(self, info: Info, node_id: Any) -> Optional[AwaitableOrValue[models.Model]]:
-        qs = self.model.objects.filter(pk=node_id)
-        return resolve_result(qs, info, resolve_qs_func=resolve_qs_one)
-
-    def resolve_node_id(self, info: Info, source: models.Model) -> AwaitableOrValue[str]:
-        attr = self.model_pk.attname
-        try:
-            return str(source.__dict__[attr])
-        except KeyError:
-            return _getattr_str(source, attr)
 
 
 class StrawberryDjangoNodeField(NodeField):
