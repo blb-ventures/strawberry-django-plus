@@ -63,10 +63,6 @@ def _to_base64(type_name: str, node_id: Any) -> str:
     return base64.b64encode(f"{type_name}:{node_id}".encode()).decode()
 
 
-class NodeException(Exception):
-    """Base node exceptions."""
-
-
 def _ensure_type(info: Info, n_type: Type[NodeType], res: Any) -> AwaitableOrValue[NodeType]:
     if not isinstance(res, n_type):
         if _is_awaitable(info, res):
@@ -82,6 +78,10 @@ def _ensure_type(info: Info, n_type: Type[NodeType], res: Any) -> AwaitableOrVal
 class _Countable(Protocol):
     def count(self) -> int:
         ...
+
+
+class NodeException(Exception):
+    """Base node exceptions."""
 
 
 @dataclasses.dataclass(order=True, frozen=True)
@@ -359,11 +359,19 @@ class Connection(Generic[NodeType]):
 
 class NodeField(StrawberryField):
     def __init__(self, *args, **kwargs):
+        self.node_type = kwargs.pop("node_type", None)
+
         super().__init__(*args, **kwargs)
 
         self.node_resolver = StrawberryResolver(self.default_resolver)
         if not self.base_resolver:
             self(self.node_resolver)
+
+    def __call__(self, resolver):
+        if self.node_type is not None and not isinstance(resolver, StrawberryResolver):
+            resolver.__annotations__["return"] = self.node_type  # type:ignore
+
+        return super().__call__(resolver)
 
     def default_resolver(
         self,
@@ -378,11 +386,19 @@ class NodeField(StrawberryField):
 
 class ConnectionField(StrawberryField):
     def __init__(self, *args, **kwargs):
+        self.node_type = kwargs.pop("node_type", None)
+
         super().__init__(*args, **kwargs)
 
         self.connection_resolver = StrawberryResolver(Connection.from_nodes_resolver)
         if not self.base_resolver:
             self(self.connection_resolver)
+
+    def __call__(self, resolver):
+        if self.node_type is not None and not isinstance(resolver, StrawberryResolver):
+            resolver.__annotations__["return"] = Connection[self.node_type]  # type:ignore
+
+        return super().__call__(resolver)
 
     @property
     def arguments(self) -> List[StrawberryArgument]:
@@ -447,6 +463,7 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
 ) -> _T:
     ...
 
@@ -463,6 +480,7 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
 ) -> Any:
     ...
 
@@ -479,6 +497,7 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
 ) -> ConnectionField:
     ...
 
@@ -494,6 +513,7 @@ def node(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -510,6 +530,7 @@ def node(
         default=default,
         default_factory=default_factory,
         directives=directives or (),
+        node_type=node_type,
     )
     if resolver is not None:
         f = f(resolver)
@@ -529,6 +550,7 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
 ) -> _T:
     ...
 
@@ -545,6 +567,7 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
 ) -> Any:
     ...
 
@@ -561,6 +584,7 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
 ) -> ConnectionField:
     ...
 
@@ -576,6 +600,7 @@ def connection(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    node_type: Optional[Any] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -592,6 +617,7 @@ def connection(
         default=default,
         default_factory=default_factory,
         directives=directives or (),
+        node_type=node_type,
     )
     if resolver is not None:
         f = f(resolver)

@@ -6,7 +6,6 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
-    Iterable,
     List,
     Literal,
     Optional,
@@ -29,7 +28,6 @@ from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
-from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.fields.field import (
     StrawberryDjangoField as _StrawberryDjangoField,
 )
@@ -43,16 +41,7 @@ from strawberry_django.fields.types import (
 from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
-from .relay import Connection, ConnectionField, Node, NodeField, NodeType
-from .relay import connection as _connection
-from .relay import node as _node
-from .resolvers import (
-    callable_resolver,
-    qs_resolver,
-    resolve_getattr,
-    resolve_qs_one,
-    resolve_result,
-)
+from .resolvers import qs_resolver, resolve_getattr, resolve_result
 
 if TYPE_CHECKING:
     from .types import StrawberryDjangoType
@@ -228,35 +217,6 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         return self.get_queryset(qs, info, **kwargs)
 
 
-class StrawberryDjangoNodeField(NodeField):
-    def resolve_node(
-        self,
-        info: Info,
-        source: Node[NodeType],
-        node_id: str,
-    ) -> Optional[AwaitableOrValue[NodeType]]:
-        django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
-        qs = django_type.model.objects.filter(pk=node_id)
-        return resolve_result(qs, info, resolve_qs_func=resolve_qs_one)
-
-
-class StrawberryDjangoConnectionField(ConnectionField):
-    def resolve_nodes(self, info: Info, source: Node) -> AwaitableOrValue[QuerySet[Any]]:
-        django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
-        # We don't want this to be prefetched yet, just to be optimized
-        return resolve_result(django_type.model.objects.all(), info, resolve_qs_func=lambda qs: qs)
-
-    @callable_resolver
-    def resolve_connection(
-        self,
-        info: Info,
-        nodes: Iterable[NodeType],
-        **kwargs,
-    ) -> AwaitableOrValue[Connection[NodeType]]:
-        # Because we are inside a callable_resolver, any calls to the db should be safe
-        return super().resolve_connection(info, nodes, **kwargs)
-
-
 @overload
 def field(
     *,
@@ -346,169 +306,3 @@ def field(
     if resolver:
         f = f(resolver)
     return f
-
-
-@overload
-def node(
-    *,
-    resolver: Callable[[], _T],
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    init: Literal[False] = False,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
-) -> _T:
-    ...
-
-
-@overload
-def node(
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
-) -> Any:
-    ...
-
-
-@overload
-def node(
-    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
-) -> ConnectionField:
-    ...
-
-
-def node(
-    resolver=None,
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoNodeField] = StrawberryDjangoNodeField,
-    # This init parameter is used by pyright to determine whether this field
-    # is added in the constructor or not. It is not used to change
-    # any behavior at the moment.
-    init=None,
-) -> Any:
-    return _node(
-        resolver=resolver,
-        name=name,
-        is_subscription=is_subscription,
-        description=description,
-        permission_classes=permission_classes,
-        deprecation_reason=deprecation_reason,
-        default=default,
-        default_factory=default_factory,
-        directives=directives,
-        base_field=base_field,
-    )
-
-
-@overload
-def connection(
-    *,
-    resolver: Callable[[], _T],
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    init: Literal[False] = False,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoConnectionField] = StrawberryDjangoConnectionField,
-) -> _T:
-    ...
-
-
-@overload
-def connection(
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoConnectionField] = StrawberryDjangoConnectionField,
-) -> Any:
-    ...
-
-
-@overload
-def connection(
-    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoConnectionField] = StrawberryDjangoConnectionField,
-) -> StrawberryDjangoConnectionField:
-    ...
-
-
-def connection(
-    resolver=None,
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-    base_field: Type[StrawberryDjangoConnectionField] = StrawberryDjangoConnectionField,
-    # This init parameter is used by pyright to determine whether this field
-    # is added in the constructor or not. It is not used to change
-    # any behavior at the moment.
-    init=None,
-) -> Any:
-    return _connection(
-        resolver=resolver,
-        name=name,
-        is_subscription=is_subscription,
-        description=description,
-        permission_classes=permission_classes,
-        deprecation_reason=deprecation_reason,
-        default=default,
-        default_factory=default_factory,
-        directives=directives,
-        base_field=base_field,
-    )
