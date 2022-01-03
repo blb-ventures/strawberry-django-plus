@@ -40,8 +40,10 @@ from strawberry_django.fields.types import (
     resolve_model_field_type,
 )
 from strawberry_django.utils import is_similar_django_type
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
+from .descriptors import ModelProperty
+from .optimizer import DjangoOptimizerStore, TypeOrSequence
 from .resolvers import qs_resolver, resolve_getattr, resolve_result
 
 if TYPE_CHECKING:
@@ -50,19 +52,16 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
 
-TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
-
 
 class StrawberryDjangoField(_StrawberryDjangoField):
-    only: List[str]
-    select_related: List[str]
-    prefetch_related: List[Union[str, Prefetch]]
+    store: DjangoOptimizerStore
 
     def __init__(self, *args, **kwargs):
-        for attr in ["only", "select_related", "prefetch_related"]:
-            value = kwargs.pop(attr, None) or []
-            setattr(self, attr, [value] if not isinstance(value, Sequence) else value)
-
+        self.store = DjangoOptimizerStore.from_iterables(
+            only=kwargs.pop("only", None),
+            select_related=kwargs.pop("select_related", None),
+            prefetch_related=kwargs.pop("prefetch_related", None),
+        )
         super().__init__(*args, **kwargs)
 
     @cached_property
@@ -148,7 +147,15 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         try:
             model_field = get_model_field(django_type.model, field.django_name or name)
         except FieldDoesNotExist:
-            if field.django_name or field.is_auto:
+            model_attr = getattr(django_type.model, name, None)
+            if model_attr is not None and isinstance(model_attr, ModelProperty):
+                if field.is_auto:
+                    field.type_annotation = StrawberryAnnotation(model_attr.type_annotation)
+                    field.is_auto = is_auto(field.type_annotation)
+
+                if field.description is None:
+                    field.description = model_attr.description
+            elif field.django_name or field.is_auto:
                 raise  # field should exist, reraise caught exception
         else:
             field.is_relation = model_field.is_relation
@@ -205,12 +212,14 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             # context if the value is already cached, since it will not hit the db anymore
             attname = self.django_name or self.python_name
             attr = getattr(source.__class__, attname, None)
-            if isinstance(attr, DeferredAttribute):
-                try:
+            try:
+                if isinstance(attr, DeferredAttribute):
                     result = source.__dict__[attr.field.attname]
-                except KeyError:
-                    result = resolve_getattr(source, self.django_name or self.python_name)
-            else:
+                elif isinstance(attr, ModelProperty):
+                    result = source.__dict__[attr.name]
+                else:
+                    raise KeyError
+            except KeyError:
                 result = resolve_getattr(source, self.django_name or self.python_name)
 
         if self.is_list:

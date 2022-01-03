@@ -18,6 +18,7 @@ from strawberry_django import (
 )
 
 from strawberry_django_plus import fields, resolvers
+from strawberry_django_plus.descriptors import model_cached_property, model_property
 from strawberry_django_plus.fields import field
 from strawberry_django_plus.types import input, interface, type
 
@@ -47,4 +48,6 @@ __all__ = [
     "type",
     "interface",
     "input",
+    "model_property",
+    "model_cached_property",
 ]

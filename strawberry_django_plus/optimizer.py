@@ -5,8 +5,8 @@ from typing import (
     Callable,
     Generator,
     Generic,
-    List,
     Optional,
+    Sequence,
     Set,
     Type,
     TypeVar,
@@ -34,12 +34,16 @@ from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.fields.types import resolve_model_field_name
+from typing_extensions import TypeAlias
 
+from .descriptors import ModelProperty
 from .relay import Connection, NodeType
 from .resolvers import resolve_qs_list
 from .utils import get_model_fields
 
-_T = TypeVar("_T", bound=models.Model)
+_T = TypeVar("_T")
+_M = TypeVar("_M", bound=models.Model)
+TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
 
 
 def _get_gql_types(
@@ -68,19 +72,26 @@ def _get_gql_type_definitions(
             yield t
 
 
-def _norm_prefetch_related(pr_set: Set[Union[str, Prefetch]]) -> Set[Union[str, Prefetch]]:
-    # If there's a prefetch_related with the name of a Prefetch object,
-    # replace it with the Prefetch object.
-    return pr_set - {p.prefetch_to for p in pr_set if isinstance(p, Prefetch)}  # type:ignore
+def _ensure_set(args: Optional[TypeOrSequence[_T]]) -> Set[_T]:
+    if args is None:
+        return set()
+
+    if not isinstance(args, Sequence):
+        return {args}
+
+    ret = set(args)
+    assert len(ret) == len(args)
+
+    return ret
 
 
 def optimize(
-    qs: Union[QuerySet[_T], BaseManager[_T]],
+    qs: Union[QuerySet[_M], BaseManager[_M]],
     *,
     info: Union[GraphQLResolveInfo, Info],
     config: Optional["DjangoOptimizerConfig"] = None,
     **kwargs,
-) -> QuerySet[_T]:
+) -> QuerySet[_M]:
     config = config or DjangoOptimizerConfig()
     optimizer = DjangoOptimizer(qs=qs, info=info, config=config, **kwargs)
     return optimizer.optimize()
@@ -94,25 +105,94 @@ class DjangoOptimizerConfig:
 
 
 @dataclasses.dataclass
-class DjangoOptimizer(Generic[_T]):
-    qs: Union[QuerySet[_T], BaseManager[_T]]
+class DjangoOptimizerStore:
+    only: Set[str] = dataclasses.field(default_factory=set)
+    select_related: Set[str] = dataclasses.field(default_factory=set)
+    prefetch_related: Set[Union[str, Prefetch]] = dataclasses.field(default_factory=set)
+
+    def __or__(self, other: "DjangoOptimizerStore"):
+        return self.__class__(
+            only=self.only.copy(),
+            select_related=self.select_related.copy(),
+            prefetch_related=self.prefetch_related.copy(),
+        ).__ior__(other)
+
+    def __ior__(self, other: "DjangoOptimizerStore"):
+        self.only |= other.only
+        self.select_related |= other.select_related
+        self.prefetch_related |= other.prefetch_related
+        return self
+
+    @classmethod
+    def from_iterables(
+        cls,
+        only: Optional[TypeOrSequence[str]] = None,
+        select_related: Optional[TypeOrSequence[str]] = None,
+        prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
+    ):
+        return cls(
+            only=_ensure_set(only),
+            select_related=_ensure_set(select_related),
+            prefetch_related=_ensure_set(prefetch_related),
+        )
+
+    def with_prefix(self, prefix: str):
+        return self.__class__(
+            only={f"{prefix}{i}" for i in self.only},
+            select_related={f"{prefix}{i}" for i in self.select_related},
+            prefetch_related={
+                f"{prefix}{i}" if isinstance(i, str) else i for i in self.prefetch_related
+            },
+        )
+
+    def apply(
+        self,
+        qs: QuerySet[_M],
+        config: Optional[DjangoOptimizerConfig] = None,
+    ) -> QuerySet[_M]:
+        if config is None or config.enable_select_related:
+            select_related = self.select_related
+            if select_related:
+                qs = qs.select_related(*select_related)
+
+        if config is None or config.enable_prefetch_related:
+            prefetch_related = self.prefetch_related
+            if prefetch_related:
+                # If there's a prefetch_related with the name of a Prefetch object,
+                # replace it with the Prefetch object.
+                prefetch_related = prefetch_related - {
+                    p.prefetch_to  # type:ignore
+                    for p in prefetch_related
+                    if isinstance(p, Prefetch)
+                }
+                qs = qs.prefetch_related(*prefetch_related)
+
+        if config is None or config.enable_only:
+            only = self.only
+            if only:
+                qs = qs.only(*only)
+
+        return qs
+
+
+@dataclasses.dataclass
+class DjangoOptimizer(Generic[_M]):
+    qs: Union[QuerySet[_M], BaseManager[_M]]
     info: Union[GraphQLResolveInfo, Info]
     config: DjangoOptimizerConfig = dataclasses.field(default_factory=DjangoOptimizerConfig)
-    only: List[str] = dataclasses.field(default_factory=list)
-    select_related: List[str] = dataclasses.field(default_factory=list)
-    prefetch_related: List[Union[str, Prefetch]] = dataclasses.field(default_factory=list)
+    store: DjangoOptimizerStore = dataclasses.field(default_factory=DjangoOptimizerStore)
 
     def __post_init__(self):
         self._info = self.info._raw_info if isinstance(self.info, Info) else self.info
         self._schema: Schema = self._info.schema._strawberry_schema  # type:ignore
         self._name_converter = self._schema.config.name_converter
 
-    def optimize(self) -> QuerySet[_T]:
-        config = self.config
+    def optimize(self) -> QuerySet[_M]:
+        store = self.store
 
         qs = self.qs
         if isinstance(qs, BaseManager):
-            qs = cast(QuerySet[_T], qs.all())
+            qs = cast(QuerySet[_M], qs.all())
 
         # If the queryset already has cached results, just return it
         if qs._result_cache:  # type:ignore
@@ -138,26 +218,8 @@ class DjangoOptimizer(Generic[_T]):
                     type_def = type_def.type_var_map[NodeType]._type_definition  # type:ignore
                     assert type_def
 
-            only, select_related, prefetch_related = self._get_model_hints(
-                qs.model,
-                type_def,
-                selection=selection,
-            )
-
-            if config.enable_only:
-                only |= set(self.only)
-                if only:
-                    qs = qs.only(*only)
-
-            if config.enable_select_related:
-                select_related |= set(self.select_related)
-                if select_related:
-                    qs = qs.select_related(*select_related)
-
-            if config.enable_prefetch_related:
-                prefetch_related |= set(self.prefetch_related)
-                if prefetch_related:
-                    qs = qs.prefetch_related(*_norm_prefetch_related(prefetch_related))
+            store |= self._get_model_hints(qs.model, type_def, selection=selection)
+            qs = store.apply(qs, self.config)
 
         return qs
 
@@ -168,9 +230,7 @@ class DjangoOptimizer(Generic[_T]):
         selection: Selection,
         prefix: str = "",
     ):
-        only: Set[str] = set()
-        select_related: Set[str] = set()
-        prefetch_related: Set[Union[str, Prefetch]] = set()
+        store = DjangoOptimizerStore()
 
         fields = get_model_fields(model)
         gql_fields = {self._name_converter.get_graphql_name(f): f for f in type_def.fields}
@@ -178,74 +238,76 @@ class DjangoOptimizer(Generic[_T]):
         # Make sure that the model's pk is always selected when using only
         pk = model._meta.pk
         if pk is not None:
-            only.add(pk.attname)
+            store.only.add(pk.attname)
 
         for s in selection.selections:
             gql_field = gql_fields[s.name]
-            f_name: str = getattr(gql_field, "django_name", gql_field.python_name)
 
-            only |= {f"{prefix}{i}" for i in getattr(gql_field, "only", [])}
-            select_related |= {f"{prefix}{i}" for i in getattr(gql_field, "select_related", [])}
-            prefetch_related |= {  # type:ignore
-                f"{prefix}{i}" if isinstance(i, str) else i
-                for i in getattr(gql_field, "prefetch_related", [])
-            }
+            # Add annotations from the field if they exist
+            field_store = getattr(gql_field, "store", None)
+            if field_store is not None:
+                store |= field_store.with_prefix(prefix) if prefix else field_store
 
-            field = fields.get(f_name, None)
+            # Then from the model property if one is defined
+            model_attr = getattr(model, gql_field.python_name, None)
+            if model_attr is not None and isinstance(model_attr, ModelProperty):
+                attr_store = model_attr.store
+                store |= attr_store.with_prefix(prefix) if prefix else attr_store
+
+            # Lastly, from the django field itself
+            field_name: str = getattr(gql_field, "django_name", gql_field.python_name)
+            field = fields.get(field_name, None)
             if field is None:
                 continue
 
-            path = f"{prefix}{f_name}"
+            path = f"{prefix}{field_name}"
             if isinstance(field, (models.ForeignKey, OneToOneRel)):
-                only.add(path)
-                select_related.add(path)
+                store.only.add(path)
+                store.select_related.add(path)
 
                 # If adding a reverse relation, make sure to select its pointer to us,
                 # or else this might causa a refetch from the database
                 if isinstance(field, OneToOneRel):
                     remote_field = field.remote_field
-                    only.add(f"{path}__{resolve_model_field_name(remote_field)}")
+                    store.only.add(f"{path}__{resolve_model_field_name(remote_field)}")
 
                 for f_type in _get_gql_type_definitions(gql_field.type):
                     f_model = field.related_model
-                    f_only, f_select_related, f_prefetch_related = self._get_model_hints(
+                    store |= self._get_model_hints(
                         model=f_model,
                         type_def=f_type,
                         selection=s,
                         prefix=f"{path}__",
                     )
-                    only |= f_only
-                    select_related |= f_select_related
-                    prefetch_related |= f_prefetch_related
             elif isinstance(field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel)):
                 f_types = list(_get_gql_type_definitions(gql_field.type))
                 if len(f_types) > 1:
                     # This might be a generic foreign key. In this case, just prefetch it
-                    prefetch_related.add(f_name)
+                    store.prefetch_related.add(field_name)
                 elif len(f_types) == 1:
                     remote_field = field.remote_field
                     f_type = f_types[0]
-                    f_only, f_select_related, f_prefetch_related = self._get_model_hints(
-                        remote_field.model,
-                        f_type,
-                        selection=s,
-                    )
-                    f_qs = remote_field.model.objects.all()
-                    if self.config.enable_only and f_only:
+                    f_store = self._get_model_hints(remote_field.model, f_type, selection=s)
+                    if self.config.enable_only and f_store.only:
                         # If adding a reverse relation, make sure to select its pointer to us,
                         # or else this might causa a refetch from the database
-                        f_only.add(cast(str, resolve_model_field_name(remote_field)))
-                        f_qs = f_qs.only(*f_only)
-                    if self.config.enable_select_related and f_select_related:
-                        f_qs = f_qs.select_related(*f_select_related)
-                    if self.config.enable_prefetch_related and f_prefetch_related:
-                        f_qs = f_qs.prefetch_related(*_norm_prefetch_related(f_prefetch_related))
+                        f_store.only.add(cast(str, resolve_model_field_name(remote_field)))
 
-                    prefetch_related.add(Prefetch(path, queryset=f_qs))
+                    f_qs = f_store.apply(remote_field.model.objects.all(), self.config)
+                    store.prefetch_related.add(Prefetch(path, queryset=f_qs))
             else:
-                only.add(path)
+                store.only.add(path)
 
-        return only, select_related, prefetch_related
+        return store
+
+    def _get_field_hints(
+        self,
+        model: Type[models.Model],
+        type_def: TypeDefinition,
+        selection: Selection,
+        prefix: str = "",
+    ):
+        pass
 
 
 class DjangoOptimizerExtension(Extension):
