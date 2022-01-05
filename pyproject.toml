@@ -1,14 +1,14 @@
 [tool.poetry]
 name = "strawberry-django-plus"
 version = "0.1"
-description = "TODO"
+description = "Enhanced Strawberry GraphQL integration with Django"
 authors = ["Thiago Bellini Ribeiro <thiago@bellini.dev>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/blb-ventures/strawberry-django-plus"
 repository = "https://github.com/blb-ventures/strawberry-django-plus"
 documentation = "https://strawberry-django-plus.readthedocs.io"
-keywords = ["strawberry", "django", "graphql", "crud", "permissions"]
+keywords = ["strawberry", "django", "graphql", "relay", "optimizer"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Web Environment",
