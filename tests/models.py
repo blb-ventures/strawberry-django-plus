@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING, Optional
 
 from django.db import models
 
+from strawberry_django_plus.descriptors import model_property
+
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
 
@@ -14,6 +16,7 @@ class Project(models.Model):
         primary_key=True,
     )
     name = models.CharField(
+        help_text="The name of the project",
         max_length=255,
     )
     due_date = models.DateField(
@@ -91,6 +94,15 @@ class Issue(models.Model):
         blank=True,
         default=None,
     )
+
+    @property
+    def name_with_kind(self) -> str:
+        return f"{self.kind}: {self.name}"
+
+    @model_property(only=["kind", "priority"])
+    def name_with_priority(self) -> str:
+        """Field doc"""
+        return f"{self.kind}: {self.priority}"
 
 
 class IssueComment(models.Model):
