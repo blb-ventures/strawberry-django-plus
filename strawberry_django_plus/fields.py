@@ -42,18 +42,30 @@ from strawberry_django.fields.types import (
 from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
+from strawberry_django_plus.utils.typing import TypeOrSequence
+
 from .descriptors import ModelProperty
-from .optimizer import DjangoOptimizerStore, TypeOrSequence
-from .resolvers import qs_resolver, resolve_getattr, resolve_result
+from .optimizer import DjangoOptimizerStore
+from .utils import resolvers
 
 if TYPE_CHECKING:
     from .types import StrawberryDjangoType
+
+__all__ = [
+    "StrawberryDjangoField",
+    "field",
+]
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
 
 
 class StrawberryDjangoField(_StrawberryDjangoField):
+    """A strawberry field for django attributes.
+
+    Do not instantiate this directly. Instead, use `@field` decorator.
+    """
+
     store: DjangoOptimizerStore
 
     def __init__(self, *args, **kwargs):
@@ -72,12 +84,6 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         origin = self.origin_django_type or self.origin._django_type  # type:ignore
         return origin.model
-
-    @cached_property
-    def model_pk(self):
-        pk = self.model._meta.pk
-        assert pk
-        return pk
 
     @classmethod
     def from_django_type(
@@ -220,24 +226,22 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 else:
                     raise KeyError
             except KeyError:
-                result = resolve_getattr(source, self.django_name or self.python_name)
+                result = resolvers.resolve_getattr(source, self.django_name or self.python_name)
 
         if self.is_list:
-            qs_resolver = lambda qs: self.get_list(info, qs, **kwargs)
+            qs_resolver = lambda qs: self.get_queryset_as_list(qs, info, **kwargs)
         else:
-            qs_resolver = lambda qs: self.get_one(info, qs, **kwargs)
+            qs_resolver = lambda qs: self.get_queryset_one(qs, info, **kwargs)
 
-        return resolve_result(result, info, resolve_callable_func=qs_resolver)
+        return resolvers.resolve_result(result, info, qs_resolver=qs_resolver)
 
-    @qs_resolver(get_list=True)
-    def get_list(self, info: Info, qs: QuerySet[Any], **kwargs) -> QuerySet[Any]:
-        # The qs_resolver will ensure this returns a list
-        return self.get_queryset(qs, info, **kwargs)
+    @resolvers.sync_resolver
+    def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
+        return list(self.get_queryset(qs, info, **kwargs))
 
-    @qs_resolver(get_one=True)
-    def get_one(self, info: Info, qs: QuerySet[Any], **kwargs) -> QuerySet[Any]:
-        # The qs_resolver will ensure this returns a single result
-        return self.get_queryset(qs, info, **kwargs)
+    @resolvers.sync_resolver
+    def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> _M:
+        return self.get_queryset(qs, info, **kwargs).one()
 
 
 @overload
@@ -325,6 +329,21 @@ def field(
     # any behavior at the moment.
     init=None,
 ) -> Any:
+    """Annotate a method or property as a Django GraphQL field.
+
+    Examples:
+        It can be used both as decorator and as a normal function:
+
+        >>> @gql.type
+        ...
+        >>> class X:
+        ...     field_abc: str = gql.django.field(description="ABC")
+        ...     @gql.django.field(description="ABC")
+        ...
+        ...     def field_with_resolver(self) -> str:
+        ...         return "abc"
+
+    """
     f = StrawberryDjangoField(
         python_name=None,
         django_name=field_name,

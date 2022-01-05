@@ -1,8 +1,10 @@
 import dataclasses
+import functools
 from typing import Callable, Generic, Optional, Sequence, Type, TypeVar, Union
 
 from django.db.models.base import Model
 import strawberry
+from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
@@ -10,22 +12,28 @@ from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.unset import _Unset
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
-from strawberry_django.fields.types import auto
 from strawberry_django.filters import StrawberryDjangoFieldFilters
 from strawberry_django.ordering import StrawberryDjangoFieldOrdering
 from strawberry_django.pagination import StrawberryDjangoPagination
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations
 
-from strawberry_django_plus.resolvers import (
-    callable_resolver,
+from strawberry_django_plus.utils.resolvers import (
     resolve_model_id,
     resolve_model_node,
     resolve_model_nodes,
+    resolve_model_nodes_resolver,
 )
 
 from .fields import StrawberryDjangoField, field
 from .relay import Node, connection, node
+
+__all = [
+    "StrawberryDjangoType",
+    "type",
+    "interface",
+    "input",
+]
 
 _T = TypeVar("_T")
 _O = TypeVar("_O", bound=type)
@@ -110,17 +118,18 @@ def _process_type(
     # Default querying methods for relay
     if issubclass(cls, Node):
         if not _has_own_node_resolver(cls, "resolve_node"):
-            cls.resolve_node = classmethod(resolve_model_node)  # type:ignore
+            cls.resolve_node = functools.partial(resolve_model_node, cls)
 
         if not _has_own_node_resolver(cls, "resolve_nodes"):
-            cls.resolve_nodes = classmethod(resolve_model_nodes)  # type:ignore
+            cls.resolve_nodes = functools.partial(resolve_model_nodes, cls)
 
         if not _has_own_node_resolver(cls, "resolve_id"):
-            cls.resolve_id = classmethod(resolve_model_id)  # type:ignore
+            cls.resolve_id = functools.partial(resolve_model_id, cls)  # type:ignore
 
-        if not _has_own_node_resolver(cls, "get_connection_resolver"):
-            cls.get_connection_resolver = callable_resolver(  # type:ignore
-                Node.get_connection_resolver
+        if not _has_own_node_resolver(cls, "resolve_nodes_resolver"):
+            cls.resolve_nodes_resolver = functools.partial(  # type:ignore
+                resolve_model_nodes_resolver,
+                cls,
             )
 
     new_cls = strawberry.type(cls, **kwargs)
@@ -134,6 +143,8 @@ def _process_type(
 
 @dataclasses.dataclass
 class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
+    """Strawberry django type metadata."""
+
     origin: _O
     model: Type[_M]
     is_input: bool
@@ -161,6 +172,18 @@ def type(  # noqa:A001
     pagination: Optional[StrawberryDjangoPagination] = UNSET,
     order: Optional[StrawberryDjangoFieldOrdering] = UNSET,
 ) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL type.
+
+    Examples:
+        It can be used like this:
+
+        >>> @gql.django.type(SomeModel)
+        ... class X:
+        ...     some_field: gql.auto
+        ...     otherfield: str = gql.django.field()
+
+    """
+
     def wrapper(cls):
         return _process_type(
             cls,
@@ -190,6 +213,18 @@ def interface(
     description: str = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL interface.
+
+    Examples:
+        It can be used like this:
+
+        >>> @gql.django.interface(SomeModel)
+        ... class X:
+        ...     some_field: gql.auto
+        ...     otherfield: str = gql.django.field()
+
+    """
+
     def wrapper(cls):
         return _process_type(
             cls,
@@ -215,6 +250,18 @@ def input(  # noqa:A001
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     partial: bool = False,
 ) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL interface.
+
+    Examples:
+        It can be used like this:
+
+        >>> @gql.django.input(SomeModel)
+        ... class X:
+        ...     some_field: gql.auto
+        ...     otherfield: str = gql.django.field()
+
+    """
+
     def wrapper(cls):
         return _process_type(
             cls,

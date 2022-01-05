@@ -17,6 +17,11 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from .optimizer import DjangoOptimizerStore, TypeOrSequence
 
+__all__ = [
+    "ModelProperty",
+    "model_cached_property",
+]
+
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 _R = TypeVar("_R")
@@ -139,6 +144,41 @@ def model_cached_property(
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[Union[str, Prefetch]]"] = None,
 ):
+    """Property with gql optimization hinting.
+
+    Decorate a method, just like you would do with a `@property`, and when
+    accessing it through a graphql resolver, if `DjangoOptimizerExtension`
+    is enabled, it will automatically optimize the hintings on this field.
+
+    Args:
+        only:
+            Optional sequence of values to optimize using `QuerySet.only`
+        selected:
+            Optional sequence of values to optimize using `QuerySet.select_related`
+        prefetch_related:
+            Optional sequence of values to optimize using `QuerySet.prefetch_related`
+
+    Returns:
+        The decorated method.
+
+    Examples:
+        In a model, define it like this to have the hintings defined in
+        `col_b_formatted` automatically optimized.
+
+        >>> class SomeModel(models.Model):
+        ...     col_a = models.CharField()
+        ...     col_b = models.CharField()
+        ...
+        ...     @model_cached_property(only=["col_b"])
+        ...     def col_b_formatted(self):
+        ...         return f"Formatted: {self.col_b}"
+        ...
+        >>> @gql.django.type(SomeModel)
+        ... class SomeModelType
+        ...     col_a: gql.auto
+        ...     col_b_formatted: gql.auto
+
+    """
     return model_property(
         func,
         cached=True,

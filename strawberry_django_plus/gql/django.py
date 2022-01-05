@@ -7,20 +7,19 @@ from strawberry_django import (
     OneToManyInput,
     OneToOneInput,
     auth,
-    auto,
     filter,
     filters,
-    is_auto,
     mutation,
     mutations,
     ordering,
     types,
 )
 
-from strawberry_django_plus import fields, resolvers
+from strawberry_django_plus import fields
 from strawberry_django_plus.descriptors import model_cached_property, model_property
 from strawberry_django_plus.fields import field
 from strawberry_django_plus.types import input, interface, type
+from strawberry_django_plus.utils import resolvers
 
 __all__ = [
     # strawberry_django
@@ -29,8 +28,6 @@ __all__ = [
     "filter",
     "ordering",
     "types",
-    "auto",
-    "is_auto",
     "DjangoFileType",
     "DjangoImageType",
     "DjangoModelType",
@@ -39,7 +36,6 @@ __all__ = [
     "ManyToOneInput",
     "ManyToManyInput",
     "mutations",
-    "type",
     "mutation",
     # strawberry_django_plus
     "fields",
