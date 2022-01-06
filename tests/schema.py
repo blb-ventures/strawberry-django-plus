@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from strawberry_django_plus import gql
 from strawberry_django_plus.gql import relay
@@ -45,8 +45,8 @@ class Query:
     milestone_conn: relay.Connection[MilestoneType] = relay.connection()
     project_conn: relay.Connection[ProjectType] = relay.connection()
 
-    @relay.connection(node_type=ProjectType)
-    def project_conn_with_resolver(self, name: str):
+    @relay.connection
+    def project_conn_with_resolver(self, name: str) -> Iterable[Project]:
         return Project.objects.filter(name__contains=name)
 
 

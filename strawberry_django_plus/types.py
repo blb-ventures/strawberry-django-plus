@@ -1,5 +1,5 @@
 import dataclasses
-import functools
+import types
 from typing import Callable, Generic, Optional, Sequence, Type, TypeVar, Union
 
 from django.db.models.base import Model
@@ -19,10 +19,10 @@ from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations
 
 from strawberry_django_plus.utils.resolvers import (
+    resolve_connection,
     resolve_model_id,
     resolve_model_node,
     resolve_model_nodes,
-    resolve_model_nodes_resolver,
 )
 
 from .fields import StrawberryDjangoField, field
@@ -118,27 +118,24 @@ def _process_type(
     # Default querying methods for relay
     if issubclass(cls, Node):
         if not _has_own_node_resolver(cls, "resolve_node"):
-            cls.resolve_node = functools.partial(resolve_model_node, cls)
+            cls.resolve_node = types.MethodType(resolve_model_node, cls)
 
         if not _has_own_node_resolver(cls, "resolve_nodes"):
-            cls.resolve_nodes = functools.partial(resolve_model_nodes, cls)
+            cls.resolve_nodes = types.MethodType(resolve_model_nodes, cls)
 
         if not _has_own_node_resolver(cls, "resolve_id"):
-            cls.resolve_id = functools.partial(resolve_model_id, cls)  # type:ignore
+            cls.resolve_id = types.MethodType(resolve_model_id, cls)
 
-        if not _has_own_node_resolver(cls, "resolve_nodes_resolver"):
-            cls.resolve_nodes_resolver = functools.partial(  # type:ignore
-                resolve_model_nodes_resolver,
-                cls,
-            )
+        if not _has_own_node_resolver(cls, "resolve_connection_resolver"):
+            cls.resolve_connection = types.MethodType(resolve_connection, cls)
 
-    new_cls = strawberry.type(cls, **kwargs)
+    strawberry.type(cls, **kwargs)
 
     # restore original annotations for further use
     cls.__annotations__ = original_annotations
     cls._django_type = django_type  # type:ignore
 
-    return new_cls
+    return cls
 
 
 @dataclasses.dataclass

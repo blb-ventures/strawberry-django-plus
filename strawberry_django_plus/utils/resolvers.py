@@ -21,7 +21,7 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.utils import is_async
 from typing_extensions import ParamSpec
 
-from strawberry_django_plus.relay import GlobalID, Node
+from strawberry_django_plus.relay import Connection, GlobalID, Node
 
 from .aio import is_awaitable, resolve, resolve_async
 
@@ -94,7 +94,6 @@ def sync_resolver(f=None, *, thread_sensitive=True):
 
 
 resolve_getattr = sync_resolver(lambda obj, key, *args: getattr(obj, key, *args))
-resolve_getattr_as_attr = sync_resolver(lambda obj, key, *args: str(getattr(obj, key, *args)))
 
 
 @overload
@@ -158,6 +157,7 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:
 
 
 resolve_qs_get_list = functools.partial(resolve_qs, resolver=list)
+resolve_qs_get_first = functools.partial(resolve_qs, resolver=lambda qs: qs.first())
 resolve_qs_get_one = functools.partial(resolve_qs, resolver=lambda qs: qs.get())
 
 
@@ -204,14 +204,18 @@ def resolve_model_nodes(
     return resolve_result(qs, info)
 
 
-def resolve_model_nodes_resolver(
+def resolve_connection(
     source: Type[Node[_M]],
     info: Info,
-    resolver: Callable[[QuerySet[_M], Optional[int]], _T],
     *,
     nodes: Optional[AwaitableOrValue[QuerySet[_M]]] = None,
-) -> AwaitableOrValue[_T]:
-    """Resolve model nodes resolver, ensuring those are prefetched in a sync context."""
+    total_count: Optional[int] = None,
+    before: Optional[str] = None,
+    after: Optional[str] = None,
+    first: Optional[int] = None,
+    last: Optional[int] = None,
+) -> AwaitableOrValue[Connection[_M]]:
+    """Resolve a model connection, ensuring those are prefetched in a sync context."""
     if nodes is None:
         django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
         nodes = django_type.model.objects.all()
@@ -224,7 +228,17 @@ def resolve_model_nodes_resolver(
         # If optimizer extension is enabled, optimize this queryset
         nodes = resolve(nodes, lambda _qs: optimize(qs=_qs, info=info, config=config))
 
-    return resolve(nodes, lambda _qs: resolver(_qs, None), info=info)
+    return resolve(
+        nodes,
+        lambda _qs: Connection.from_nodes(
+            _qs,
+            total_count=total_count,
+            before=before,
+            after=after,
+            first=first,
+            last=last,
+        ),
+    )
 
 
 def resolve_model_node(
@@ -239,7 +253,7 @@ def resolve_model_node(
     django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
     qs = django_type.model.objects.filter(pk=node_id)
 
-    return resolve_result(qs, info, qs_resolver=resolve_qs_get_one)
+    return resolve_result(qs, info, qs_resolver=resolve_qs_get_first)
 
 
 def resolve_model_id(
@@ -253,4 +267,4 @@ def resolve_model_id(
         # Prefer to retrieve this from the cache
         return str(root.__dict__[attr])
     except KeyError:
-        return resolve_getattr_as_attr(root, attr)
+        return resolve_getattr(root, attr)

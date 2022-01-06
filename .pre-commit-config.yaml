@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.4.0
+    rev: v4.1.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -10,7 +10,7 @@ repos:
         args: ["--maxkb=1024"]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.21.0
+    rev: v2.31.0
     hooks:
       - id: pyupgrade
         args: ["--py38-plus"]
@@ -34,7 +34,7 @@ repos:
         args: ["--config", "pyproject.toml"]
 
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 4.0.1
+    rev: 3.9.2
     hooks:
       - id: flake8
         args: ["--config=.flake8"]

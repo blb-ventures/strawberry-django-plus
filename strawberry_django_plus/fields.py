@@ -335,7 +335,6 @@ def field(
         It can be used both as decorator and as a normal function:
 
         >>> @gql.type
-        ...
         >>> class X:
         ...     field_abc: str = gql.django.field(description="ABC")
         ...     @gql.django.field(description="ABC")

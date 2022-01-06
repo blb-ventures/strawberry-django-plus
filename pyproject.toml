@@ -49,6 +49,8 @@ isort = "^5.9.2"
 pytest = "^6.2.3"
 pytest-cov = "^3.0.0"
 pytest-django = "^4.2.0"
+django-extensions = "^3.1.5"
+ipython = "^7.31.0"
 
 [tool.black]
 line-length = 100
