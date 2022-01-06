@@ -1,7 +1,5 @@
 # This should go to its own module or be contributed back to strawberry
 
-from __future__ import annotations
-
 import abc
 import base64
 import dataclasses
@@ -14,12 +12,15 @@ from typing import (
     Generator,
     Generic,
     Iterable,
+    List,
     Literal,
     Optional,
     Sequence,
     Sized,
+    Tuple,
     Type,
     TypeVar,
+    Union,
     cast,
     get_args,
     get_origin,
@@ -66,12 +67,12 @@ __all__ = [
 _T = TypeVar("_T")
 _R = TypeVar("_R")
 _connection_typename = "arrayconnection"
-_node_types_map: dict[type, Any] = cast(Dict, WeakKeyDictionary())
+_node_types_map: Dict[type, Any] = cast(Dict, WeakKeyDictionary())
 
 NodeType = TypeVar("NodeType")
 
 
-def from_base64(value: str) -> tuple[str, str]:
+def from_base64(value: str) -> Tuple[str, str]:
     """Parse the base64 encoded relay value.
 
     Args:
@@ -97,7 +98,7 @@ def from_base64(value: str) -> tuple[str, str]:
     return res[0], res[1]
 
 
-def to_base64(type_: str | type | TypeDefinition, node_id: Any) -> str:
+def to_base64(type_: Union[str, type, TypeDefinition], node_id: Any) -> str:
     """Encode the type name and node id to a base64 string.
 
     Args:
@@ -153,7 +154,7 @@ class GlobalID:
 
     """
 
-    _nodes_cache: ClassVar[dict[tuple[int, str], type[Node[Any]]]] = {}
+    _nodes_cache: ClassVar[Dict[Tuple[int, str], Type["Node[Any]"]]] = {}
 
     type_name: str
     node_id: str
@@ -172,7 +173,7 @@ class GlobalID:
         return to_base64(self.type_name, self.node_id)
 
     @classmethod
-    def from_id(cls, value: str | strawberry.ID):
+    def from_id(cls, value: Union[str, strawberry.ID]):
         """Create a new GlobalID from parsing the given value.
 
         Args:
@@ -194,7 +195,7 @@ class GlobalID:
 
         return cls(type_name=type_name, node_id=node_id)
 
-    def resolve_type(self, info: Info) -> type[Node[Any]]:
+    def resolve_type(self, info: Info) -> Type["Node[Any]"]:
         """Resolve the internal type name to its type itself.
 
         Args:
@@ -224,7 +225,7 @@ class GlobalID:
         ...
 
     @overload
-    def resolve_node(self, info: Info, ensure_type=None) -> AwaitableOrValue[Node[Any]]:
+    def resolve_node(self, info: Info, ensure_type=None) -> AwaitableOrValue["Node[Any]"]:
         ...
 
     def resolve_node(self, info, ensure_type=None):
@@ -294,7 +295,7 @@ class Node(abc.ABC, Generic[NodeType]):
 
     @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
-    def id(cls, info: Info, root: Node[NodeType]) -> GlobalID:  # noqa:A003
+    def id(cls, info: Info, root: "Node[NodeType]") -> GlobalID:  # noqa:A003
         node_id = cls.resolve_id(info, root)
         type_name = info.path.typename
         assert type_name
@@ -351,7 +352,7 @@ class Node(abc.ABC, Generic[NodeType]):
         return super().__init_subclass__()
 
     @classmethod
-    def resolve_types(cls, node_type: _T) -> Generator[type[Node[_T]], None, None]:
+    def resolve_types(cls, node_type: _T) -> Generator[Type["Node[_T]"], None, None]:
         """Resolve possible types for the node type.
 
         Mostly a utility for places where the NodeType itself is not the same as
@@ -367,13 +368,13 @@ class Node(abc.ABC, Generic[NodeType]):
         """
         for origin, type_ in _node_types_map.items():
             if type_ is node_type:
-                yield origin
+                yield cast(Type["Node[_T]"], origin)
 
     @classmethod
     def resolve_id(
         cls,
         info: Info,
-        root: Node[NodeType],
+        root: "Node[NodeType]",
     ) -> AwaitableOrValue[str]:
         """Resolve the node id.
 
@@ -396,13 +397,13 @@ class Node(abc.ABC, Generic[NodeType]):
         cls,
         info: Info,
         *,
-        nodes: AwaitableOrValue[Iterable[NodeType]] | None = None,
-        total_count: int | None = None,
-        before: str | None = None,
-        after: str | None = None,
-        first: int | None = None,
-        last: int | None = None,
-    ) -> AwaitableOrValue[Connection[NodeType]]:
+        nodes: Optional[AwaitableOrValue[Iterable[NodeType]]] = None,
+        total_count: Optional[int] = None,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+    ) -> AwaitableOrValue["Connection[NodeType]"]:
         """Resolve a connection for this node.
 
         By default this will call `cls.resolve_nodes` if None were provided,
@@ -485,7 +486,7 @@ class Node(abc.ABC, Generic[NodeType]):
         cls,
         info: Info,
         *,
-        node_ids: Iterable[str] | None = None,
+        node_ids: Optional[Iterable[str]] = None,
     ) -> AwaitableOrValue[Iterable[NodeType]]:
         """Resolve a list of nodes.
 
@@ -528,10 +529,10 @@ class PageInfo:
     has_previous_page: bool = strawberry.field(
         description="When paginating backwards, are there more items?",
     )
-    start_cursor: str | None = strawberry.field(
+    start_cursor: Optional[str] = strawberry.field(
         description="When paginating backwards, the cursor to continue.",
     )
-    end_cursor: str | None = strawberry.field(
+    end_cursor: Optional[str] = strawberry.field(
         description="When paginating forwards, the cursor to continue.",
     )
 
@@ -573,7 +574,7 @@ class Connection(Generic[NodeType]):
     page_info: PageInfo = strawberry.field(
         description="Pagination data for this connection",
     )
-    edges: list[Edge[NodeType]] = strawberry.field(
+    edges: List[Edge[NodeType]] = strawberry.field(
         description="Contains the nodes in this connection",
     )
     total_count: int = strawberry.field(
@@ -585,11 +586,11 @@ class Connection(Generic[NodeType]):
         cls,
         nodes: Iterable[Any],
         *,
-        total_count: int | None = None,
-        before: str | None = None,
-        after: str | None = None,
-        first: int | None = None,
-        last: int | None = None,
+        total_count: Optional[int] = None,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
     ):
         """Resolve a connection from the list of nodes.
 
@@ -675,7 +676,7 @@ class Connection(Generic[NodeType]):
 class RelayField(StrawberryField):
     """Base relay field, containing utilities for both Node and Connection fields."""
 
-    default_args: dict[str, StrawberryArgument]
+    default_args: Dict[str, StrawberryArgument]
 
     def __init__(self, *args, **kwargs):
         base_resolver = kwargs.pop("base_resolver", None)
@@ -718,7 +719,7 @@ class RelayField(StrawberryField):
         return super().__call__(resolver)
 
     @property
-    def arguments(self) -> list[StrawberryArgument]:
+    def arguments(self) -> List[StrawberryArgument]:
         args = {
             **self.default_args,
             **{
@@ -734,7 +735,7 @@ class NodeField(RelayField):
     Do not instantiate this directly. Instead, use `@relay.node`
     """
 
-    default_args: dict[str, StrawberryArgument] = {
+    default_args: Dict[str, StrawberryArgument] = {
         "id": StrawberryArgument(
             python_name="id",
             graphql_name=None,
@@ -747,8 +748,8 @@ class NodeField(RelayField):
         self,
         source: Any,
         info: Info,
-        args: list[Any],
-        kwargs: dict[str, Any],
+        args: List[Any],
+        kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
         if self.base_resolver:
             resolver_args = {arg.python_name for arg in self.base_resolver.arguments}  # type:ignore
@@ -767,7 +768,7 @@ class ConnectionField(RelayField):
     Do not instantiate this directly. Instead, use `@relay.connection`
     """
 
-    default_args: dict[str, StrawberryArgument] = {
+    default_args: Dict[str, StrawberryArgument] = {
         "before": StrawberryArgument(
             python_name="before",
             graphql_name=None,
@@ -802,8 +803,8 @@ class ConnectionField(RelayField):
         self,
         source: Any,
         info: Info,
-        args: list[Any],
-        kwargs: dict[str, Any],
+        args: List[Any],
+        kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
         type_def = info.return_type._type_definition  # type:ignore
         assert isinstance(type_def, TypeDefinition)
@@ -829,15 +830,15 @@ class ConnectionField(RelayField):
 def node(
     *,
     resolver: Callable[[], _T],
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
+    description: Optional[str] = None,
     init: Literal[False] = False,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> _T:
     ...
 
@@ -845,31 +846,31 @@ def node(
 @overload
 def node(
     *,
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
+    description: Optional[str] = None,
     init: Literal[True] = True,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Any:
     ...
 
 
 @overload
 def node(
-    resolver: StrawberryResolver | Callable | staticmethod | classmethod,
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
     *,
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> ConnectionField:
     ...
 
@@ -877,14 +878,14 @@ def node(
 def node(
     resolver=None,
     *,
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -932,15 +933,15 @@ def node(
 def connection(
     *,
     resolver: Callable[[], _T],
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
+    description: Optional[str] = None,
     init: Literal[False] = False,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> _T:
     ...
 
@@ -948,31 +949,31 @@ def connection(
 @overload
 def connection(
     *,
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
+    description: Optional[str] = None,
     init: Literal[True] = True,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Any:
     ...
 
 
 @overload
 def connection(
-    resolver: StrawberryResolver | Callable | staticmethod | classmethod,
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
     *,
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> ConnectionField:
     ...
 
@@ -980,14 +981,14 @@ def connection(
 def connection(
     resolver=None,
     *,
-    name: str | None = None,
+    name: Optional[str] = None,
     is_subscription: bool = False,
-    description: str | None = None,
-    permission_classes: list[type[BasePermission]] | None = None,
-    deprecation_reason: str | None = None,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Callable | object = UNSET,
-    directives: Sequence[StrawberrySchemaDirective] | None = (),
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
