@@ -42,11 +42,10 @@ from strawberry_django.fields.types import (
 from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
-from strawberry_django_plus.utils.typing import TypeOrSequence
-
 from .descriptors import ModelProperty
 from .optimizer import DjangoOptimizerStore
 from .utils import resolvers
+from .utils.typing import TypeOrSequence
 
 if TYPE_CHECKING:
     from .types import StrawberryDjangoType
@@ -226,20 +225,22 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 else:
                     raise KeyError
             except KeyError:
-                result = resolvers.resolve_getattr(source, self.django_name or self.python_name)
+                result = resolvers.getattr_async_unsafe(
+                    source, self.django_name or self.python_name
+                )
 
         if self.is_list:
             qs_resolver = lambda qs: self.get_queryset_as_list(qs, info, **kwargs)
         else:
             qs_resolver = lambda qs: self.get_queryset_one(qs, info, **kwargs)
 
-        return resolvers.resolve_result(result, info, qs_resolver=qs_resolver)
+        return resolvers.resolve_result(result, info=info, qs_resolver=qs_resolver)
 
-    @resolvers.sync_resolver
+    @resolvers.async_unsafe
     def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
         return list(self.get_queryset(qs, info, **kwargs))
 
-    @resolvers.sync_resolver
+    @resolvers.async_unsafe
     def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> _M:
         return self.get_queryset(qs, info, **kwargs).one()
 

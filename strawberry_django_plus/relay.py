@@ -252,7 +252,7 @@ class GlobalID:
 
         """
         n_type = self.resolve_type(info)
-        node = n_type.resolve_node(info, self.node_id)
+        node = n_type.resolve_node(self.node_id, info=info)
 
         if ensure_type is not None:
             return aio.resolve(node, lambda n: n, info=info, ensure_type=ensure_type)
@@ -295,8 +295,8 @@ class Node(abc.ABC, Generic[NodeType]):
 
     @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
-    def id(cls, info: Info, root: "Node[NodeType]") -> GlobalID:  # noqa:A003
-        node_id = cls.resolve_id(info, root)
+    def id(cls, root: "Node[NodeType]", info: Info) -> GlobalID:  # noqa:A003
+        node_id = cls.resolve_id(root, info=info)
         type_name = info.path.typename
         assert type_name
 
@@ -373,8 +373,9 @@ class Node(abc.ABC, Generic[NodeType]):
     @classmethod
     def resolve_id(
         cls,
-        info: Info,
         root: "Node[NodeType]",
+        *,
+        info: Optional[Info] = None,
     ) -> AwaitableOrValue[str]:
         """Resolve the node id.
 
@@ -395,8 +396,8 @@ class Node(abc.ABC, Generic[NodeType]):
     @classmethod
     def resolve_connection(
         cls,
-        info: Info,
         *,
+        info: Optional[Info] = None,
         nodes: Optional[AwaitableOrValue[Iterable[NodeType]]] = None,
         total_count: Optional[int] = None,
         before: Optional[str] = None,
@@ -432,13 +433,13 @@ class Node(abc.ABC, Generic[NodeType]):
 
         """
         if nodes is None:
-            nodes = cls.resolve_nodes(info)
+            nodes = cls.resolve_nodes(info=info)
 
         if aio.is_awaitable(nodes, info=info):
             return aio.resolve_async(  # type:ignore
                 nodes,
                 lambda resolved: cls.resolve_connection(
-                    info,
+                    info=info,
                     nodes=resolved,
                     total_count=total_count,
                     before=before,
@@ -459,33 +460,10 @@ class Node(abc.ABC, Generic[NodeType]):
 
     @classmethod
     @abc.abstractmethod
-    def resolve_node(
-        cls,
-        info: Info,
-        node_id: str,
-    ) -> AwaitableOrValue[NodeType]:
-        """Resolve a node given its id.
-
-        This method *should* be defined by anyone implementing the `Node` interface.
-
-        Args:
-            info:
-                The strawberry execution info resolve the type name from
-            node_id:
-                The id of the node to be retrieved
-
-        Returns:
-            The resolved node or None if it was not found
-
-        """
-        raise NotImplementedError
-
-    @classmethod
-    @abc.abstractmethod
     def resolve_nodes(
         cls,
-        info: Info,
         *,
+        info: Optional[Info] = None,
         node_ids: Optional[Iterable[str]] = None,
     ) -> AwaitableOrValue[Iterable[NodeType]]:
         """Resolve a list of nodes.
@@ -502,6 +480,58 @@ class Node(abc.ABC, Generic[NodeType]):
 
         Returns:
             An iterable of resolved nodes.
+
+        """
+        raise NotImplementedError
+
+    @overload
+    @classmethod
+    @abc.abstractmethod
+    def resolve_node(
+        cls,
+        node_id: str,
+        *,
+        info: Optional[Info] = None,
+        required: Literal[False] = ...,
+    ) -> AwaitableOrValue[Optional[NodeType]]:
+        ...
+
+    @overload
+    @classmethod
+    @abc.abstractmethod
+    def resolve_node(
+        cls,
+        node_id: str,
+        *,
+        info: Optional[Info] = None,
+        required: Literal[True] = ...,
+    ) -> AwaitableOrValue[NodeType]:
+        ...
+
+    @classmethod
+    @abc.abstractmethod
+    def resolve_node(
+        cls,
+        node_id: str,
+        *,
+        info: Optional[Info] = None,
+        required: bool = False,
+    ):
+        """Resolve a node given its id.
+
+        This method *should* be defined by anyone implementing the `Node` interface.
+
+        Args:
+            info:
+                The strawberry execution info resolve the type name from
+            node_id:
+                The id of the node to be retrieved
+            required:
+                if the node is required or not to exist. If not, then None should
+                be returned if it doesn't exist. Otherwise an exception should be raised.
+
+        Returns:
+            The resolved node or None if it was not found
 
         """
         raise NotImplementedError
@@ -823,7 +853,7 @@ class ConnectionField(RelayField):
         else:
             nodes = None
 
-        return field_type.resolve_connection(info, nodes=nodes, **kwargs)
+        return field_type.resolve_connection(info=info, nodes=nodes, **kwargs)
 
 
 @overload

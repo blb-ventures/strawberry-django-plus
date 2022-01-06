@@ -1,10 +1,10 @@
 import functools
 import inspect
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Iterable,
+    Literal,
     Optional,
     Type,
     TypeVar,
@@ -24,9 +24,7 @@ from typing_extensions import ParamSpec
 from strawberry_django_plus.relay import Connection, GlobalID, Node
 
 from .aio import is_awaitable, resolve, resolve_async
-
-if TYPE_CHECKING:
-    from strawberry_django_plus.types import StrawberryDjangoType
+from .inspect import get_django_type, get_optimizer_config
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -35,7 +33,7 @@ _P = ParamSpec("_P")
 
 
 @overload
-def sync_resolver(
+def async_unsafe(
     f: Callable[_P, _R],
     *,
     thread_sensitive: bool = True,
@@ -44,7 +42,7 @@ def sync_resolver(
 
 
 @overload
-def sync_resolver(
+def async_unsafe(
     f=None,
     *,
     thread_sensitive: bool = True,
@@ -52,8 +50,8 @@ def sync_resolver(
     ...
 
 
-def sync_resolver(f=None, *, thread_sensitive=True):
-    """Ensure function is called in a sync context.
+def async_unsafe(f=None, *, thread_sensitive=True):
+    """Decorates a function as async unsafe, ensuring it is called in a sync context always.
 
     - If `f` is a coroutine function, this is a noop.
     - When running, if an asyncio loop is running, the function will
@@ -93,7 +91,7 @@ def sync_resolver(f=None, *, thread_sensitive=True):
     return make_resolver
 
 
-resolve_getattr = sync_resolver(lambda obj, key, *args: getattr(obj, key, *args))
+getattr_async_unsafe = async_unsafe(lambda obj, key, *args: getattr(obj, key, *args))
 
 
 @overload
@@ -161,53 +159,197 @@ resolve_qs_get_first = functools.partial(resolve_qs, resolver=lambda qs: qs.firs
 resolve_qs_get_one = functools.partial(resolve_qs, resolver=lambda qs: qs.get())
 
 
+@overload
 def resolve_result(
-    res: Any,
-    info: Info,
+    res: AwaitableOrValue[Union[BaseManager[_M], QuerySet[_M]]],
     *,
-    qs_resolver: Optional[
-        Callable[[Union[BaseManager[_M], QuerySet[_M]]], AwaitableOrValue[Any]]
-    ] = None,
-) -> AwaitableOrValue[Any]:
-    """Resolve the result, ensuring any qs and callable are resolved in sync context."""
-    if isinstance(res, (BaseManager, QuerySet)):
-        config = getattr(info.context, "_django_optimizer_config", None)
-        if config is not None:
-            from strawberry_django_plus.optimizer import optimize
+    info: Optional[Info] = None,
+) -> AwaitableOrValue[QuerySet[_M]]:
+    ...
 
-            # If optimizer extension is enabled, optimize this queryset
-            res = optimize(qs=res, info=info, config=config)
+
+@overload
+def resolve_result(
+    res: AwaitableOrValue[Union[BaseManager[_M], QuerySet[_M]]],
+    *,
+    info: Optional[Info] = None,
+    qs_resolver: Callable[[Union[BaseManager[_M], QuerySet[_M]]], AwaitableOrValue[_T]] = ...,
+) -> AwaitableOrValue[_T]:
+    ...
+
+
+@overload
+def resolve_result(
+    res: AwaitableOrValue[Callable[[], _T]],
+    *,
+    info: Optional[Info] = None,
+) -> AwaitableOrValue[_T]:
+    ...
+
+
+@overload
+def resolve_result(
+    res: AwaitableOrValue[_T],
+    *,
+    info: Optional[Info] = None,
+    qs_resolver: Optional[
+        Callable[[Union[BaseManager[Any], QuerySet[Any]]], AwaitableOrValue[Any]]
+    ] = None,
+) -> AwaitableOrValue[_T]:
+    ...
+
+
+def resolve_result(res, *, info=None, qs_resolver=None):
+    """Resolve the result, ensuring any qs and callables are resolved in a sync context.
+
+    Args:
+        res:
+            The result to resolve
+        info:
+            Optional gql execution info. Make sure to always provide this or
+            otherwise, the queryset cannot be optimized in case DjangoOptimizerExtension
+            is enabled. This will also be used for `is_awaitable` check.
+        qs_resolver:
+            Optional qs_resolver to use to resolve any queryset. If not provided,
+            `resolve_qs` will be used, which by default returns the queryset
+            already prefetched from the database.
+
+    Returns:
+        The resolved result.
+
+    """
+    from strawberry_django_plus import optimizer  # avoid circular import
+
+    if isinstance(res, (BaseManager, QuerySet)):
+        if info is not None:
+            config = get_optimizer_config(info)
+            if config is not None:
+                # If optimizer extension is enabled, optimize this queryset
+                res = optimizer.optimize(qs=res, info=info, config=config)
 
         qs_resolver = qs_resolver or resolve_qs
-
         return qs_resolver(res)
     elif callable(res):
-        return resolve_result(sync_resolver(res)(), info, qs_resolver=qs_resolver)
+        return resolve_result(async_unsafe(res)(), info=info, qs_resolver=qs_resolver)
     elif is_awaitable(res, info=info):
-        return resolve_async(res, lambda r: resolve_result(r, info, qs_resolver=qs_resolver))
+        return resolve_async(res, lambda r: resolve_result(r, info=info, qs_resolver=qs_resolver))
 
     return res
 
 
 def resolve_model_nodes(
-    source: Type[Node[_M]],
-    info: Info,
+    source: Union[Type[Node[_M]], Type[_M]],
+    *,
+    info: Optional[Info] = None,
     node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
 ) -> AwaitableOrValue[QuerySet[_M]]:
-    """Resolve model nodes, ensuring those are prefetched in a sync context."""
-    django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
+    """Resolve model nodes, ensuring those are prefetched in a sync context.
 
-    qs = django_type.model.objects.all()
+    Args:
+        source:
+            The source model or the model type that implements the `Node` interface
+        info:
+            Optional gql execution info. Make sure to always provide this or
+            otherwise, the queryset cannot be optimized in case DjangoOptimizerExtension
+            is enabled. This will also be used for `is_awaitable` check.
+        node_ids:
+            Optional filter by those node_ids instead of retrieving everything
+
+    Returns:
+        The resolved queryset, already prefetched from the database
+
+    """
+    if not issubclass(source, Model):
+        django_type = get_django_type(source, ensure_type=True)
+        source = cast(Type[_M], django_type.model)
+
+    qs = source.objects.all()
     if node_ids is not None:
         qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
 
-    return resolve_result(qs, info)
+    return resolve_result(qs, info=info)
+
+
+@overload
+def resolve_model_node(
+    source: Union[Type[Node[_M]], Type[_M]],
+    node_id: Union[str, GlobalID],
+    *,
+    info: Optional[Info] = None,
+    required: Literal[False] = ...,
+) -> Optional[AwaitableOrValue[_M]]:
+    ...
+
+
+@overload
+def resolve_model_node(
+    source: Union[Type[Node[_M]], Type[_M]],
+    node_id: Union[str, GlobalID],
+    *,
+    info: Optional[Info] = None,
+    required: Literal[True],
+) -> AwaitableOrValue[_M]:
+    ...
+
+
+def resolve_model_node(source, node_id, *, info=None, required=False):
+    """Resolve model nodes, ensuring it is retrieved in a sync context.
+
+    Args:
+        source:
+            The source model or the model type that implements the `Node` interface
+        node_id:
+            The node it to retrieve the model from
+        info:
+            Optional gql execution info. Make sure to always provide this or
+            otherwise, the queryset cannot be optimized in case DjangoOptimizerExtension
+            is enabled. This will also be used for `is_awaitable` check.
+        required:
+            If the return value is required to exist. If true, `qs.get()` will be
+            used, which might raise `model.DoesNotExist` error if the node doesn't exist.
+            Otherwise, `qs.first()` will be used, which might return None.
+
+    Returns:
+        The resolved node, already prefetched from the database
+
+    """
+    if not issubclass(source, Model):
+        django_type = get_django_type(source, ensure_type=True)
+        source = cast(Type[_M], django_type.model)
+
+    if isinstance(node_id, GlobalID):
+        node_id = node_id.node_id
+
+    qs = source.objects.filter(pk=node_id)
+
+    qs_resolver = resolve_qs_get_one if required else resolve_qs_get_first
+    return resolve_result(qs, info=info, qs_resolver=qs_resolver)
+
+
+def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
+    """Resolve the model id, ensuring it is retrieved in a sync context.
+
+    Args:
+        root:
+            The source model object.
+
+    Returns:
+        The resolved object id
+
+    """
+    assert isinstance(root, Model)
+    attr = root._meta.pk.attname  # type:ignore
+    try:
+        # Prefer to retrieve this from the cache
+        return str(root.__dict__[attr])
+    except KeyError:
+        return getattr_async_unsafe(root, attr)
 
 
 def resolve_connection(
-    source: Type[Node[_M]],
-    info: Info,
+    source: Union[Type[Node[_M]], Type[_M]],
     *,
+    info: Optional[Info] = None,
     nodes: Optional[AwaitableOrValue[QuerySet[_M]]] = None,
     total_count: Optional[int] = None,
     before: Optional[str] = None,
@@ -215,22 +357,56 @@ def resolve_connection(
     first: Optional[int] = None,
     last: Optional[int] = None,
 ) -> AwaitableOrValue[Connection[_M]]:
-    """Resolve a model connection, ensuring those are prefetched in a sync context."""
+    """Resolve model connection, ensuring those are prefetched in a sync context.
+
+    Args:
+        source:
+            The source model or the model type that implements the `Node` interface
+        info:
+            Optional gql execution info. Make sure to always provide this or
+            otherwise, the queryset cannot be optimized in case DjangoOptimizerExtension
+            is enabled. This will also be used for `is_awaitable` check.
+        nodes:
+            An iterable of already filtered queryset to use in the connection.
+            If not provided, `model.objects.all()` will be used
+        total_count:
+            Optionally provide a total count so that the connection. This will
+            avoid having to call `qs.count()` later.
+        before:
+            Returns the items in the list that come before the specified cursor
+        after:
+            Returns the items in the list that come after the specified cursor
+        first:
+            Returns the first n items from the list
+        last:
+            Returns the items in the list that come after the specified cursor
+
+    Returns:
+        The resolved connection
+
+    """
+    from strawberry_django_plus import optimizer  # avoid circular import
+
     if nodes is None:
-        django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
-        nodes = django_type.model.objects.all()
+        if not issubclass(source, Model):
+            django_type = get_django_type(source, ensure_type=True)
+            source = cast(Type[_M], django_type.model)
+
+        nodes = source.objects.all()
         assert nodes
 
-    config = getattr(info.context, "_django_optimizer_config", None)
-    if config is not None:
-        from strawberry_django_plus.optimizer import optimize
-
-        # If optimizer extension is enabled, optimize this queryset
-        nodes = resolve(nodes, lambda _qs: optimize(qs=_qs, info=info, config=config))
+    if info is not None:
+        config = get_optimizer_config(info)
+        if config is not None:
+            # If optimizer extension is enabled, optimize this queryset
+            nodes = resolve(
+                nodes,
+                lambda _qs: optimizer.optimize(qs=_qs, info=info, config=config),
+            )
 
     return resolve(
         nodes,
-        lambda _qs: Connection.from_nodes(
+        lambda _qs: async_unsafe(Connection.from_nodes)(
             _qs,
             total_count=total_count,
             before=before,
@@ -239,32 +415,3 @@ def resolve_connection(
             last=last,
         ),
     )
-
-
-def resolve_model_node(
-    source: Type[Node[_M]],
-    info: Info,
-    node_id: Union[str, GlobalID],
-) -> Optional[AwaitableOrValue[_M]]:
-    """Resolve model nodes, ensuring it is retrieved in a sync context."""
-    if isinstance(node_id, GlobalID):
-        node_id = node_id.node_id
-
-    django_type = cast("StrawberryDjangoType", source._django_type)  # type:ignore
-    qs = django_type.model.objects.filter(pk=node_id)
-
-    return resolve_result(qs, info, qs_resolver=resolve_qs_get_first)
-
-
-def resolve_model_id(
-    source: Node[_M],
-    info: Info,
-    root: _M,
-) -> AwaitableOrValue[str]:
-    """Resolve the model id, ensuring it is retrieved in a sync context."""
-    attr = root._meta.pk.attname  # type:ignore
-    try:
-        # Prefer to retrieve this from the cache
-        return str(root.__dict__[attr])
-    except KeyError:
-        return resolve_getattr(root, attr)

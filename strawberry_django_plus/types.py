@@ -18,15 +18,14 @@ from strawberry_django.pagination import StrawberryDjangoPagination
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations
 
-from strawberry_django_plus.utils.resolvers import (
+from .fields import StrawberryDjangoField, field
+from .relay import Node, connection, node
+from .utils.resolvers import (
     resolve_connection,
     resolve_model_id,
     resolve_model_node,
     resolve_model_nodes,
 )
-
-from .fields import StrawberryDjangoField, field
-from .relay import Node, connection, node
 
 __all = [
     "StrawberryDjangoType",
@@ -123,11 +122,14 @@ def _process_type(
         if not _has_own_node_resolver(cls, "resolve_nodes"):
             cls.resolve_nodes = types.MethodType(resolve_model_nodes, cls)
 
-        if not _has_own_node_resolver(cls, "resolve_id"):
-            cls.resolve_id = types.MethodType(resolve_model_id, cls)
-
         if not _has_own_node_resolver(cls, "resolve_connection_resolver"):
             cls.resolve_connection = types.MethodType(resolve_connection, cls)
+
+        if not _has_own_node_resolver(cls, "resolve_id"):
+            cls.resolve_id = types.MethodType(
+                lambda cls, root, *args, **kwargs: resolve_model_id(root),
+                cls,
+            )
 
     strawberry.type(cls, **kwargs)
 
