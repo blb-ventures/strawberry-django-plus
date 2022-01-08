@@ -1,12 +1,41 @@
+import contextlib
 from typing import Dict, Mapping, Optional
 
+from django.test.client import Client
 from strawberry.test import BaseGraphQLTestClient
 from strawberry.test.client import Response
 
+from strawberry_django_plus.optimizer import DjangoOptimizerExtension
+
 
 class GraphQLTestClient(BaseGraphQLTestClient):
-    is_async: bool
-    path: str
+    def __init__(self, client: Client, *, is_async: bool = False, optimizer_enabled: bool = True):
+        super().__init__(client=client)
+
+        self.is_async = is_async
+        self.optimizer_enabled = optimizer_enabled
+
+    def request(
+        self,
+        body: Dict[str, object],
+        headers: Optional[Dict[str, object]] = None,
+        files: Optional[Dict[str, object]] = None,
+    ):
+        path = "/graphql_async/" if self.is_async else "/graphql/"
+
+        kwargs: Dict[str, object] = {"data": body}
+        if files:
+            kwargs["format"] = "multipart"
+        else:
+            kwargs["content_type"] = "application/json"
+
+        if self.optimizer_enabled:
+            ctx = contextlib.nullcontext()
+        else:
+            ctx = DjangoOptimizerExtension.disable()
+
+        with ctx:
+            return self._client.post(path, **kwargs)
 
     def query(
         self,
@@ -17,7 +46,6 @@ class GraphQLTestClient(BaseGraphQLTestClient):
         files: Optional[Dict[str, object]] = None,
     ) -> Response:
         body = self._build_body(query, variables, files)
-
         resp = self.request(body, headers, files)
         data = self._decode(resp, type="multipart" if files else "json")
 
@@ -53,34 +81,3 @@ class GraphQLTestClient(BaseGraphQLTestClient):
             assert response.errors is None
 
         return response
-
-    def request(
-        self,
-        body: Dict[str, object],
-        headers: Optional[Dict[str, object]] = None,
-        files: Optional[Dict[str, object]] = None,
-    ):
-        assert self.path
-
-        if files:
-            return self._client.post(
-                self.path,
-                data=body,
-                format="multipart",
-                # headers=headers,
-            )
-        else:
-            return self._client.post(
-                self.path,
-                data=body,
-                content_type="application/json",
-                # headers=headers,
-            )
-
-
-class GraphQLTestClientSync(GraphQLTestClient):
-    path = "/graphql/"
-
-
-class GraphQLTestClientAsync(GraphQLTestClient):
-    path = "/graphql_async/"

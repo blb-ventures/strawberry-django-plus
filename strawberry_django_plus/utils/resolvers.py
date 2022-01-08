@@ -221,6 +221,9 @@ def resolve_result(res, *, info=None, qs_resolver=None):
     from strawberry_django_plus import optimizer  # avoid circular import
 
     if isinstance(res, (BaseManager, QuerySet)):
+        if isinstance(res, BaseManager):
+            res = cast(QuerySet, res.all())
+
         if info is not None:
             config = get_optimizer_config(info)
             if config is not None:

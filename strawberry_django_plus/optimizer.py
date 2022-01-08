@@ -1,7 +1,9 @@
+import contextlib
 import dataclasses
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Dict,
     List,
     Optional,
@@ -447,6 +449,8 @@ class DjangoOptimizerExtension(Extension):
 
     """
 
+    _disabled: ClassVar[bool] = False
+
     def __init__(
         self,
         enable_only_optimization: bool = True,
@@ -459,7 +463,17 @@ class DjangoOptimizerExtension(Extension):
             enable_prefetch_related=enable_prefetch_related_optimization,
         )
 
+    @classmethod
+    @contextlib.contextmanager
+    def disable(cls):
+        cls._disabled = True
+        yield
+        cls._disabled = False
+
     def on_request_start(self) -> AwaitableOrValue[None]:
+        if self._disabled:
+            return
+
         self.execution_context.context._django_optimizer_config = self._config
 
     def resolve(
@@ -471,6 +485,9 @@ class DjangoOptimizerExtension(Extension):
         **kwargs,
     ) -> AwaitableOrValue[Any]:
         ret = _next(root, info, *args, **kwargs)
+
+        if self._disabled:
+            return ret
 
         if isinstance(ret, (BaseManager, QuerySet)):
             if isinstance(ret, BaseManager):

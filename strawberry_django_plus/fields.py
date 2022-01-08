@@ -215,7 +215,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             # to decide what to do...
             result = self.base_resolver(*args, **kwargs)
         elif source is None:
-            result = self.model.objects.all()[:2]
+            result = self.model.objects.all()
         else:
             # Small optimization to async resolvers avoid having to call it in an sync_to_async
             # context if the value is already cached, since it will not hit the db anymore
