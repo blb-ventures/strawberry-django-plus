@@ -3,7 +3,7 @@ import pytest
 from strawberry_django_plus.relay import to_base64
 
 from .faker import IssueFactory, MilestoneFactory, ProjectFactory
-from .utils import GraphQLTestClient
+from .utils import GraphQLTestClient, assert_num_queries
 
 
 @pytest.mark.django_db(transaction=True)
@@ -48,61 +48,11 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
                 }
                 expected.append(r)
 
-    res = gql_client.query(query)
-    assert res.data == {
-        "issueConn": {
-            "totalCount": 8,
-            "edges": [{"node": r} for r in expected],
-        },
-    }
+    # FIXME: Why async is failing to track queries?
+    n_queries = 2 if gql_client.optimizer_enabled else 18
+    with assert_num_queries(n_queries, is_async=gql_client.is_async):
+        res = gql_client.query(query)
 
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(transaction=True)
-async def test_query_forward_async(db, gql_client_async: GraphQLTestClient):
-    query = """
-      query TestQuery {
-        issueConn {
-          totalCount
-          edges {
-            node {
-              id
-              name
-              milestone {
-                id
-                name
-                asyncField (value: "foo")
-                project {
-                  id
-                  name
-                }
-              }
-            }
-          }
-        }
-      }
-    """
-
-    expected = []
-    for p in await ProjectFactory.acreate_batch(2):
-        for m in await MilestoneFactory.acreate_batch(2, project=p):
-            for i in await IssueFactory.acreate_batch(2, milestone=m):
-                r = {
-                    "id": to_base64("IssueType", i.id),
-                    "name": i.name,
-                    "milestone": {
-                        "id": to_base64("MilestoneType", m.id),
-                        "name": m.name,
-                        "asyncField": "value: foo",
-                        "project": {
-                            "id": to_base64("ProjectType", p.id),
-                            "name": p.name,
-                        },
-                    },
-                }
-                expected.append(r)
-
-    res = await gql_client_async.aquery(query)
     assert res.data == {
         "issueConn": {
             "totalCount": 8,
@@ -179,7 +129,11 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                     }
                 )
 
-    res = gql_client.query(query)
+    # FIXME: Why async is failing to track queries?
+    n_queries = 2 if gql_client.optimizer_enabled else 56
+    with assert_num_queries(n_queries, is_async=gql_client.is_async):
+        res = gql_client.query(query)
+
     assert res.data == {
         "issueConn": {
             "totalCount": 27,
@@ -248,7 +202,10 @@ def test_query_prefetch(db, gql_client: GraphQLTestClient):
 
     assert len(expected) == 2
     for e in expected:
-        res = gql_client.query(query, {"node_id": e["id"]})
+        n_queries = 3 if gql_client.optimizer_enabled else 4
+        with assert_num_queries(n_queries, is_async=gql_client.is_async):
+            res = gql_client.query(query, {"node_id": e["id"]})
+
         assert res.data == {"project": e}
 
 
@@ -349,5 +306,8 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
 
     assert len(expected) == 3
     for e in expected:
-        res = gql_client.query(query, {"node_id": e["id"]})
+        n_queries = 3 if gql_client.optimizer_enabled else 8
+        with assert_num_queries(n_queries, is_async=gql_client.is_async):
+            res = gql_client.query(query, {"node_id": e["id"]})
+
         assert res.data == {"project": e}
