@@ -223,18 +223,13 @@ def interface(
         ...     otherfield: str = gql.django.field()
 
     """
-
-    def wrapper(cls):
-        return _process_type(
-            cls,
-            model,
-            name=name,
-            is_interface=True,
-            description=description,
-            directives=directives,
-        )
-
-    return wrapper
+    return type(
+        model,
+        is_interface=True,
+        name=name,
+        description=description,
+        directives=directives,
+    )
 
 
 @__dataclass_transform__(
@@ -260,16 +255,10 @@ def input(  # noqa:A001
         ...     otherfield: str = gql.django.field()
 
     """
-
-    def wrapper(cls):
-        return _process_type(
-            cls,
-            model,
-            name=name,
-            is_input=True,
-            description=description,
-            directives=directives,
-            partial=partial,
-        )
-
-    return wrapper
+    return type(
+        model,
+        is_input=True,
+        name=name,
+        description=description,
+        directives=directives,
+    )

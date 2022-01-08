@@ -20,6 +20,11 @@ from typing import (
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
+from django.db.models.fields.related_descriptors import (
+    ForwardManyToOneDescriptor,
+    ReverseManyToOneDescriptor,
+    ReverseOneToOneDescriptor,
+)
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.db.models.query_utils import DeferredAttribute
 from strawberry.annotation import StrawberryAnnotation
@@ -221,12 +226,19 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                     result = source.__dict__[attr.field.attname]
                 elif isinstance(attr, ModelProperty):
                     result = source.__dict__[attr.name]
+                elif isinstance(attr, ForwardManyToOneDescriptor):
+                    # This will raise KeyError if it is not cached
+                    result = attr.field.get_cached_value(source)  # type:ignore
+                elif isinstance(attr, ReverseOneToOneDescriptor):
+                    # This will raise KeyError if it is not cached
+                    result = attr.related.get_cached_value(source)  # type:ignore
+                elif isinstance(attr, ReverseManyToOneDescriptor):
+                    # This returns a queryset, it is async safe
+                    result = getattr(source, attname)
                 else:
                     raise KeyError
             except KeyError:
-                result = resolvers.getattr_async_unsafe(
-                    source, self.django_name or self.python_name
-                )
+                result = resolvers.getattr_async_unsafe(source, attname)
 
         if self.is_list:
             qs_resolver = lambda qs: self.get_queryset_as_list(qs, info, **kwargs)

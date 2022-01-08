@@ -139,7 +139,7 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:
         qs = qs.all()
 
     if is_awaitable(qs, info=info):
-        return resolve_async(qs, lambda r: resolve_qs(r, resolver=resolver, info=info))
+        return resolve_async(qs, lambda r: resolve_qs(r, resolver=resolver, info=info), info=info)
 
     if resolver is None:
         # This is what QuerySet does internally to fetch results.
@@ -232,7 +232,11 @@ def resolve_result(res, *, info=None, qs_resolver=None):
     elif callable(res):
         return resolve_result(async_unsafe(res)(), info=info, qs_resolver=qs_resolver)
     elif is_awaitable(res, info=info):
-        return resolve_async(res, lambda r: resolve_result(r, info=info, qs_resolver=qs_resolver))
+        return resolve_async(
+            res,
+            lambda r: resolve_result(r, info=info, qs_resolver=qs_resolver),
+            info=info,
+        )
 
     return res
 

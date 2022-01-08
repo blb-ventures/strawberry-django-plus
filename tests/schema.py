@@ -24,8 +24,8 @@ class MilestoneType(relay.Node[Milestone]):
     issues: List["IssueType"]
 
     @gql.field
-    def foo(self, name: str) -> str:
-        return "xxx"
+    async def async_field(self, value: str) -> str:
+        return f"value: {value}"
 
 
 @gql.django.type(Issue)

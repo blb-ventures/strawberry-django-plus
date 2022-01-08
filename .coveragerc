@@ -8,3 +8,6 @@ exclude_lines =
     pragma: nocover
     pragma:nocover
     if TYPE_CHECKING:
+    @overload
+    @abstractmethod
+    @abc.abstractmethod

@@ -318,15 +318,6 @@ class OptimizerStore:
     def __bool__(self):
         return any([self.only, self.select_related, self.prefetch_related])
 
-    def __hash__(self):
-        return hash(
-            (
-                tuple(self.only),
-                tuple(self.select_related),
-                tuple(self.prefetch_related),
-            )
-        )
-
     def __ior__(self, other: "OptimizerStore"):
         self.only.extend(other.only)
         self.select_related.extend(other.select_related)
@@ -371,7 +362,7 @@ class OptimizerStore:
             elif isinstance(p, Prefetch):
                 p.add_prefix(prefix)
                 prefetch_related.append(p)
-            else:
+            else:  # pragma:nocover
                 raise AssertionError(f"Unexpected prefetch type {repr(p)}")
 
         return self.__class__(
@@ -481,7 +472,10 @@ class DjangoOptimizerExtension(Extension):
     ) -> AwaitableOrValue[Any]:
         ret = _next(root, info, *args, **kwargs)
 
-        if isinstance(ret, (QuerySet, BaseManager)):
-            return resolvers.resolve_qs(optimize(qs=ret, info=info, config=self._config))
+        if isinstance(ret, (BaseManager, QuerySet)):
+            if isinstance(ret, BaseManager):
+                ret = ret.all()
+            if not ret._result_cache:  # type:ignore
+                return resolvers.resolve_qs(optimize(qs=ret, info=info, config=self._config))
 
         return ret

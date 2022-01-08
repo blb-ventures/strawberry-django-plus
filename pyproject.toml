@@ -51,6 +51,8 @@ pytest-cov = "^3.0.0"
 pytest-django = "^4.2.0"
 django-extensions = "^3.1.5"
 ipython = "^7.31.0"
+factory-boy = "^3.2.1"
+pytest-asyncio = "^0.16.0"
 
 [tool.black]
 line-length = 100
@@ -83,8 +85,7 @@ useLibraryCodeForTypes = true
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
 python_files = "tests/test_*.py"
-django_find_projects = false
-addopts = "--cov=./ -vv"
+addopts = "-p no:warnings --nomigrations --cov=strawberry_django_plus/ --cov-report term-missing:skip-covered"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -307,6 +307,7 @@ class Node(abc.ABC, Generic[NodeType]):
             return aio.resolve_async(  # type:ignore
                 node_id,
                 lambda resolved: GlobalID(type_name=type_name, node_id=resolved),
+                info=info,
             )
 
         # If node_id is not str, GlobalID will raise an error for us
@@ -447,6 +448,7 @@ class Node(abc.ABC, Generic[NodeType]):
                     first=first,
                     last=last,
                 ),
+                info=info,
             )
 
         return Connection.from_nodes(

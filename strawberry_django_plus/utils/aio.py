@@ -41,9 +41,10 @@ def is_awaitable(
 
 async def resolve_async(
     value: Awaitable[_T],
-    resolver: Callable[[_T], _R],
+    resolver: Callable[[_T], AwaitableOrValue[_R]],
     *,
     ensure_type: Optional[Type[_R]] = None,
+    info: Optional[Info] = None,
 ) -> _R:
     """Call resolver with the awaited value's response.
 
@@ -64,6 +65,8 @@ async def resolve_async(
 
     """
     ret = resolver(await value)
+    while is_awaitable(ret, info=info):
+        ret = await ret
     if ensure_type is not None and not isinstance(ret, ensure_type):
         raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
 
@@ -117,7 +120,7 @@ def resolve(value, resolver, *, ensure_type=None, info=None):
 
     """
     if is_awaitable(value, info=info):
-        return resolve_async(value, resolver, ensure_type=ensure_type)
+        return resolve_async(value, resolver, info=info, ensure_type=ensure_type)
 
     ret = resolver(value)
     if ensure_type is not None and not isinstance(ret, ensure_type):

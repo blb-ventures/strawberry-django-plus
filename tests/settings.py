@@ -24,7 +24,9 @@ INSTALLED_APPS = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(_DIR, "db.sqlite3"),
+        "NAME": os.path.join(_DIR, "db.sqlite3")
+        if os.environ.get("_PERSISTENT_DB")
+        else ":memory:",
     },
 }
 
@@ -71,7 +73,7 @@ LOGGING = {
     "loggers": {
         "django.db.backends": {
             "handlers": ["console"],
-            "level": "DEBUG",
+            "level": "INFO",
         },
     },
 }
