@@ -42,8 +42,8 @@ from strawberry.type import StrawberryTypeVar
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import TypeDefinition
-from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
+from strawberry.utils.str_converters import to_camel_case
 
 from .utils import aio
 
@@ -716,40 +716,6 @@ class RelayField(StrawberryField):
         if base_resolver:
             self.__call__(base_resolver)
 
-    def __call__(self, resolver: Callable[..., Iterable[Node[Any]]]):
-        namespace = sys.modules[resolver.__module__].__dict__
-        nodes_type = resolver.__annotations__.get("return")
-        if nodes_type is None:
-            raise TypeError("Nodes resolver needs a return type decoration.")
-
-        resolved = _eval_type(nodes_type, namespace, None)
-        origin = get_origin(resolved)
-        if not origin or (not isinstance(origin, type) and not issubclass(origin, Iterable)):
-            raise TypeError(
-                "Nodes resolver needs a decoration that is a subclass of Iterable, "
-                "like 'Iterable[<NodeType>]'"
-            )
-
-        args = get_args(resolved)
-        node_types = list(
-            set().union(*(set(Node.resolve_types(a)) for a in get_args(args[0]) or [args[0]]))
-        )
-        if len(node_types) == 1:
-            type_override = StrawberryAnnotation(Connection[node_types[0]]).resolve()  # type:ignore
-        elif len(node_types) > 1:
-            # FIXME: Why isn't this working? Even setting the field with union doesn't work
-            # ret_type = resolver.__annotations__["return"] = Connection[Union[node_types]]
-            name = "".join(sorted(n._type_definition.name for n in node_types))  # type:ignore
-            type_override = resolver.__annotations__["return"] = StrawberryUnion(
-                type_annotations=tuple(StrawberryAnnotation(n) for n in node_types),
-                name=f"{name}Connection",
-            )
-        else:
-            type_override = None
-
-        resolver = StrawberryResolver(resolver, type_override=type_override)
-        return super().__call__(resolver)
-
     @property
     def arguments(self) -> List[StrawberryArgument]:
         args = {
@@ -776,6 +742,39 @@ class NodeField(RelayField):
         ),
     }
 
+    def __call__(self, resolver: Callable[..., Iterable[Node[Any]]]):
+        namespace = sys.modules[resolver.__module__].__dict__
+        nodes_type = resolver.__annotations__.get("return")
+        resolved = _eval_type(nodes_type, namespace, None)
+
+        is_optional = StrawberryAnnotation._is_optional(resolved)
+        if is_optional:
+            resolved = get_args(resolved)[0]
+
+        if not hasattr(resolved, "_type_definition"):
+            node_types = list(
+                set().union(*(set(Node.resolve_types(a)) for a in get_args(resolved) or [resolved]))
+            )
+            if len(node_types) == 1:
+                type_override = node_types[0]
+            elif len(node_types) > 1:
+                type_override = Union[tuple(node_types)]  # type:ignore
+            else:
+                raise AssertionError()
+
+            if is_optional:
+                type_override = Optional[type_override]
+
+            type_override = StrawberryAnnotation(type_override).resolve()
+        else:
+            type_override = None
+
+        # If a resolver was set, remove default args
+        self.default_args = {}
+        resolver = StrawberryResolver(resolver, type_override=type_override)
+
+        return super().__call__(resolver)
+
     def get_result(
         self,
         source: Any,
@@ -784,9 +783,7 @@ class NodeField(RelayField):
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
         if self.base_resolver:
-            resolver_args = {arg.python_name for arg in self.base_resolver.arguments}  # type:ignore
-            resolver_kwargs = {k: v for k, v in kwargs.items() if k in resolver_args}
-            return self.base_resolver(*args, **resolver_kwargs)
+            return self.base_resolver(*args, **kwargs)
 
         gid = kwargs["id"]
         assert isinstance(gid, GlobalID)
@@ -831,6 +828,34 @@ class ConnectionField(RelayField):
         ),
     }
 
+    def __call__(self, resolver: Callable[..., Iterable[Node[Any]]]):
+        namespace = sys.modules[resolver.__module__].__dict__
+        nodes_type = resolver.__annotations__.get("return")
+        if nodes_type is None:
+            raise TypeError("Nodes resolver needs a return type decoration.")
+
+        resolved = _eval_type(nodes_type, namespace, None)
+        origin = get_origin(resolved)
+        if not origin or (not isinstance(origin, type) and not issubclass(origin, Iterable)):
+            raise TypeError(
+                "Nodes resolver needs a decoration that is a subclass of Iterable, "
+                "like 'Iterable[<NodeType>]'"
+            )
+
+        args = get_args(resolved)
+        node_types = list(
+            set().union(*(set(Node.resolve_types(a)) for a in get_args(args[0]) or [args[0]]))
+        )
+        if len(node_types) == 1:
+            type_override = StrawberryAnnotation(Connection[node_types[0]]).resolve()  # type:ignore
+        elif len(node_types) > 1:
+            type_override = Connection[Union[tuple(node_types)]].resolve()  # type:ignore
+        else:
+            type_override = None
+
+        resolver = StrawberryResolver(resolver, type_override=type_override)
+        return super().__call__(resolver)
+
     def get_result(
         self,
         source: Any,
@@ -856,6 +881,90 @@ class ConnectionField(RelayField):
             nodes = None
 
         return field_type.resolve_connection(info=info, nodes=nodes, **kwargs)
+
+
+class MutationField(RelayField):
+    """Relay Mutation field.
+
+    Do not instantiate this directly. Instead, use `@relay.mutation`
+    """
+
+    default_args: Dict[str, StrawberryArgument] = {}
+
+    def __call__(self, resolver: Callable[..., Iterable[Node[Any]]]):
+        name = to_camel_case(resolver.__name__)
+        cap_name = name[0].upper() + name[1:]
+
+        namespace = sys.modules[resolver.__module__].__dict__
+        nodes_type = resolver.__annotations__.get("return")
+        resolved = _eval_type(nodes_type, namespace, None)
+
+        is_optional = StrawberryAnnotation._is_optional(resolved)
+        if is_optional:
+            resolved = get_args(resolved)[0]
+
+        if not hasattr(resolved, "_type_definition") and isinstance(resolved, type):
+            node_types = list(
+                set().union(*(set(Node.resolve_types(a)) for a in get_args(resolved) or [resolved]))
+            )
+            if len(node_types) == 1:
+                type_override = node_types[0]
+            elif len(node_types) > 1:
+                type_override = Union[tuple(node_types)]  # type:ignore
+            else:
+                raise AssertionError()
+
+            if is_optional:
+                type_override = Optional[type_override]
+
+            type_override = StrawberryAnnotation(type_override).resolve()
+        else:
+            type_override = None
+
+        r = StrawberryResolver(resolver, type_override=type_override)
+
+        args = cast(List[StrawberryArgument], r.arguments)
+        annotations = {}
+        for arg in args:
+            annotations[arg.python_name] = arg.type
+
+        # TODO: We are not creating a type for the output payload, as it is not easy to
+        # do that with the typing system. Is there a way to solve that automatically?
+        input_doc = f"Input data for `{name}` mutation"
+        new_type = strawberry.input(
+            type(
+                f"{cap_name}Input",
+                (),
+                {"__annotations__": annotations, "__doc__": input_doc},
+            )
+        )
+        self.default_args["input"] = StrawberryArgument(
+            python_name="input",
+            graphql_name=None,
+            type_annotation=StrawberryAnnotation(new_type, namespace=namespace),
+            description=input_doc,
+        )
+
+        return super().__call__(r)
+
+    @property
+    def arguments(self) -> List[StrawberryArgument]:
+        args = [
+            arg for arg in super().arguments if arg.python_name in StrawberryResolver._SPECIAL_ARGS
+        ]
+        return args + list(self.default_args.values())
+
+    def get_result(
+        self,
+        source: Any,
+        info: Info,
+        args: List[Any],
+        kwargs: Dict[str, Any],
+    ) -> AwaitableOrValue[Any]:
+        assert self.base_resolver
+        input_obj = kwargs.pop("input")
+
+        return self.base_resolver(*args, **kwargs, **vars(input_obj))
 
 
 @overload
@@ -1077,6 +1186,124 @@ def connection(
 
     """
     f = ConnectionField(
+        python_name=None,
+        graphql_name=name,
+        type_annotation=None,
+        description=description,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
+        deprecation_reason=deprecation_reason,
+        default=default,
+        default_factory=default_factory,
+        directives=directives or (),
+    )
+    if resolver is not None:
+        f = f(resolver)
+    return f
+
+
+@overload
+def input_mutation(
+    *,
+    resolver: Callable[[], _T],
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[False] = False,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+) -> _T:
+    ...
+
+
+@overload
+def input_mutation(
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[True] = True,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+) -> Any:
+    ...
+
+
+@overload
+def input_mutation(
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+) -> MutationField:
+    ...
+
+
+def input_mutation(
+    resolver=None,
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init=None,
+) -> Any:
+    """Annotate a property or a method to create an input mutation field.
+
+    The difference from this mutation to the default one from strawberry is that
+    all arguments found in the resolver will be converted to a single input type,
+    named using the mutation name, capitalizing the first letter and append "Input"
+    at the end. e.g. `doSomeMutation` will generate an input type `DoSomeMutationInput`.
+
+    Examples:
+        Annotating something like this:
+
+        >>> @strawberry.type
+        ... class CreateUserPayload:
+        ...     user: UserType
+        ...
+        >>> @strawberry.mutation
+        >>> class X:
+        ...     @relay.input_mutation
+        ...     def create_user(self, name: str, age: int) -> UserPayload:
+        ...         ...
+
+        Will create a type and an input type like
+
+        ```
+        input CreateUserInput {
+            name: String!
+            age: Int!
+        }
+
+        mutation {
+            createUser (input: CreateUserInput!) {
+                user: UserType
+            }
+        }
+        ```
+
+    """
+    f = MutationField(
         python_name=None,
         graphql_name=name,
         type_annotation=None,

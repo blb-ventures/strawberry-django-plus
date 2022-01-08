@@ -1,5 +1,7 @@
 from typing import Iterable, List, Optional
 
+from typing_extensions import Annotated
+
 from strawberry_django_plus import gql
 from strawberry_django_plus.gql import relay
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
@@ -55,8 +57,21 @@ class Query:
         return Project.objects.filter(name__contains=name)
 
 
+@gql.type
+class Mutation:
+    @relay.input_mutation
+    def test_mutation(
+        self,
+        name: Annotated[str, gql.argument(description="foobar")],
+        abc: int,
+    ) -> Optional[Project]:
+        """Test mutation doc"""
+        return Project.objects.first()
+
+
 schema = gql.Schema(
-    Query,
+    query=Query,
+    mutation=Mutation,
     extensions=[
         DjangoOptimizerExtension(),
     ],

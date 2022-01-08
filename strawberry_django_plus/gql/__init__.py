@@ -22,7 +22,13 @@ from strawberry import (
 )
 
 from strawberry_django_plus import relay
-from strawberry_django_plus.relay import Connection, Node, connection, node
+from strawberry_django_plus.relay import (
+    Connection,
+    Node,
+    connection,
+    input_mutation,
+    node,
+)
 
 from . import django
 
@@ -54,5 +60,6 @@ __all__ = [
     "Connection",
     "node",
     "connection",
+    "input_mutation",
     "django",
 ]
