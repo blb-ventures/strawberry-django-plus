@@ -14,8 +14,10 @@ from django.db.models.base import Model
 from django.db.models.query import Prefetch
 from typing_extensions import Self
 
+from .utils.typing import TypeOrSequence
+
 if TYPE_CHECKING:
-    from .optimizer import DjangoOptimizerStore, TypeOrSequence
+    from .optimizer import OptimizerStore, PrefetchType
 
 __all__ = [
     "ModelProperty",
@@ -31,7 +33,7 @@ class ModelProperty(Generic[_M, _R]):
     """Model property with optimization hinting functionality."""
 
     name: str
-    store: "DjangoOptimizerStore"
+    store: "OptimizerStore"
 
     def __init__(
         self,
@@ -40,13 +42,13 @@ class ModelProperty(Generic[_M, _R]):
         cached: bool = False,
         only: Optional["TypeOrSequence[str]"] = None,
         select_related: Optional["TypeOrSequence[str]"] = None,
-        prefetch_related: Optional["TypeOrSequence[Union[str, Prefetch]]"] = None,
+        prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
     ):
-        from .optimizer import DjangoOptimizerStore
+        from .optimizer import OptimizerStore
 
         self.func = func
         self.cached = cached
-        self.store = DjangoOptimizerStore.from_iterables(
+        self.store = OptimizerStore.with_hints(
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,

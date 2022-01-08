@@ -21,7 +21,6 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
-from django.db.models.query import Prefetch
 from django.db.models.query_utils import DeferredAttribute
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, is_unset
@@ -43,7 +42,7 @@ from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
 from .descriptors import ModelProperty
-from .optimizer import DjangoOptimizerStore
+from .optimizer import OptimizerStore, PrefetchType
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
 
@@ -65,10 +64,10 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     Do not instantiate this directly. Instead, use `@field` decorator.
     """
 
-    store: DjangoOptimizerStore
+    store: OptimizerStore
 
     def __init__(self, *args, **kwargs):
-        self.store = DjangoOptimizerStore.from_iterables(
+        self.store = OptimizerStore.with_hints(
             only=kwargs.pop("only", None),
             select_related=kwargs.pop("select_related", None),
             prefetch_related=kwargs.pop("prefetch_related", None),
@@ -211,7 +210,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             # to decide what to do...
             result = self.base_resolver(*args, **kwargs)
         elif source is None:
-            result = self.model.objects.all()
+            result = self.model.objects.all()[:2]
         else:
             # Small optimization to async resolvers avoid having to call it in an sync_to_async
             # context if the value is already cached, since it will not hit the db anymore
@@ -262,7 +261,7 @@ def field(
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
 ) -> _T:
     ...
 
@@ -283,7 +282,7 @@ def field(
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
 ) -> Any:
     ...
 
@@ -304,7 +303,7 @@ def field(
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
 ) -> StrawberryDjangoField:
     ...
 
@@ -324,7 +323,7 @@ def field(
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[Union[str, Prefetch]]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.

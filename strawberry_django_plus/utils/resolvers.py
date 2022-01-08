@@ -393,7 +393,7 @@ def resolve_connection(
             source = cast(Type[_M], django_type.model)
 
         nodes = source.objects.all()
-        assert nodes
+        assert isinstance(nodes, QuerySet)
 
     if info is not None:
         config = get_optimizer_config(info)

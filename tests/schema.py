@@ -13,6 +13,7 @@ class ProjectType(relay.Node[Project]):
     due_date: gql.auto
     cost: gql.auto
     milestones: List["MilestoneType"]
+    milestones_conn: "relay.Connection[MilestoneType]" = relay.connection()
 
 
 @gql.django.type(Milestone)
@@ -22,13 +23,17 @@ class MilestoneType(relay.Node[Milestone]):
     project: ProjectType
     issues: List["IssueType"]
 
+    @gql.field
+    def foo(self, name: str) -> str:
+        return "xxx"
+
 
 @gql.django.type(Issue)
 class IssueType(relay.Node[Issue]):
     name: gql.auto
     milestone: MilestoneType
-    name_with_kind: str = gql.django.field(only=["kind", "name"])
     name_with_priority: gql.auto
+    name_with_kind: str = gql.django.field(only=["kind", "name"])
 
 
 @gql.type

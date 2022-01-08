@@ -735,7 +735,7 @@ class RelayField(StrawberryField):
         if len(node_types) == 1:
             type_override = StrawberryAnnotation(Connection[node_types[0]]).resolve()  # type:ignore
         elif len(node_types) > 1:
-            # FIXME: Why isn't this working?
+            # FIXME: Why isn't this working? Even setting the field with union doesn't work
             # ret_type = resolver.__annotations__["return"] = Connection[Union[node_types]]
             name = "".join(sorted(n._type_definition.name for n in node_types))  # type:ignore
             type_override = resolver.__annotations__["return"] = StrawberryUnion(
