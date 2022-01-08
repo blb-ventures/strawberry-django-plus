@@ -12,27 +12,35 @@ _DIR = os.path.dirname(os.path.abspath(__file__))
 
 DEBUG = True
 
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
+    "django.contrib.staticfiles",
     "django_extensions",
+    "debug_toolbar",
     "strawberry.django",
+    "strawberry_django_plus",
     "tests",
 ]
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(_DIR, "db.sqlite3")
-        if os.environ.get("_PERSISTENT_DB")
-        else ":memory:",
+        "NAME": (
+            os.path.join(_DIR, "db.sqlite3") if os.environ.get("_PERSISTENT_DB") else ":memory:"
+        ),
     },
 }
 
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "strawberry_django_plus.middlewares.debug_toolbar.DebugToolbarMiddleware",
 ]
 
 TEMPLATES = [
@@ -50,6 +58,12 @@ TEMPLATES = [
             ],
         },
     },
+]
+
+STATIC_URL = "/static/"
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
 
 LOGGING = {
