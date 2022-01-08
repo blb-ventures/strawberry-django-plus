@@ -28,10 +28,10 @@ packages = [{ include = "strawberry_django_plus" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-django = "^3.2"
-strawberry-graphql = "^0.93.4"
-strawberry-graphql-django = "^0.2.5"
-typing-extensions = "^4.0.1"
+django = ">= 3.2"
+strawberry-graphql = ">= 0.93.4"
+strawberry-graphql-django = ">= 0.2.5"
+typing-extensions = ">= 4.0.1"
 
 [tool.poetry.dev-dependencies]
 black = "^21.6b"
