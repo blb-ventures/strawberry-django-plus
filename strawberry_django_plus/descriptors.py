@@ -106,7 +106,7 @@ def model_property(
 
 @overload
 def model_property(
-    func=None,
+    func: None = ...,
     *,
     cached: bool = False,
     only: Optional["TypeOrSequence[str]"] = None,

@@ -85,7 +85,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         if model:
             return model
 
-        origin = self.origin_django_type or self.origin._django_type  # type:ignore
+        origin = self.origin_django_type or self.origin._django_type
         return origin.model
 
     @classmethod
@@ -231,7 +231,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                     result = attr.field.get_cached_value(source)  # type:ignore
                 elif isinstance(attr, ReverseOneToOneDescriptor):
                     # This will raise KeyError if it is not cached
-                    result = attr.related.get_cached_value(source)  # type:ignore
+                    result = attr.related.get_cached_value(source)
                 elif isinstance(attr, ReverseManyToOneDescriptor):
                     # This returns a queryset, it is async safe
                     result = getattr(source, attname)

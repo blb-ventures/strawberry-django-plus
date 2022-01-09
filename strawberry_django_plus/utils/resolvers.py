@@ -4,6 +4,7 @@ from typing import (
     Any,
     Callable,
     Iterable,
+    List,
     Literal,
     Optional,
     Type,
@@ -30,6 +31,7 @@ _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 _R = TypeVar("_R")
 _P = ParamSpec("_P")
+_sentinel = object()
 
 
 @overload
@@ -43,7 +45,7 @@ def async_unsafe(
 
 @overload
 def async_unsafe(
-    f=None,
+    f: None,
     *,
     thread_sensitive: bool = True,
 ) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
@@ -98,9 +100,9 @@ getattr_async_unsafe = async_unsafe(lambda obj, key, *args: getattr(obj, key, *a
 def resolve_qs(
     qs: AwaitableOrValue[Union[BaseManager[_M], QuerySet[_M]]],
     *,
-    resolver: Optional[Callable[[QuerySet[_M]], AwaitableOrValue[_R]]] = None,
-    info: Optional[Info] = None,
-) -> AwaitableOrValue[_R]:
+    resolver: None = ...,
+    info: Optional[Info] = ...,
+) -> AwaitableOrValue[QuerySet[_M]]:
     ...
 
 
@@ -108,8 +110,9 @@ def resolve_qs(
 def resolve_qs(
     qs: AwaitableOrValue[Union[BaseManager[_M], QuerySet[_M]]],
     *,
-    info: Optional[Info] = None,
-) -> AwaitableOrValue[QuerySet[_M]]:
+    resolver: Optional[Callable[[QuerySet[_M]], AwaitableOrValue[_R]]] = ...,
+    info: Optional[Info] = ...,
+) -> AwaitableOrValue[_R]:
     ...
 
 
@@ -139,12 +142,16 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:
         qs = qs.all()
 
     if is_awaitable(qs, info=info):
-        return resolve_async(qs, lambda r: resolve_qs(r, resolver=resolver, info=info), info=info)
+        return resolve_async(
+            qs,
+            functools.partial(resolve_qs, resolver=resolver, info=info),
+            info=info,
+        )
 
     if resolver is None:
         # This is what QuerySet does internally to fetch results.
         # After this, iterating over the queryset should be async safe
-        resolver = lambda r: r._fetch_all() or r  # type:ignore
+        resolver = lambda r: r._fetch_all() or r
 
     if is_async() and not (
         inspect.iscoroutinefunction(resolver) or inspect.isasyncgenfunction(resolver)
@@ -154,9 +161,18 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:
     return resolver(qs)
 
 
-resolve_qs_get_list = functools.partial(resolve_qs, resolver=list)
-resolve_qs_get_first = functools.partial(resolve_qs, resolver=lambda qs: qs.first())
-resolve_qs_get_one = functools.partial(resolve_qs, resolver=lambda qs: qs.get())
+resolve_qs_get_list = cast(
+    Callable[[AwaitableOrValue[QuerySet[_M]]], AwaitableOrValue[List[_M]]],
+    functools.partial(resolve_qs, resolver=list),
+)
+resolve_qs_get_first = cast(
+    Callable[[AwaitableOrValue[QuerySet[_M]]], AwaitableOrValue[Optional[_M]]],
+    functools.partial(resolve_qs, resolver=lambda qs: qs.first()),
+)
+resolve_qs_get_one = cast(
+    Callable[[AwaitableOrValue[QuerySet[_M]]], AwaitableOrValue[_M]],
+    functools.partial(resolve_qs, resolver=lambda qs: qs.get()),
+)
 
 
 @overload
@@ -237,7 +253,7 @@ def resolve_result(res, *, info=None, qs_resolver=None):
     elif is_awaitable(res, info=info):
         return resolve_async(
             res,
-            lambda r: resolve_result(r, info=info, qs_resolver=qs_resolver),
+            functools.partial(resolve_result, info=info, qs_resolver=qs_resolver),
             info=info,
         )
 
@@ -282,9 +298,9 @@ def resolve_model_node(
     source: Union[Type[Node], Type[_M]],
     node_id: Union[str, GlobalID],
     *,
-    info: Optional[Info] = None,
+    info: Optional[Info] = ...,
     required: Literal[False] = ...,
-) -> Optional[AwaitableOrValue[_M]]:
+) -> AwaitableOrValue[Optional[_M]]:
     ...
 
 
@@ -293,7 +309,7 @@ def resolve_model_node(
     source: Union[Type[Node], Type[_M]],
     node_id: Union[str, GlobalID],
     *,
-    info: Optional[Info] = None,
+    info: Optional[Info] = ...,
     required: Literal[True],
 ) -> AwaitableOrValue[_M]:
     ...
@@ -329,8 +345,12 @@ def resolve_model_node(source, node_id, *, info=None, required=False):
 
     qs = source.objects.filter(pk=node_id)
 
-    qs_resolver = resolve_qs_get_one if required else resolve_qs_get_first
-    return resolve_result(qs, info=info, qs_resolver=qs_resolver)
+    if required:
+        ret = resolve_result(qs, info=info, qs_resolver=resolve_qs_get_one)
+    else:
+        ret = resolve_result(qs, info=info, qs_resolver=resolve_qs_get_first)
+
+    return ret
 
 
 def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
@@ -402,23 +422,37 @@ def resolve_connection(
         nodes = source.objects.all()
         assert isinstance(nodes, QuerySet)
 
+    if is_awaitable(nodes, info=info):
+        return resolve_async(
+            nodes,
+            lambda resolved: resolve_connection(
+                source,
+                info=info,
+                nodes=resolved,
+                total_count=total_count,
+                before=before,
+                after=after,
+                first=first,
+                last=last,
+            ),
+        )
+
     if info is not None:
         config = get_optimizer_config(info)
         if config is not None:
             # If optimizer extension is enabled, optimize this queryset
-            nodes = resolve(
-                nodes,
-                lambda _qs: optimizer.optimize(qs=_qs, info=info, config=config),
-            )
+            nodes = optimizer.optimize(nodes, info=info, config=config)
 
     return resolve(
         nodes,
-        lambda _qs: async_unsafe(Connection.from_nodes)(
-            _qs,
-            total_count=total_count,
-            before=before,
-            after=after,
-            first=first,
-            last=last,
+        async_unsafe(
+            functools.partial(
+                Connection.from_nodes,
+                total_count=total_count,
+                before=before,
+                after=after,
+                first=first,
+                last=last,
+            )
         ),
     )

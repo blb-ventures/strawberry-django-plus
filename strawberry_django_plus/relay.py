@@ -268,7 +268,7 @@ DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
 )
 
 
-@strawberry.interface(description="An object with a Globally Unique ID")  # type:ignore
+@strawberry.interface(description="An object with a Globally Unique ID")
 class Node(abc.ABC):
     """Node interface for GraphQL types.
 
@@ -375,7 +375,7 @@ class Node(abc.ABC):
             nodes = cls.resolve_nodes(info=info)
 
         if aio.is_awaitable(nodes, info=info):
-            return aio.resolve_async(  # type:ignore
+            return aio.resolve_async(
                 nodes,
                 lambda resolved: cls.resolve_connection(
                     info=info,
@@ -658,9 +658,7 @@ class RelayField(StrawberryField):
     def arguments(self) -> List[StrawberryArgument]:
         args = {
             **self.default_args,
-            **{
-                arg.python_name: arg for arg in super().arguments  # type:ignore
-            },
+            **{arg.python_name: arg for arg in super().arguments},
         }
         return list(args.values())
 

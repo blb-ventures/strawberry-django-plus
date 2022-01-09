@@ -75,8 +75,18 @@ async def resolve_async(
 
 @overload
 def resolve(
+    value: _T,
+    resolver: Callable[[_T], _R],
+    *,
+    ensure_type: Optional[Type[_R]] = None,
+) -> _R:
+    ...
+
+
+@overload
+def resolve(
     value: AwaitableOrValue[_T],
-    resolver: Callable[[_T], AwaitableOrValue[_R]],
+    resolver: Callable[[_T], Awaitable[_R]],
     *,
     ensure_type: Optional[Type[_R]] = None,
     info: Optional[Info] = None,
@@ -86,11 +96,12 @@ def resolve(
 
 @overload
 def resolve(
-    value: _T,
+    value: AwaitableOrValue[_T],
     resolver: Callable[[_T], _R],
     *,
     ensure_type: Optional[Type[_R]] = None,
-) -> _R:
+    info: Optional[Info] = None,
+) -> AwaitableOrValue[_R]:
     ...
 
 
