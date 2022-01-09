@@ -9,7 +9,6 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    Generator,
     Generic,
     Iterable,
     List,
@@ -27,7 +26,6 @@ from typing import (
     overload,
 )
 from typing import _eval_type  # type:ignore
-from weakref import WeakKeyDictionary  # type:ignore
 
 from graphql import GraphQLID
 import strawberry
@@ -38,7 +36,6 @@ from strawberry.field import StrawberryField
 from strawberry.permission import BasePermission
 from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
 from strawberry.schema_directive import StrawberrySchemaDirective
-from strawberry.type import StrawberryTypeVar
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import TypeDefinition
@@ -67,9 +64,8 @@ __all__ = [
 _T = TypeVar("_T")
 _R = TypeVar("_R")
 _connection_typename = "arrayconnection"
-_node_types_map: Dict[type, Any] = cast(Dict, WeakKeyDictionary())
 
-NodeType = TypeVar("NodeType")
+NodeType = TypeVar("NodeType", bound="Node")
 
 
 def from_base64(value: str) -> Tuple[str, str]:
@@ -154,7 +150,7 @@ class GlobalID:
 
     """
 
-    _nodes_cache: ClassVar[Dict[Tuple[int, str], Type["Node[Any]"]]] = {}
+    _nodes_cache: ClassVar[Dict[Tuple[int, str], Type["Node"]]] = {}
 
     type_name: str
     node_id: str
@@ -195,7 +191,7 @@ class GlobalID:
 
         return cls(type_name=type_name, node_id=node_id)
 
-    def resolve_type(self, info: Info) -> Type["Node[Any]"]:
+    def resolve_type(self, info: Info) -> Type["Node"]:
         """Resolve the internal type name to its type itself.
 
         Args:
@@ -225,7 +221,7 @@ class GlobalID:
         ...
 
     @overload
-    def resolve_node(self, info: Info, ensure_type=None) -> AwaitableOrValue["Node[Any]"]:
+    def resolve_node(self, info: Info, ensure_type=None) -> AwaitableOrValue["Node"]:
         ...
 
     def resolve_node(self, info, ensure_type=None):
@@ -234,7 +230,7 @@ class GlobalID:
         Tip: When you know the expected type, calling `ensure_type` should help
         not only to enforce it, but also help with typing since it will know that,
         if this function returns successfully, the retval should be of that
-        type and not `Node[Any]`.
+        type and not `Node`.
 
         Args:
             info:
@@ -273,7 +269,7 @@ DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
 
 
 @strawberry.interface(description="An object with a Globally Unique ID")  # type:ignore
-class Node(abc.ABC, Generic[NodeType]):
+class Node(abc.ABC):
     """Node interface for GraphQL types.
 
     All types that are relay ready should inherit from this interface and
@@ -295,7 +291,7 @@ class Node(abc.ABC, Generic[NodeType]):
 
     @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
-    def id(cls, root: "Node[NodeType]", info: Info) -> GlobalID:  # noqa:A003
+    def id(cls, root: "Node", info: Info) -> GlobalID:  # noqa:A003
         node_id = cls.resolve_id(root, info=info)
         type_name = info.path.typename
         assert type_name
@@ -313,68 +309,10 @@ class Node(abc.ABC, Generic[NodeType]):
         # If node_id is not str, GlobalID will raise an error for us
         return GlobalID(type_name=type_name, node_id=node_id)
 
-    def __init_subclass__(cls) -> None:
-        # Avoid having duplicates in case of auto reloads from frameworks (e.g. Django)
-        for c in list(_node_types_map.keys()):
-            if c.__module__ == cls.__module__ and c.__qualname__ == cls.__qualname__:
-                del _node_types_map[c]
-
-        for orig in cls.__orig_bases__:  # type:ignore
-            namespace = sys.modules[cls.__module__].__dict__
-            evaled = _eval_type(orig, namespace, None)
-            origin = get_origin(evaled)
-            args = get_args(evaled)
-
-            if origin is Node:
-                node_type = args[0]
-                _node_types_map[cls] = StrawberryAnnotation(
-                    node_type,
-                    namespace=namespace,
-                ).resolve()
-            elif origin in _node_types_map:
-                resolved = _node_types_map[cast(Type["Node[Any]"], origin)]
-                if isinstance(resolved, StrawberryTypeVar):
-                    node_type = next(
-                        (
-                            args[i]
-                            for i, p in enumerate(cls.__parameters__)  # type:ignore
-                            if p == resolved.type_var
-                        ),
-                        args[0],
-                    )
-                else:
-                    node_type = resolved
-
-                _node_types_map[cls] = StrawberryAnnotation(
-                    node_type,
-                    namespace=namespace,
-                ).resolve()
-
-        return super().__init_subclass__()
-
-    @classmethod
-    def resolve_types(cls, node_type: _T) -> Generator[Type["Node[_T]"], None, None]:
-        """Resolve possible types for the node type.
-
-        Mostly a utility for places where the NodeType itself is not the same as
-        the returned type. Usually happens for ORMs like Django.
-
-        Args:
-            node_type:
-                The node type to retrieve possible GraphQL types from
-
-        Yields:
-            All possible types that are subclasses of `Node`
-
-        """
-        for origin, type_ in _node_types_map.items():
-            if type_ is node_type:
-                yield cast(Type["Node[_T]"], origin)
-
     @classmethod
     def resolve_id(
-        cls,
-        root: "Node[NodeType]",
+        cls: Type[NodeType],
+        root: NodeType,
         *,
         info: Optional[Info] = None,
     ) -> AwaitableOrValue[str]:
@@ -396,7 +334,7 @@ class Node(abc.ABC, Generic[NodeType]):
 
     @classmethod
     def resolve_connection(
-        cls,
+        cls: Type[NodeType],
         *,
         info: Optional[Info] = None,
         nodes: Optional[AwaitableOrValue[Iterable[NodeType]]] = None,
@@ -463,7 +401,7 @@ class Node(abc.ABC, Generic[NodeType]):
     @classmethod
     @abc.abstractmethod
     def resolve_nodes(
-        cls,
+        cls: Type[NodeType],
         *,
         info: Optional[Info] = None,
         node_ids: Optional[Iterable[str]] = None,
@@ -490,7 +428,7 @@ class Node(abc.ABC, Generic[NodeType]):
     @classmethod
     @abc.abstractmethod
     def resolve_node(
-        cls,
+        cls: Type[NodeType],
         node_id: str,
         *,
         info: Optional[Info] = None,
@@ -502,7 +440,7 @@ class Node(abc.ABC, Generic[NodeType]):
     @classmethod
     @abc.abstractmethod
     def resolve_node(
-        cls,
+        cls: Type[NodeType],
         node_id: str,
         *,
         info: Optional[Info] = None,
@@ -742,37 +680,9 @@ class NodeField(RelayField):
         ),
     }
 
-    def __call__(self, resolver: Callable[..., Iterable[Node[Any]]]):
-        namespace = sys.modules[resolver.__module__].__dict__
-        nodes_type = resolver.__annotations__.get("return")
-        resolved = _eval_type(nodes_type, namespace, None)
-
-        is_optional = StrawberryAnnotation._is_optional(resolved)
-        if is_optional:
-            resolved = get_args(resolved)[0]
-
-        if not hasattr(resolved, "_type_definition"):
-            node_types = list(
-                set().union(*(set(Node.resolve_types(a)) for a in get_args(resolved) or [resolved]))
-            )
-            if len(node_types) == 1:
-                type_override = node_types[0]
-            elif len(node_types) > 1:
-                type_override = Union[tuple(node_types)]  # type:ignore
-            else:
-                raise AssertionError()
-
-            if is_optional:
-                type_override = Optional[type_override]
-
-            type_override = StrawberryAnnotation(type_override).resolve()
-        else:
-            type_override = None
-
-        # If a resolver was set, remove default args
+    def __call__(self, resolver):
+        # If a resolver is being set, remove default_args
         self.default_args = {}
-        resolver = StrawberryResolver(resolver, type_override=type_override)
-
         return super().__call__(resolver)
 
     def get_result(
@@ -828,30 +738,21 @@ class ConnectionField(RelayField):
         ),
     }
 
-    def __call__(self, resolver: Callable[..., Iterable[Node[Any]]]):
+    def __call__(self, resolver: Callable[..., Iterable[Node]]):
         namespace = sys.modules[resolver.__module__].__dict__
         nodes_type = resolver.__annotations__.get("return")
-        if nodes_type is None:
-            raise TypeError("Nodes resolver needs a return type decoration.")
+        if not nodes_type:
+            raise TypeError("Connection nodes resolver needs a return type decoration.")
 
         resolved = _eval_type(nodes_type, namespace, None)
         origin = get_origin(resolved)
         if not origin or (not isinstance(origin, type) and not issubclass(origin, Iterable)):
             raise TypeError(
-                "Nodes resolver needs a decoration that is a subclass of Iterable, "
-                "like 'Iterable[<NodeType>]'"
+                "Connection nodes resolver needs a decoration that is a subclass of Iterable, "
+                "like `Iterable[<NodeType>]`, `List[<NodeType>]`, etc"
             )
 
-        args = get_args(resolved)
-        node_types = list(
-            set().union(*(set(Node.resolve_types(a)) for a in get_args(args[0]) or [args[0]]))
-        )
-        if len(node_types) == 1:
-            type_override = StrawberryAnnotation(Connection[node_types[0]]).resolve()  # type:ignore
-        elif len(node_types) > 1:
-            type_override = Connection[Union[tuple(node_types)]].resolve()  # type:ignore
-        else:
-            type_override = None
+        type_override = StrawberryAnnotation(get_args(resolved)[0], namespace=namespace).resolve()
 
         resolver = StrawberryResolver(resolver, type_override=type_override)
         return super().__call__(resolver)
@@ -891,39 +792,13 @@ class MutationField(RelayField):
 
     default_args: Dict[str, StrawberryArgument] = {}
 
-    def __call__(self, resolver: Callable[..., Iterable[Node[Any]]]):
+    def __call__(self, resolver: Callable[..., Iterable[Node]]):
         name = to_camel_case(resolver.__name__)
         cap_name = name[0].upper() + name[1:]
-
         namespace = sys.modules[resolver.__module__].__dict__
-        nodes_type = resolver.__annotations__.get("return")
-        resolved = _eval_type(nodes_type, namespace, None)
+        resolver = StrawberryResolver(resolver)
 
-        is_optional = StrawberryAnnotation._is_optional(resolved)
-        if is_optional:
-            resolved = get_args(resolved)[0]
-
-        if not hasattr(resolved, "_type_definition") and isinstance(resolved, type):
-            node_types = list(
-                set().union(*(set(Node.resolve_types(a)) for a in get_args(resolved) or [resolved]))
-            )
-            if len(node_types) == 1:
-                type_override = node_types[0]
-            elif len(node_types) > 1:
-                type_override = Union[tuple(node_types)]  # type:ignore
-            else:
-                raise AssertionError()
-
-            if is_optional:
-                type_override = Optional[type_override]
-
-            type_override = StrawberryAnnotation(type_override).resolve()
-        else:
-            type_override = None
-
-        r = StrawberryResolver(resolver, type_override=type_override)
-
-        args = cast(List[StrawberryArgument], r.arguments)
+        args = cast(List[StrawberryArgument], resolver.arguments)
         annotations = {}
         for arg in args:
             annotations[arg.python_name] = arg.type
@@ -945,7 +820,7 @@ class MutationField(RelayField):
             description=input_doc,
         )
 
-        return super().__call__(r)
+        return super().__call__(resolver)
 
     @property
     def arguments(self) -> List[StrawberryArgument]:
@@ -963,7 +838,6 @@ class MutationField(RelayField):
     ) -> AwaitableOrValue[Any]:
         assert self.base_resolver
         input_obj = kwargs.pop("input")
-
         return self.base_resolver(*args, **kwargs, **vars(input_obj))
 
 

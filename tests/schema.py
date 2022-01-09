@@ -1,4 +1,5 @@
-from typing import Iterable, List, Optional
+import decimal
+from typing import Iterable, List, Optional, cast
 
 from typing_extensions import Annotated
 
@@ -10,7 +11,7 @@ from .models import Issue, Milestone, Project
 
 
 @gql.django.type(Project)
-class ProjectType(relay.Node[Project]):
+class ProjectType(relay.Node):
     name: gql.auto
     due_date: gql.auto
     cost: gql.auto
@@ -19,7 +20,7 @@ class ProjectType(relay.Node[Project]):
 
 
 @gql.django.type(Milestone)
-class MilestoneType(relay.Node[Milestone]):
+class MilestoneType(relay.Node):
     name: gql.auto
     due_date: gql.auto
     project: ProjectType
@@ -31,7 +32,7 @@ class MilestoneType(relay.Node[Milestone]):
 
 
 @gql.django.type(Issue)
-class IssueType(relay.Node[Issue]):
+class IssueType(relay.Node):
     name: gql.auto
     milestone: MilestoneType
     name_with_priority: gql.auto
@@ -53,20 +54,27 @@ class Query:
     project_conn: relay.Connection[ProjectType] = relay.connection()
 
     @relay.connection
-    def project_conn_with_resolver(self, name: str) -> Iterable[Project]:
-        return Project.objects.filter(name__contains=name)
+    def project_conn_with_resolver(self, name: str) -> Iterable[ProjectType]:
+        return cast(Iterable[ProjectType], Project.objects.filter(name__contains=name))
 
 
 @gql.type
 class Mutation:
     @relay.input_mutation
-    def test_mutation(
+    @gql.django.async_unsafe
+    def create_project(
         self,
-        name: Annotated[str, gql.argument(description="foobar")],
-        abc: int,
-    ) -> Optional[Project]:
-        """Test mutation doc"""
-        return Project.objects.first()
+        name: Annotated[str, gql.argument(description="The project's name")],
+        cost: decimal.Decimal,
+    ) -> Optional[ProjectType]:
+        """Create project documentation"""
+        return cast(
+            Optional[ProjectType],
+            Project.objects.create(
+                name=name,
+                cost=cost,
+            ),
+        )
 
 
 schema = gql.Schema(

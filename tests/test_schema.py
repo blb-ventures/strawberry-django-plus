@@ -5,6 +5,8 @@ from strawberry_django_plus.relay import to_base64
 from .faker import IssueFactory, MilestoneFactory, ProjectFactory
 from .utils import GraphQLTestClient, assert_num_queries
 
+# Those are simple general tests. Still need to write specific ones...
+
 
 @pytest.mark.django_db(transaction=True)
 def test_query_forward(db, gql_client: GraphQLTestClient):
@@ -311,3 +313,18 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_mutation(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateProject ($input: CreateProjectInput!) {
+        createProject (input: $input) {
+          name
+          cost
+        }
+      }
+    """
+    with assert_num_queries(1, is_async=gql_client.is_async):
+        res = gql_client.query(query, {"input": {"name": "Some Project", "cost": "12.50"}})
+        assert res.data == {"createProject": {"name": "Some Project", "cost": "12.50"}}

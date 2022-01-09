@@ -21,7 +21,7 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.utils import is_async
 from typing_extensions import ParamSpec
 
-from strawberry_django_plus.relay import Connection, GlobalID, Node
+from strawberry_django_plus.relay import Connection, GlobalID, Node, NodeType
 
 from .aio import is_awaitable, resolve, resolve_async
 from .inspect import get_django_type, get_optimizer_config
@@ -245,7 +245,7 @@ def resolve_result(res, *, info=None, qs_resolver=None):
 
 
 def resolve_model_nodes(
-    source: Union[Type[Node[_M]], Type[_M]],
+    source: Union[Type[Node], Type[_M]],
     *,
     info: Optional[Info] = None,
     node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
@@ -279,7 +279,7 @@ def resolve_model_nodes(
 
 @overload
 def resolve_model_node(
-    source: Union[Type[Node[_M]], Type[_M]],
+    source: Union[Type[Node], Type[_M]],
     node_id: Union[str, GlobalID],
     *,
     info: Optional[Info] = None,
@@ -290,7 +290,7 @@ def resolve_model_node(
 
 @overload
 def resolve_model_node(
-    source: Union[Type[Node[_M]], Type[_M]],
+    source: Union[Type[Node], Type[_M]],
     node_id: Union[str, GlobalID],
     *,
     info: Optional[Info] = None,
@@ -354,7 +354,7 @@ def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
 
 
 def resolve_connection(
-    source: Union[Type[Node[_M]], Type[_M]],
+    source: Union[Type[NodeType], Type[_M]],
     *,
     info: Optional[Info] = None,
     nodes: Optional[AwaitableOrValue[QuerySet[_M]]] = None,
@@ -363,7 +363,7 @@ def resolve_connection(
     after: Optional[str] = None,
     first: Optional[int] = None,
     last: Optional[int] = None,
-) -> AwaitableOrValue[Connection[_M]]:
+) -> AwaitableOrValue[Connection[NodeType]]:
     """Resolve model connection, ensuring those are prefetched in a sync context.
 
     Args:
