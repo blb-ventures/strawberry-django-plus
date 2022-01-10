@@ -15,10 +15,9 @@ from strawberry_django import (
     types,
 )
 
-from strawberry_django_plus import fields
 from strawberry_django_plus.descriptors import model_cached_property, model_property
-from strawberry_django_plus.fields import field
-from strawberry_django_plus.types import input, interface, type
+from strawberry_django_plus.field import field
+from strawberry_django_plus.type import input, interface, type
 from strawberry_django_plus.utils.resolvers import async_unsafe, resolve_qs
 
 __all__ = [
@@ -38,7 +37,6 @@ __all__ = [
     "mutations",
     "mutation",
     # strawberry_django_plus
-    "fields",
     "field",
     "async_unsafe",
     "resolve_qs",

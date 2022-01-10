@@ -49,7 +49,7 @@ from strawberry_django_plus.utils.pyutils import (
 
 if TYPE_CHECKING:
     from strawberry_django_plus.optimizer import OptimizerConfig
-    from strawberry_django_plus.types import StrawberryDjangoType
+    from strawberry_django_plus.type import StrawberryDjangoType
 
 try:
     # Try to use the smaller/faster cache decorator if available
@@ -117,7 +117,7 @@ def get_django_type(type_, *, ensure_type=False):
             If the type ensuring fails
 
     """
-    from strawberry_django_plus.types import StrawberryDjangoType
+    from strawberry_django_plus.type import StrawberryDjangoType
 
     django_type = getattr(type_, "_django_type", None)
     if ensure_type and not isinstance(django_type, StrawberryDjangoType):

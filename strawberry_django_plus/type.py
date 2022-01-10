@@ -18,7 +18,7 @@ from strawberry_django.pagination import StrawberryDjangoPagination
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations
 
-from .fields import StrawberryDjangoField, field
+from .field import StrawberryDjangoField, field
 from .relay import Node, connection, node
 from .utils.resolvers import (
     resolve_connection,

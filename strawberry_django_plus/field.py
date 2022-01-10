@@ -52,7 +52,7 @@ from .utils import resolvers
 from .utils.typing import TypeOrSequence
 
 if TYPE_CHECKING:
-    from .types import StrawberryDjangoType
+    from .type import StrawberryDjangoType
 
 __all__ = [
     "StrawberryDjangoField",
