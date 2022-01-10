@@ -352,7 +352,7 @@ flake8-plugin-utils = ">=1.0,<2.0"
 
 [[package]]
 name = "flake8-simplify"
-version = "0.14.2"
+version = "0.14.5"
 description = "flake8 plugin which checks for code that can be simplified"
 category = "dev"
 optional = false
@@ -744,7 +744,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.93.21"
+version = "0.93.22"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -1047,8 +1047,8 @@ flake8-return = [
     {file = "flake8_return-1.1.3-py3-none-any.whl", hash = "sha256:4a266191f7ed69aa26b835ec90c5a5522fa8f79f5cf6363a877ac499f8eb418b"},
 ]
 flake8-simplify = [
-    {file = "flake8_simplify-0.14.2-py3-none-any.whl", hash = "sha256:6584f3d49350659caaf2a42129f820dc64e60d4bdcb316f621b4e1cfae27e33a"},
-    {file = "flake8_simplify-0.14.2.tar.gz", hash = "sha256:4a8f103607195c3d0743a2fd8beeebe24926e19fb3e24521042cfc35771a8d4d"},
+    {file = "flake8_simplify-0.14.5-py3-none-any.whl", hash = "sha256:9b4b93d75b3c2046883d490df0e8e957b725fcdccf455c0ffe51436d1a098f6b"},
+    {file = "flake8_simplify-0.14.5.tar.gz", hash = "sha256:0bf8b1d60cf35d3e7cf8871194445589778f49ce81a35060f2fe3e0501f5792e"},
 ]
 graphql-core = [
     {file = "graphql-core-3.1.7.tar.gz", hash = "sha256:62ec192150ccecd9a18cfb79e3e72eb7d1fd68fb594ef19c40099b6deec8ef0c"},
@@ -1182,8 +1182,8 @@ sqlparse = [
     {file = "sqlparse-0.4.2.tar.gz", hash = "sha256:0c00730c74263a94e5a9919ade150dfc3b19c574389985446148402998287dae"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.93.21.tar.gz", hash = "sha256:937d2613bca40375d1db2b7b7e1a506c07fa9b721bda2338ce2610ee342decc1"},
-    {file = "strawberry_graphql-0.93.21-py3-none-any.whl", hash = "sha256:16bbb4762966a74b6f8b472e8b0f5af5de193ba27986ba4f2f35cee07dc97472"},
+    {file = "strawberry-graphql-0.93.22.tar.gz", hash = "sha256:9843bb0ccb2cc51aca5bd606de50e6e127ff3c14990c361132f632ba64881f3b"},
+    {file = "strawberry_graphql-0.93.22-py3-none-any.whl", hash = "sha256:a2b174bfe8af1d1af66bd9168dfb3c97c0baebe3975c95220260bf25f37e2fb0"},
 ]
 strawberry-graphql-django = [
     {file = "strawberry-graphql-django-0.2.5.tar.gz", hash = "sha256:483d97c24ce440a1e3cb92ec3e1fdc0cf534d9afa79600396b0a27a5d9d97793"},
