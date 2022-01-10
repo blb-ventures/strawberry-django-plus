@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="project",
             name="status",
-            field=django_choices_field.fields.TextChoicesField(
+            field=django_choices_field.fields.TextChoicesField(  # type:ignore
                 choices=[("active", "Active"), ("inactive", "Inactive")],
                 choices_enum=tests.models.Project.Status,
                 default="active",
