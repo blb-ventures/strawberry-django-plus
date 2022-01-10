@@ -41,13 +41,13 @@ from strawberry_django.fields.types import (
     is_auto,
     is_optional,
     resolve_model_field_name,
-    resolve_model_field_type,
 )
 from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
 from .descriptors import ModelProperty
 from .optimizer import OptimizerStore, PrefetchType
+from .types import resolve_model_field_type
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
 
@@ -367,6 +367,7 @@ def field(
         default=default,
         default_factory=default_factory,
         directives=directives,
+        filters=filters,
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
