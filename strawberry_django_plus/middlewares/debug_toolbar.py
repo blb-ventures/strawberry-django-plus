@@ -1,3 +1,5 @@
+# Based on https://github.com/flavors/django-graphiql-debug-toolbar
+
 import collections
 import json
 from typing import Optional
