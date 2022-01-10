@@ -11,7 +11,7 @@ from .utils import GraphQLTestClient, assert_num_queries
 @pytest.mark.django_db(transaction=True)
 def test_query_forward(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery {
+      query TestQuery ($isAsync: Boolean!) {
         issueConn {
           totalCount
           edges {
@@ -21,6 +21,7 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
               milestone {
                 id
                 name
+                asyncField(value: "foo") @include (if: $isAsync)
                 project {
                   id
                   name
@@ -48,12 +49,14 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
                         },
                     },
                 }
+                if gql_client.is_async:
+                    r["milestone"]["asyncField"] = "value: foo"
                 expected.append(r)
 
     # FIXME: Why async is failing to track queries?
     n_queries = 2 if gql_client.optimizer_enabled else 18
     with assert_num_queries(n_queries, is_async=gql_client.is_async):
-        res = gql_client.query(query)
+        res = gql_client.query(query, {"isAsync": gql_client.is_async})
 
     assert res.data == {
         "issueConn": {

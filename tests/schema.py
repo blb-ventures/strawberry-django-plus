@@ -1,3 +1,5 @@
+import asyncio
+import datetime
 import decimal
 from typing import Iterable, List, Optional, cast
 
@@ -29,6 +31,7 @@ class MilestoneType(relay.Node):
 
     @gql.field
     async def async_field(self, value: str) -> str:
+        await asyncio.sleep(0.1)
         return f"value: {value}"
 
 
@@ -42,7 +45,9 @@ class IssueType(relay.Node):
 
 @gql.type
 class Query:
-    issue: Optional[IssueType] = relay.node()
+    """All available queries for this schema."""
+
+    issue: Optional[IssueType] = relay.node(description="FOobar")
     milestone: Optional[MilestoneType] = relay.node()
     project: Optional[ProjectType] = relay.node()
 
@@ -61,21 +66,24 @@ class Query:
 
 @gql.type
 class Mutation:
-    @relay.input_mutation
-    @gql.django.async_unsafe
+    """All available mutations for this schema."""
+
+    @gql.django.input_mutation
     def create_project(
         self,
-        name: Annotated[str, gql.argument(description="The project's name")],
-        cost: decimal.Decimal,
-        status: Optional[Project.Status] = None,
-    ) -> Optional[ProjectType]:
+        name: str,
+        cost: Annotated[decimal.Decimal, gql.argument(description="The project's cost")],
+        status: Project.Status = Project.Status.ACTIVE,
+        due_date: Optional[datetime.datetime] = None,
+    ) -> ProjectType:
         """Create project documentation"""
         return cast(
-            Optional[ProjectType],
+            ProjectType,
             Project.objects.create(
                 name=name,
                 cost=cost,
                 status=status or Project.Status.ACTIVE,
+                due_date=due_date,
             ),
         )
 

@@ -1,7 +1,7 @@
 import asyncio
 import contextlib
 import inspect
-from typing import Dict, Mapping, Optional
+from typing import Any, Dict, Optional
 
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.client import AsyncClient  # type:ignore
@@ -44,7 +44,6 @@ class GraphQLTestClient(BaseGraphQLTestClient):
         headers: Optional[Dict[str, object]] = None,
         files: Optional[Dict[str, object]] = None,
     ):
-        # path = "/graphql_async/" if self.is_async else "/graphql/"
         path = "/graphql_async/" if self.is_async else "/graphql/"
 
         kwargs: Dict[str, object] = {"data": body}
@@ -64,7 +63,7 @@ class GraphQLTestClient(BaseGraphQLTestClient):
     def query(
         self,
         query: str,
-        variables: Optional[Dict[str, Mapping]] = None,
+        variables: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, object]] = None,
         asserts_errors: Optional[bool] = True,
         files: Optional[Dict[str, object]] = None,

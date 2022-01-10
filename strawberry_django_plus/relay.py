@@ -782,7 +782,7 @@ class ConnectionField(RelayField):
         return field_type.resolve_connection(info=info, nodes=nodes, **kwargs)
 
 
-class MutationField(RelayField):
+class InputMutationField(RelayField):
     """Relay Mutation field.
 
     Do not instantiate this directly. Instead, use `@relay.mutation`
@@ -1117,7 +1117,7 @@ def input_mutation(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-) -> MutationField:
+) -> InputMutationField:
     ...
 
 
@@ -1173,7 +1173,7 @@ def input_mutation(
         ```
 
     """
-    f = MutationField(
+    f = InputMutationField(
         python_name=None,
         graphql_name=name,
         type_annotation=None,

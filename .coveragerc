@@ -1,6 +1,6 @@
 [run]
-source = graphene_django_plus
-omit = .venv/**
+source = strawberry_django_plus
+omit = .venv/**,tests/migrations/**
 
 [report]
 precision = 2

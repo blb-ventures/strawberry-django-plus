@@ -1,6 +1,5 @@
 from typing import Generic, List, TypeVar
 
-from asgiref.sync import sync_to_async
 import factory
 
 from .models import Issue, Milestone, Project
@@ -14,17 +13,7 @@ class _BaseFactory(Generic[_T], factory.django.DjangoModelFactory):
         return super().create(**kwargs)
 
     @classmethod
-    @sync_to_async(thread_sensitive=True)
-    def acreate(cls, **kwargs) -> _T:
-        return super().create(**kwargs)
-
-    @classmethod
     def create_batch(cls, size: int, **kwargs) -> List[_T]:
-        return super().create_batch(size, **kwargs)
-
-    @classmethod
-    @sync_to_async(thread_sensitive=True)
-    def acreate_batch(cls, size: int, **kwargs) -> List[_T]:
         return super().create_batch(size, **kwargs)
 
 

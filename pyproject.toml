@@ -96,7 +96,7 @@ strictSetInference = "error"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
 python_files = "tests/test_*.py"
-addopts = "-p no:warnings --nomigrations --cov=strawberry_django_plus/ --cov-report term-missing:skip-covered"
+addopts = "-p no:warnings --nomigrations --cov=./ --cov-report term-missing:skip-covered"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
