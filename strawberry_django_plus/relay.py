@@ -667,6 +667,7 @@ class NodeField(RelayField):
     """Relay Node field.
 
     Do not instantiate this directly. Instead, use `@relay.node`
+
     """
 
     default_args: Dict[str, StrawberryArgument] = {
@@ -703,6 +704,7 @@ class ConnectionField(RelayField):
     """Relay Connection field.
 
     Do not instantiate this directly. Instead, use `@relay.connection`
+
     """
 
     default_args: Dict[str, StrawberryArgument] = {
@@ -786,6 +788,7 @@ class InputMutationField(RelayField):
     """Relay Mutation field.
 
     Do not instantiate this directly. Instead, use `@relay.mutation`
+
     """
 
     default_args: Dict[str, StrawberryArgument] = {}

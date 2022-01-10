@@ -76,7 +76,7 @@ class Mutation:
         status: Project.Status = Project.Status.ACTIVE,
         due_date: Optional[datetime.datetime] = None,
     ) -> ProjectType:
-        """Create project documentation"""
+        """Create project documentation."""
         return cast(
             ProjectType,
             Project.objects.create(

@@ -110,7 +110,7 @@ class Issue(models.Model):
 
     @model_property(only=["kind", "priority"])
     def name_with_priority(self) -> str:
-        """Field doc"""
+        """Field doc."""
         return f"{self.kind}: {self.priority}"
 
 

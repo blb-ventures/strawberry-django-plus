@@ -9,11 +9,27 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=1024"]
 
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.1.0
+    hooks:
+      - id: codespell
+
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.31.0
     hooks:
       - id: pyupgrade
         args: ["--py38-plus"]
+
+  - repo: https://github.com/myint/docformatter
+    rev: v1.4
+    hooks:
+      - id: docformatter
+        args: ["-i", "--wrap-summaries", "0", "--blank"]
+
+  - repo: https://github.com/myint/autoflake
+    rev: v1.4
+    hooks:
+      - id: autoflake
 
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1

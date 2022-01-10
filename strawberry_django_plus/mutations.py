@@ -31,6 +31,7 @@ class DjangoInputMutationField(relay.InputMutationField):
     the mutation resolver gets called in an async safe environment.
 
     Do not instantiate this directly. Instead, use `@gql.django.inpt_mutation`
+
     """
 
     def __call__(self, resolver: Callable[..., Iterable[relay.Node]]):
@@ -104,8 +105,8 @@ def input_mutation(
 ) -> Any:
     """Annotate a property or a method to create an input mutation field.
 
-    This is basically the same as `@relay.input_mutation`, but it ensure that
-    the mutation resolver gets called in an async safe environment.
+    This is basically the same as `@relay.input_mutation`, but it ensure
+    that the mutation resolver gets called in an async safe environment.
 
     """
     f = DjangoInputMutationField(

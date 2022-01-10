@@ -67,6 +67,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     """A strawberry field for django attributes.
 
     Do not instantiate this directly. Instead, use `@field` decorator.
+
     """
 
     store: OptimizerStore
