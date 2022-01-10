@@ -147,7 +147,7 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_query_prefetch(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($node_id: ID!) {
+      query TestQuery ($node_id: GlobalID!) {
         project (id: $node_id) {
           id
           name
@@ -227,7 +227,7 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
         }
       }
 
-      query TestQuery ($node_id: ID!) {
+      query TestQuery ($node_id: GlobalID!) {
         project (id: $node_id) {
           id
           name

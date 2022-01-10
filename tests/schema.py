@@ -13,6 +13,7 @@ from .models import Issue, Milestone, Project
 @gql.django.type(Project)
 class ProjectType(relay.Node):
     name: gql.auto
+    status: gql.auto
     due_date: gql.auto
     cost: gql.auto
     milestones: List["MilestoneType"]
@@ -66,6 +67,7 @@ class Mutation:
         self,
         name: Annotated[str, gql.argument(description="The project's name")],
         cost: decimal.Decimal,
+        status: Optional[Project.Status] = None,
     ) -> Optional[ProjectType]:
         """Create project documentation"""
         return cast(
@@ -73,6 +75,7 @@ class Mutation:
             Project.objects.create(
                 name=name,
                 cost=cost,
+                status=status or Project.Status.ACTIVE,
             ),
         )
 

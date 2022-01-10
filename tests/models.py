@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Optional
 
 from django.db import models
+from django_choices_field.fields import TextChoicesField
 
 from strawberry_django_plus.descriptors import model_property
 
@@ -11,9 +12,17 @@ if TYPE_CHECKING:
 class Project(models.Model):
     milestones: "RelatedManager[Milestone]"
 
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        INACTIVE = "inactive", "Inactive"
+
     id = models.BigAutoField(  # noqa: A003
         verbose_name="ID",
         primary_key=True,
+    )
+    status = TextChoicesField(
+        choices_enum=Status,
+        default=Status.ACTIVE,
     )
     name = models.CharField(
         help_text="The name of the project",

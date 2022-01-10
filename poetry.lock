@@ -191,6 +191,14 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-choices-field"
+version = "2.0"
+description = "Django field that set/get django's new TextChoices/IntegerChoices enum."
+category = "dev"
+optional = false
+python-versions = ">=3.8,<4.0"
+
+[[package]]
 name = "django-debug-toolbar"
 version = "3.2.4"
 description = "A configurable set of panels that display various debug information about the current request/response."
@@ -851,7 +859,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "e78d6ab2b1b5130b42c0515449c098aa29813b6f7959aa133f44eb0592cb9c95"
+content-hash = "b042ef05f3842dbd9a20f25deb6da1fc4a5b96471086e0f79850ee834283c7c7"
 
 [metadata.files]
 appnope = [
@@ -981,6 +989,10 @@ decorator = [
 django = [
     {file = "Django-4.0.1-py3-none-any.whl", hash = "sha256:7cd8e8a3ed2bc0dfda05ce1e53a9c81b30eefd7aa350e538a18884475e4d4ce2"},
     {file = "Django-4.0.1.tar.gz", hash = "sha256:2485eea3cc4c3bae13080dee866ebf90ba9f98d1afe8fda89bfb0eb2e218ef86"},
+]
+django-choices-field = [
+    {file = "django-choices-field-2.0.tar.gz", hash = "sha256:46f863b4f12d57f754c39438168860d49787736db1c89cefb9cee972fbfbc5e5"},
+    {file = "django_choices_field-2.0-py3-none-any.whl", hash = "sha256:a469ae644e60eea5fe1aac68055af5d547d92e05df35aa9cea05196e6eaf5ae8"},
 ]
 django-debug-toolbar = [
     {file = "django-debug-toolbar-3.2.4.tar.gz", hash = "sha256:644bbd5c428d3283aa9115722471769cac1bec189edf3a0c855fd8ff870375a9"},

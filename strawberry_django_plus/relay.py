@@ -30,7 +30,7 @@ from typing import _eval_type  # type:ignore
 from graphql import GraphQLID
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument
+from strawberry.arguments import UNSET, StrawberryArgument, is_unset
 from strawberry.custom_scalar import ScalarDefinition
 from strawberry.field import StrawberryField
 from strawberry.permission import BasePermission
@@ -260,7 +260,7 @@ class GlobalID:
 DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
     # Use the same name/description/parse_literal from GraphQLID as relay
     # specs expect this type to be "ID".
-    name=GraphQLID.name,
+    name="GlobalID",
     description=GraphQLID.description,
     parse_literal=lambda v: GlobalID.from_id(GraphQLID.parse_literal(v)),
     parse_value=GlobalID.from_id,
@@ -797,25 +797,23 @@ class MutationField(RelayField):
         resolver = StrawberryResolver(resolver)
 
         args = cast(List[StrawberryArgument], resolver.arguments)
-        annotations = {}
+        type_dict = {
+            "__doc__": f"Input data for `{name}` mutation",
+            "__annotations__": {},
+        }
         for arg in args:
-            annotations[arg.python_name] = arg.type
+            type_dict["__annotations__"][arg.python_name] = arg.type
+            if not is_unset(arg.default):
+                type_dict[arg.python_name] = arg.default
 
         # TODO: We are not creating a type for the output payload, as it is not easy to
         # do that with the typing system. Is there a way to solve that automatically?
-        input_doc = f"Input data for `{name}` mutation"
-        new_type = strawberry.input(
-            type(
-                f"{cap_name}Input",
-                (),
-                {"__annotations__": annotations, "__doc__": input_doc},
-            )
-        )
+        new_type = strawberry.input(type(f"{cap_name}Input", (), type_dict))
         self.default_args["input"] = StrawberryArgument(
             python_name="input",
             graphql_name=None,
             type_annotation=StrawberryAnnotation(new_type, namespace=namespace),
-            description=input_doc,
+            description=type_dict["__doc__"],
         )
 
         return super().__call__(resolver)
