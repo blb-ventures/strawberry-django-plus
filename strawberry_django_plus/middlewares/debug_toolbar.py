@@ -123,7 +123,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
             if "Content-Length" in response:
                 response["Content-Length"] = len(response.content)
 
-        if is_html:
+        if is_html or not is_graphiql or content_type != "application/json":
             return response
 
         payload = _get_payload(request, response)
