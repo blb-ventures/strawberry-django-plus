@@ -26,6 +26,7 @@ from django.db.models.query import QuerySet
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry.extensions.base_extension import Extension
 from strawberry.schema.schema import Schema
+from strawberry.types.execution import ExecutionContext
 from strawberry.types.info import Info
 from strawberry.types.nodes import InlineFragment, Selection, convert_selections
 from strawberry.types.types import TypeDefinition
@@ -453,10 +454,13 @@ class DjangoOptimizerExtension(Extension):
 
     def __init__(
         self,
+        *,
         enable_only_optimization: bool = True,
         enable_select_related_optimization: bool = True,
         enable_prefetch_related_optimization: bool = True,
+        execution_context: ExecutionContext = None,
     ):
+        super().__init__(execution_context=execution_context)  # type:ignore
         self._config = OptimizerConfig(
             enable_only=enable_only_optimization,
             enable_select_related=enable_select_related_optimization,
