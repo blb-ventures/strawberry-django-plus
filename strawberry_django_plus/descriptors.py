@@ -46,6 +46,8 @@ class ModelProperty(Generic[_M, _R]):
     ):
         from .optimizer import OptimizerStore
 
+        super().__init__()
+
         self.func = func
         self.cached = cached
         self.store = OptimizerStore.with_hints(

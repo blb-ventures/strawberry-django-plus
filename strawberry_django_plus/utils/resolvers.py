@@ -437,6 +437,9 @@ def resolve_connection(
             ),
         )
 
+    # FIXME: Remove cast once pyright resolves the negative TypeGuard form
+    nodes = cast(QuerySet[_M], nodes)
+
     if info is not None:
         config = get_optimizer_config(info)
         if config is not None:

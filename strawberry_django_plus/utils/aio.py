@@ -1,4 +1,4 @@
-from typing import Awaitable, Callable, Optional, Type, TypeVar, overload
+from typing import Awaitable, Callable, Optional, Type, TypeVar, cast, overload
 
 from graphql.pyutils.is_awaitable import is_awaitable as _is_awaitable
 from strawberry.types.info import Info
@@ -19,7 +19,7 @@ def is_awaitable(
     value: AwaitableOrValue[_T],
     *,
     info: Optional[Info] = None,
-) -> "TypeGuard[Awaitable[_T], _T]":
+) -> TypeGuard[Awaitable[_T]]:
     """Check if the given value is awaitable.
 
     Args:
@@ -69,6 +69,9 @@ async def resolve_async(
         ret = await ret
     if ensure_type is not None and not isinstance(ret, ensure_type):
         raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
+
+    # FIXME: Remove cast once pyright resolves the negative TypeGuard form
+    ret = cast(_R, ret)
 
     return ret
 

@@ -307,7 +307,7 @@ class Node(abc.ABC):
             )
 
         # If node_id is not str, GlobalID will raise an error for us
-        return GlobalID(type_name=type_name, node_id=node_id)
+        return GlobalID(type_name=type_name, node_id=cast(str, node_id))
 
     @classmethod
     def resolve_id(
@@ -388,6 +388,9 @@ class Node(abc.ABC):
                 ),
                 info=info,
             )
+
+        # FIXME: Remove cast once pyright resolves the negative TypeGuard form
+        nodes = cast(Iterable[NodeType], nodes)
 
         return Connection.from_nodes(
             nodes,
