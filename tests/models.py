@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Optional
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from django_choices_field.fields import TextChoicesField
 
 from strawberry_django_plus.descriptors import model_property
@@ -21,6 +22,7 @@ class Project(models.Model):
         primary_key=True,
     )
     status = TextChoicesField(
+        help_text=_("This project's status"),
         choices_enum=Status,
         default=Status.ACTIVE,
     )

@@ -195,11 +195,13 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 ]
 
             if field.description is None:
-                field.description = (
+                description = (
                     model_field.field.help_text
                     if isinstance(model_field, (ManyToOneRel, ManyToManyRel))
                     else model_field.help_text
                 )
+                if description:
+                    field.description = str(description)
 
         return field
 

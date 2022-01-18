@@ -1,8 +1,10 @@
 import asyncio
 import datetime
 import decimal
-from typing import Iterable, List, Optional, cast
+from typing import Iterable, List, Optional, Type, cast
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
 from typing_extensions import Annotated
 
 from strawberry_django_plus import gql
@@ -10,6 +12,21 @@ from strawberry_django_plus.gql import relay
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 
 from .models import Issue, Milestone, Project
+
+UserModel = cast(Type[AbstractUser], get_user_model())
+
+
+@gql.django.type(UserModel)
+class UserType(relay.Node):
+    username: gql.auto
+    email: gql.auto
+    is_active: gql.auto
+    is_superuser: gql.auto
+    is_staff: gql.auto
+
+    @gql.django.field(only=["first_name", "last_name"])
+    def full_name(self, root: UserModel, value: str) -> str:
+        return f"{root.first_name or ''} {root.last_name or ''}".strip()
 
 
 @gql.django.type(Project)
