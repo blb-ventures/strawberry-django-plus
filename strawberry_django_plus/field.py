@@ -17,6 +17,7 @@ from typing import (
     overload,
 )
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
@@ -45,8 +46,11 @@ from strawberry_django.fields.types import (
 from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
+from strawberry_django_plus.utils.inspect import get_directives
+
 from .descriptors import ModelProperty
 from .optimizer import OptimizerStore, PrefetchType
+from .permissions import BasePermRequired, ObjPermRequired, is_perm_safe, perm_safe
 from .types import resolve_model_field_type
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
@@ -88,6 +92,10 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         origin = self.origin_django_type or self.origin._django_type
         return origin.model
+
+    @cached_property
+    def directive_filters(self) -> List[BasePermRequired]:
+        return cast(List[BasePermRequired], get_directives([self], instanceof=ObjPermRequired))
 
     @classmethod
     def from_django_type(
@@ -252,11 +260,24 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
     @resolvers.async_unsafe
     def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
-        return list(self.get_queryset(qs, info, **kwargs))
+        need_perm_safe = False
+        for d in self.directive_filters:
+            qs = d.filter_queryset(
+                qs,
+                info.context.request.user,
+                ctype=ContentType.objects.get_for_model(qs.model),
+            )
+            need_perm_safe = need_perm_safe or is_perm_safe(qs)
+
+        retval = list(self.get_queryset(qs, info, **kwargs))
+        if need_perm_safe:
+            retval = perm_safe(retval)
+
+        return retval
 
     @resolvers.async_unsafe
     def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> _M:
-        return self.get_queryset(qs, info, **kwargs).one()
+        return self.get_queryset(qs, info, **kwargs).get()
 
 
 @overload

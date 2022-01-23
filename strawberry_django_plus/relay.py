@@ -775,7 +775,7 @@ class ConnectionField(RelayField):
             # If base_resolver is not self.conn_resolver, then it is defined to something
             assert self.base_resolver
 
-            resolver_args = {arg.python_name for arg in self.base_resolver.arguments}  # type:ignore
+            resolver_args = {arg.python_name for arg in self.base_resolver.arguments}
             resolver_kwargs = {k: v for k, v in kwargs.items() if k in resolver_args}
             # This will be passed to the field cconnection resolver
             kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
@@ -802,7 +802,7 @@ class InputMutationField(RelayField):
         namespace = sys.modules[resolver.__module__].__dict__
         resolver = StrawberryResolver(resolver)
 
-        args = cast(List[StrawberryArgument], resolver.arguments)
+        args = resolver.arguments
         type_dict = {
             "__doc__": f"Input data for `{name}` mutation",
             "__annotations__": {},

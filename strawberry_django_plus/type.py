@@ -9,6 +9,7 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
 from strawberry.schema_directive import StrawberrySchemaDirective
+from strawberry.types.info import Info
 from strawberry.unset import _Unset
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
@@ -19,7 +20,9 @@ from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations
 
 from .field import StrawberryDjangoField, field
+from .permissions import ObjPermRequired
 from .relay import Node, connection, node
+from .utils.inspect import get_directives
 from .utils.resolvers import (
     resolve_connection,
     resolve_model_id,
@@ -76,6 +79,13 @@ def _has_own_node_resolver(cls, name: str) -> bool:
     return True
 
 
+def _get_filters(info: Info = None):
+    if not info:
+        return []
+
+    return list(get_directives([info._field], instanceof=ObjPermRequired))
+
+
 def _process_type(
     cls: _O,
     model: Type[Model],
@@ -120,10 +130,24 @@ def _process_type(
             cls.resolve_node = types.MethodType(resolve_model_node, cls)
 
         if not _has_own_node_resolver(cls, "resolve_nodes"):
-            cls.resolve_nodes = types.MethodType(resolve_model_nodes, cls)
+            cls.resolve_nodes = types.MethodType(
+                lambda *args, **kwargs: resolve_model_nodes(
+                    *args,
+                    filters=_get_filters(kwargs.get("info")),
+                    **kwargs,
+                ),
+                cls,
+            )
 
         if not _has_own_node_resolver(cls, "resolve_connection_resolver"):
-            cls.resolve_connection = types.MethodType(resolve_connection, cls)
+            cls.resolve_connection = types.MethodType(
+                lambda *args, **kwargs: resolve_connection(
+                    *args,
+                    filters=_get_filters(kwargs.get("info")),
+                    **kwargs,
+                ),
+                cls,
+            )
 
         if not _has_own_node_resolver(cls, "resolve_id"):
             cls.resolve_id = types.MethodType(

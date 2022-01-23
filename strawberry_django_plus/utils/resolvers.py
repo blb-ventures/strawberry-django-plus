@@ -1,12 +1,14 @@
 import functools
 import inspect
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Iterable,
     List,
     Literal,
     Optional,
+    Sequence,
     Type,
     TypeVar,
     Union,
@@ -26,6 +28,9 @@ from strawberry_django_plus.relay import Connection, GlobalID, Node, NodeType
 
 from .aio import is_awaitable, resolve, resolve_async
 from .inspect import get_django_type, get_optimizer_config
+
+if TYPE_CHECKING:
+    from strawberry_django_plus.permissions import BasePermRequired
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -265,6 +270,7 @@ def resolve_model_nodes(
     *,
     info: Optional[Info] = None,
     node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
+    filters: Sequence["BasePermRequired"] = None,
 ) -> AwaitableOrValue[QuerySet[_M]]:
     """Resolve model nodes, ensuring those are prefetched in a sync context.
 
@@ -289,6 +295,11 @@ def resolve_model_nodes(
     qs = source.objects.all()
     if node_ids is not None:
         qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
+
+    if filters:
+        assert info
+        for f in filters:
+            qs = f.filter_queryset(qs, info.context.request.user)
 
     return resolve_result(qs, info=info)
 
@@ -383,6 +394,7 @@ def resolve_connection(
     after: Optional[str] = None,
     first: Optional[int] = None,
     last: Optional[int] = None,
+    filters: Sequence["BasePermRequired"] = None,
 ) -> AwaitableOrValue[Connection[NodeType]]:
     """Resolve model connection, ensuring those are prefetched in a sync context.
 
@@ -434,11 +446,28 @@ def resolve_connection(
                 after=after,
                 first=first,
                 last=last,
+                filters=filters,
             ),
         )
 
     # FIXME: Remove cast once pyright resolves the negative TypeGuard form
     nodes = cast(QuerySet[_M], nodes)
+    from_nodes = Connection.from_nodes
+
+    if filters:
+        from strawberry_django_plus.permissions import is_perm_safe, perm_safe
+
+        assert info
+        need_perm_safe = False
+        for f in filters:
+            nodes = f.filter_queryset(
+                nodes,
+                info.context.request.user,
+            )
+            need_perm_safe = need_perm_safe or is_perm_safe(nodes)
+
+        if need_perm_safe:
+            from_nodes = lambda *args, **kwargs: perm_safe(Connection.from_nodes(*args, **kwargs))
 
     if info is not None:
         config = get_optimizer_config(info)
@@ -450,7 +479,7 @@ def resolve_connection(
         nodes,
         async_unsafe(
             functools.partial(
-                Connection.from_nodes,
+                from_nodes,
                 total_count=total_count,
                 before=before,
                 after=after,

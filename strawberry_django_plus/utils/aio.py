@@ -1,6 +1,7 @@
-from typing import Awaitable, Callable, Optional, Type, TypeVar, cast, overload
+from typing import Awaitable, Callable, Optional, Type, TypeVar, Union, cast, overload
 
 from graphql.pyutils.is_awaitable import is_awaitable as _is_awaitable
+from graphql.type.definition import GraphQLResolveInfo
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import TypeGuard
@@ -18,7 +19,7 @@ _R = TypeVar("_R")
 def is_awaitable(
     value: AwaitableOrValue[_T],
     *,
-    info: Optional[Info] = None,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
 ) -> TypeGuard[Awaitable[_T]]:
     """Check if the given value is awaitable.
 
@@ -35,7 +36,9 @@ def is_awaitable(
 
     """
     if info is not None:
-        return info._raw_info.is_awaitable(value)
+        if isinstance(info, Info):
+            info = info._raw_info
+        return info.is_awaitable(value)
     return _is_awaitable(value)
 
 
@@ -44,7 +47,7 @@ async def resolve_async(
     resolver: Callable[[_T], AwaitableOrValue[_R]],
     *,
     ensure_type: Optional[Type[_R]] = None,
-    info: Optional[Info] = None,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
 ) -> _R:
     """Call resolver with the awaited value's response.
 
@@ -92,7 +95,7 @@ def resolve(
     resolver: Callable[[_T], Awaitable[_R]],
     *,
     ensure_type: Optional[Type[_R]] = None,
-    info: Optional[Info] = None,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
 ) -> AwaitableOrValue[_R]:
     ...
 
@@ -103,7 +106,7 @@ def resolve(
     resolver: Callable[[_T], _R],
     *,
     ensure_type: Optional[Type[_R]] = None,
-    info: Optional[Info] = None,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
 ) -> AwaitableOrValue[_R]:
     ...
 

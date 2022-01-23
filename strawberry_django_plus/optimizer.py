@@ -79,7 +79,7 @@ def _get_model_hints(
     # are actually inside edges -> node selection...
     if type_def.concrete_of and issubclass(type_def.concrete_of.origin, Connection):
         n_type = type_def.type_var_map[NodeType]
-        n_type_def = n_type._type_definition  # type:ignore
+        n_type_def = cast(TypeDefinition, n_type._type_definition)  # type:ignore
 
         for edges in get_selections(selection, typename=typename).values():
             if edges.name != "edges":

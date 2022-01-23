@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.staticfiles",
+    "guardian",
     "django_extensions",
     "debug_toolbar",
     "strawberry.django",
@@ -36,6 +37,13 @@ DATABASES = {
         ),
     },
 }
+
+ANONYMOUS_USER_NAME = None
+
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+    "guardian.backends.ObjectPermissionBackend",
+)
 
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -86,6 +94,10 @@ LOGGING = {
     },
     "loggers": {
         "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+        },
+        "strawberry.execution": {
             "handlers": ["console"],
             "level": "INFO",
         },
