@@ -331,7 +331,7 @@ class SuperuserRequired(Requires):
         )
 
 
-@strawberry.type
+@strawberry.input()
 class PermDefinition:
     """Permission definition.
 

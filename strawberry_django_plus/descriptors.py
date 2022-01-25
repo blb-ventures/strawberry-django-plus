@@ -1,3 +1,4 @@
+import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -84,7 +85,9 @@ class ModelProperty(Generic[_M, _R]):
 
     @property
     def description(self) -> Optional[str]:
-        return self.func.__doc__
+        if not self.func.__doc__:
+            return None
+        return inspect.cleandoc(self.func.__doc__)
 
     @property
     def type_annotation(self) -> Union[object, str]:

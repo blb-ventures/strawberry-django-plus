@@ -1,3 +1,4 @@
+import inspect
 from typing import TYPE_CHECKING, Union
 
 from django.db.models.fields import Field
@@ -25,6 +26,7 @@ def resolve_model_field_type(
     if has_choices_field and isinstance(model_field, (TextChoicesField, IntegerChoicesField)):
         field_type = model_field.choices_enum
         if not hasattr(field_type, "_enum_definition"):
-            return enum(field_type, description=field_type.__doc__)
+            doc = field_type.__doc__ and inspect.cleandoc(field_type.__doc__)
+            return enum(field_type, description=doc)
 
     return _resolve_model_field(model_field, django_type)
