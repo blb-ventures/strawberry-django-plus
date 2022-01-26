@@ -2,6 +2,7 @@ from collections import defaultdict
 import dataclasses
 import functools
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
@@ -51,13 +52,25 @@ Origin: TypeAlias = Union[TypeDefinition, StrawberryField]
 _origin_cache: DefaultDict[Origin, List["SchemaDirectiveResolver"]] = defaultdict(list)
 
 
+# FIXME: This is here to help with typing
+@dataclasses.dataclass
+class SchemaDirective(Generic[_T], StrawberrySchemaDirective):
+    wrap: Type[_T]
+    instance: Optional[_T] = dataclasses.field(init=False)
+
+    if TYPE_CHECKING:
+
+        def __call__(self, *args, **kwargs) -> Self:
+            ...
+
+
 @dataclasses.dataclass
 @functools.total_ordering
 class SchemaDirectiveResolver:
     """Base schema directive resolver definition."""
 
-    has_resolver: ClassVar[Private[bool]] = False
-    priority: ClassVar[Private[int]] = -999
+    has_resolver: ClassVar[bool] = False
+    priority: ClassVar[int] = 0
 
     origin: Private[Optional[Origin]] = dataclasses.field(init=False)
 
@@ -85,6 +98,8 @@ class SchemaDirectiveResolver:
                 for d in _origin_cache[type_def]:
                     if isinstance(d, cls) and d not in directives:
                         directives.append(d)
+
+        directives.sort(reverse=True)
         return directives
 
     def register(self, origin: Origin):
@@ -102,12 +117,6 @@ class SchemaDirectiveResolver:
         **kwargs,
     ) -> AwaitableOrValue[Any]:
         raise NotImplementedError
-
-
-@dataclasses.dataclass
-class SchemaDirective(Generic[_T], StrawberrySchemaDirective):
-    wrap: Type[_T]
-    instance: Optional[_T] = dataclasses.field(init=False)
 
 
 def schema_directive(
@@ -231,7 +240,7 @@ class SchemaDirectiveExtension(Extension):
 
         # Keep directives sorted by order of priority and avoid duplicates
         directives = []
-        for d in sorted(found_directives):
+        for d in reversed(found_directives):
             if d.has_resolver and d not in directives:
                 directives.append(d)
 

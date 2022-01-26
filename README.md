@@ -275,12 +275,14 @@ For example:
 ```python
 @strawberry.type
 class SomeType:
-    login_required_field: RetType = strawberry.field(directives=[LoginRequired()])
+    login_required_field: RetType = strawberry.field(
+        directives=[IsAuthenticated()],
+    )
     perm_required_field: OtherType = strawberry.field(
-        directives=[PermRequired("some_app.some_perm")],
+        directives=[HasPerm("some_app.some_perm")],
     )
     obj_perm_required_field: OtherType = strawberry.field(
-        directives=[ObjPermRequired("some_app.some_perm")],
+        directives=[HasObjPerm("some_app.some_perm")],
     )
 ```
 
@@ -290,14 +292,14 @@ class SomeType:
 
 Available options are:
 
-- `LoginRequired`: Checks if the user is authenticated (`user.is_autenticated`)
-- `StaffRequired`: Checks if the user is a staff member (`user.is_staff`)
-- `SuperuserRequired`: Checks if the user is a superuser (`user.is_superuser`)
-- `PermRequired(perms: str, list[str], any: bool = True)`: Checks if the user has any or all of
+- `IsAuthenticated`: Checks if the user is authenticated (`user.is_autenticated`)
+- `IsStaff`: Checks if the user is a staff member (`user.is_staff`)
+- `IsSuperuser`: Checks if the user is a superuser (`user.is_superuser`)
+- `HasPerm(perms: str, list[str], any: bool = True)`: Checks if the user has any or all of
   the given permissions (`user.has_perm(perm)`)
-- `RootPermRequired(perms: str | list[str], any: bool = True)`: Checks if the user has any or all
+- `HasRootPerm(perms: str | list[str], any: bool = True)`: Checks if the user has any or all
   of the given permissions for the root of that field (`user.has_perm(perm, root)`)
-- `ObjPermRequired(perms: str | list[str], any: bool = True)`: Resolves the retval and then
+- `HasObjPerm(perms: str | list[str], any: bool = True)`: Resolves the retval and then
   checks if the user has any or all of the given permissions for that specific value
   (`user.has_perm(perm, retval)`). Note that if the return value is a list, this directive
   will filter the return value, removing objects that fails the check (check below for more

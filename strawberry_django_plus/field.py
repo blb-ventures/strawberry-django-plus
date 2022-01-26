@@ -48,7 +48,7 @@ from typing_extensions import Self
 
 from .descriptors import ModelProperty
 from .optimizer import OptimizerStore, PrefetchType
-from .permissions import PermDirective, is_perm_safe, perm_safe
+from .permissions import HasPermDirective, is_perm_safe, perm_safe
 from .types import resolve_model_field_type
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
@@ -255,7 +255,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     @resolvers.async_unsafe
     def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
         need_perm_safe = False
-        for d in PermDirective.for_origin(self):
+        for d in HasPermDirective.for_origin(self):
             qs = d.get_queryset(
                 qs,
                 info.context.request.user,

@@ -30,7 +30,7 @@ from .aio import is_awaitable, resolve, resolve_async
 from .inspect import get_django_type, get_optimizer_config
 
 if TYPE_CHECKING:
-    from strawberry_django_plus.permissions import PermDirective
+    from strawberry_django_plus.permissions import HasPermDirective
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -270,7 +270,7 @@ def resolve_model_nodes(
     *,
     info: Optional[Info] = None,
     node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
-    filters: Sequence["PermDirective"] = None,
+    filters: Sequence["HasPermDirective"] = None,
 ) -> AwaitableOrValue[QuerySet[_M]]:
     """Resolve model nodes, ensuring those are prefetched in a sync context.
 
@@ -394,7 +394,7 @@ def resolve_connection(
     after: Optional[str] = None,
     first: Optional[int] = None,
     last: Optional[int] = None,
-    filters: Sequence["PermDirective"] = None,
+    filters: Sequence["HasPermDirective"] = None,
 ) -> AwaitableOrValue[Connection[NodeType]]:
     """Resolve model connection, ensuring those are prefetched in a sync context.
 

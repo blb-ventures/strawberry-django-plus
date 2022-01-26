@@ -11,7 +11,7 @@ from strawberry_django_plus import gql
 from strawberry_django_plus.directives import SchemaDirectiveExtension
 from strawberry_django_plus.gql import relay
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
-from strawberry_django_plus.permissions import LoginRequired, PermRequired
+from strawberry_django_plus.permissions import HasPerm, IsAuthenticated
 
 from .models import Issue, Milestone, Project
 
@@ -82,19 +82,19 @@ class Query:
     def project_conn_with_resolver(self, name: str) -> Iterable[ProjectType]:
         return cast(Iterable[ProjectType], Project.objects.filter(name__contains=name))
 
-    @gql.django.field(directives=[LoginRequired()])
+    @gql.django.field(directives=[IsAuthenticated()])
     def login_required(self) -> str:
         return "login required"
 
-    @gql.django.field(directives=[LoginRequired()])
+    @gql.django.field(directives=[IsAuthenticated()])
     def login_required_optional(self) -> Optional[str]:
         return "login required optional"
 
-    @gql.django.field(directives=[PermRequired("foo.bar")])
+    @gql.django.field(directives=[HasPerm("foo.bar")])
     def perm_required(self) -> str:
         return "perm required"
 
-    @gql.django.field(directives=[PermRequired("foo.bar")])
+    @gql.django.field(directives=[HasPerm("foo.bar")])
     def perm_required_optional(self) -> Optional[str]:
         return "perm required optional"
 
