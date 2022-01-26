@@ -22,11 +22,14 @@ integration, enhancing its overall functionality.
   when not needed.
 - Support for [Django choices enums using](#django-choices-enums) (requires
   [django-choices-field](https://github.com/bellini666/django-choices-field))
+- [Permissioning](#permissioning) using schema directives with the default
+  [django authentication system](https://docs.djangoproject.com/en/4.0/topics/auth/default/),
+  with support for both direct and per-object permission checking for backends that
+  support those (e.g. [django-guardian](https://django-guardian.readthedocs.io/en/stable])).
 - [Relay support](#relay-support) for queries, connections and input mutations.
 - [Django Debug Toolbar integration](#django-debug-toolbar-integration) with graphiql to
   display metrics like SQL queries
 - (Coming Soon...) Improved Django mutations with automatic validation errors integration.
-- (Coming Soon...)Integration with Django Guardian for per-object permission management.
 - A well typed and documented API.
 
 ## Installation
@@ -73,7 +76,8 @@ from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 schema = strawberry.Schema(
     Query,
     extensions=[
-        DjangoOptimizerExtension(),
+        # other extensions...
+        DjangoOptimizerExtension,
     ]
 )
 ```
@@ -261,6 +265,70 @@ and mutations.
 If you want to name it differently, decorate the class with `@gql.enum` with your preferred
 name so that strawberry-django-plus will not try to register it again.
 
+### Permissioning
+
+Permissioning is done using schema directives by applying them to the fields that requires
+permission checking.
+
+For example:
+
+```python
+@strawberry.type
+class SomeType:
+    login_required_field: RetType = strawberry.field(directives=[LoginRequired()])
+    perm_required_field: OtherType = strawberry.field(
+        directives=[PermRequired("some_app.some_perm")],
+    )
+    obj_perm_required_field: OtherType = strawberry.field(
+        directives=[ObjPermRequired("some_app.some_perm")],
+    )
+```
+
+- `login_required_field` will check if the user is authenticated
+- `perm_required_field` will check if the user has `"some_app.some_perm"` permission
+- `obj_perm_required_field` will check the permission for the resolved value
+
+Available options are:
+
+- `LoginRequired`: Checks if the user is authenticated (`user.is_autenticated`)
+- `StaffRequired`: Checks if the user is a staff member (`user.is_staff`)
+- `SuperuserRequired`: Checks if the user is a superuser (`user.is_superuser`)
+- `PermRequired(perms: str, list[str], any: bool = True)`: Checks if the user has any or all of
+  the given permissions (`user.has_perm(perm)`)
+- `RootPermRequired(perms: str | list[str], any: bool = True)`: Checks if the user has any or all
+  of the given permissions for the root of that field (`user.has_perm(perm, root)`)
+- `ObjPermRequired(perms: str | list[str], any: bool = True)`: Resolves the retval and then
+  checks if the user has any or all of the given permissions for that specific value
+  (`user.has_perm(perm, retval)`). Note that if the return value is a list, this directive
+  will filter the return value, removing objects that fails the check (check below for more
+  information regarding other possibilities).
+
+There are some important notes regarding how the directives handle the return value:
+
+- If the user passes the check, the retval is returned normally
+- If the user fails the check:
+  - If the return type was `Optional`, it returns `None`
+  - If the return type was a `List`, it returns an empty list
+  - If the return type was a relay `Connection`, it returns an empty `Connection`
+  - Otherwise, it raises a `PermissionError` for that resolver
+
+Note that since `strawberry` doesn't support resolvers for schema directives, it is necessary
+to use this lib's custom extension that handles the resolution of those and any other custom
+defined schema directive inherited from `strawberry_django_plus.directives.SchemaDirectiveResolver`:
+
+```python
+import strawberry
+from strawberry_django_plus.directives import SchemaDirectiveExtension
+
+schema = strawberry.Schema(
+    Query,
+    extensions=[
+        SchemaDirectiveExtension,
+        # other extensions...
+    ]
+)
+```
+
 ### Relay Support
 
 We have a custom [relay spec](https://relay.dev/docs/guides/graphql-server-specification/)
@@ -329,13 +397,18 @@ type PageInfo {
 
 type Query {
   fruit(id: GlobalID!): Fruit
-  fruits_connection(before: String, after: String, first: Int, last: Int): FruitConnection
+  fruits_connection(
+    before: String
+    after: String
+    first: Int
+    last: Int
+  ): FruitConnection
   fruits_connection_filtered(
-      before: String,
-      after: String,
-      first: Int,
-      last: Int,
-      nameStartswith: String!
+    before: String
+    after: String
+    first: Int
+    last: Int
+    nameStartswith: String!
   ): FruitConnection
 }
 ```

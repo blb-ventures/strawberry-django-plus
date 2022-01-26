@@ -94,7 +94,10 @@ class AuthDirective(SchemaDirectiveResolver):
     """Base auth directive definition."""
 
     has_resolver: ClassVar[Private[bool]] = True
-    message: Private[str] = dataclasses.field(default="User is not authorized.")
+
+    @property
+    def message(self) -> str:
+        return "User is not authorized."
 
     def resolve(
         self,
@@ -301,7 +304,6 @@ class PermDirective(AuthDirective):
 
     perms: List[PermDefinition] = strawberry.field(
         description="Required perms to access this resource.",
-        default_factory=list,
     )
     any: bool = strawberry.field(  # noqa:A003
         description="If any or all perms listed are required.",

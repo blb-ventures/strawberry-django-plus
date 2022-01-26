@@ -57,9 +57,9 @@ class SchemaDirectiveResolver:
     """Base schema directive resolver definition."""
 
     has_resolver: ClassVar[Private[bool]] = False
+    priority: ClassVar[Private[int]] = -999
 
     origin: Private[Optional[Origin]] = dataclasses.field(init=False)
-    priority: Private[int] = dataclasses.field(default=-999)
 
     def __post_init__(self):
         self.origin = None
