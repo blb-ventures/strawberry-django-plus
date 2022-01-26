@@ -30,7 +30,7 @@ from .aio import is_awaitable, resolve, resolve_async
 from .inspect import get_django_type, get_optimizer_config
 
 if TYPE_CHECKING:
-    from strawberry_django_plus.permissions import BasePermRequired
+    from strawberry_django_plus.permissions import PermDirective
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -270,7 +270,7 @@ def resolve_model_nodes(
     *,
     info: Optional[Info] = None,
     node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
-    filters: Sequence["BasePermRequired"] = None,
+    filters: Sequence["PermDirective"] = None,
 ) -> AwaitableOrValue[QuerySet[_M]]:
     """Resolve model nodes, ensuring those are prefetched in a sync context.
 
@@ -299,7 +299,7 @@ def resolve_model_nodes(
     if filters:
         assert info
         for f in filters:
-            qs = f.filter_queryset(qs, info.context.request.user)
+            qs = f.get_queryset(qs, info.context.request.user)
 
     return resolve_result(qs, info=info)
 
@@ -394,7 +394,7 @@ def resolve_connection(
     after: Optional[str] = None,
     first: Optional[int] = None,
     last: Optional[int] = None,
-    filters: Sequence["BasePermRequired"] = None,
+    filters: Sequence["PermDirective"] = None,
 ) -> AwaitableOrValue[Connection[NodeType]]:
     """Resolve model connection, ensuring those are prefetched in a sync context.
 
@@ -460,7 +460,7 @@ def resolve_connection(
         assert info
         need_perm_safe = False
         for f in filters:
-            nodes = f.filter_queryset(
+            nodes = f.get_queryset(
                 nodes,
                 info.context.request.user,
             )

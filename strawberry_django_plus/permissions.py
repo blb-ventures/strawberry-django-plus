@@ -1,9 +1,8 @@
-import abc
 import dataclasses
+import enum
 import functools
 from typing import (
     Any,
-    Awaitable,
     Callable,
     ClassVar,
     Dict,
@@ -17,33 +16,22 @@ from typing import (
     Union,
     cast,
 )
-import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, QuerySet, Value
-from graphql.type.definition import (
-    GraphQLList,
-    GraphQLNonNull,
-    GraphQLObjectType,
-    GraphQLOutputType,
-    GraphQLResolveInfo,
-    GraphQLUnionType,
-    GraphQLWrappingType,
-)
+from graphql.type.definition import GraphQLResolveInfo
 import strawberry
 from strawberry.django.context import StrawberryDjangoContext
-from strawberry.extensions.base_extension import Extension
 from strawberry.private import Private
-from strawberry.schema.schema import Schema
 from strawberry.schema_directive import Location
-from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
+from typing_extensions import Self
 
-from .relay import Connection, NodeType
+from .directives import SchemaDirectiveHelper, SchemaDirectiveResolver, schema_directive
+from .relay import Connection
 from .utils import aio, resolvers
-from .utils.inspect import get_directives, get_possible_type_definitions
 from .utils.query import filter_for_user
-from .utils.typing import SchemaDirective, TypeOrIterable, UserType
+from .utils.typing import UserType
 
 try:
     # Try to use the smaller/faster cache decorator if available
@@ -53,97 +41,18 @@ except AttributeError:
 
 try:
     from .integrations.guardian import get_user_or_anonymous
+
+    get_user_or_anonymous = resolvers.async_unsafe(get_user_or_anonymous)
 except ImportError:
     # Access the user's id to force it to be loaded from the database
-    get_user_or_anonymous = lambda u: (u, u.id)[0]
+    get_user_or_anonymous = resolvers.async_unsafe(lambda u: (u, u.id)[0])
+
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 
 _user_ensured_attr = "_user_ensured"
 _perm_safe_marker = "_strawberry_django_perm_safe_marker"
-_perm_checker_attr = "_obj_perm_checker"
-
-
-def _directive(
-    *,
-    locations: List[Location],
-    description=None,
-    name=None,
-) -> Callable[[_T], SchemaDirective[_T]]:
-    return strawberry.schema_directive(
-        locations=locations,
-        description=description,
-        name=name,
-    )
-
-
-def _default_user_has_perm(user: UserType, perm: str, obj: Any) -> bool:
-    return user.has_perm(perm, obj=obj)
-
-
-def _ensure_str(value: Optional[str]) -> str:
-    assert value is not None
-    return value
-
-
-def _ensure_user(info: GraphQLResolveInfo) -> AwaitableOrValue[UserType]:
-    context = cast(StrawberryDjangoContext, info.context)
-    if getattr(context, _user_ensured_attr, False):
-        return cast(UserType, context.request.user)
-
-    return aio.resolve(
-        cast(
-            Awaitable[UserType],
-            resolvers.async_unsafe(
-                lambda: get_user_or_anonymous(cast(UserType, context.request.user))
-            )(),
-        ),
-        lambda u: setattr(context, _user_ensured_attr, True) or u,
-    )
-
-
-@_cache
-def _parse_ret_type(ret_type: GraphQLOutputType, schema: Schema):
-    if isinstance(ret_type, GraphQLNonNull):
-        ret_type = ret_type.of_type
-        optional = False
-    else:
-        optional = True
-
-    is_list = isinstance(ret_type, GraphQLList)
-
-    while isinstance(ret_type, GraphQLWrappingType):
-        ret_type = ret_type.of_type
-
-    if isinstance(ret_type, GraphQLUnionType):
-        ret_types = cast(List[GraphQLObjectType], ret_type.types)
-    else:
-        ret_types = [ret_type]
-
-    type_defs = {}
-    node_type_defs = {}
-    for type_ in ret_types:
-        if not isinstance(type_, GraphQLObjectType):
-            continue
-
-        type_ = schema.get_type_by_name(ret_type.name)
-        if type_ is None:
-            continue
-
-        for type_def in get_possible_type_definitions(type_):
-            type_defs[type_def.name] = type_def
-            if type_def.concrete_of and issubclass(type_def.concrete_of.origin, Connection):
-                n_type = type_def.type_var_map[NodeType]
-                n_type_def = cast(TypeDefinition, n_type._type_definition)  # type:ignore
-                node_type_defs[type_def.name] = n_type_def
-
-    return ReturnHandler(
-        type_defs=type_defs,
-        node_type_defs=node_type_defs,
-        optional=optional,
-        is_list=is_list,
-    )
 
 
 def perm_safe(result: _T) -> _T:
@@ -181,157 +90,161 @@ class PermSafeIterable(Generic[_T]):
 
 
 @dataclasses.dataclass
-class ReturnHandler:
-    type_defs: Dict[str, TypeDefinition]
-    node_type_defs: Dict[str, TypeDefinition]
-    optional: bool
-    is_list: bool
+class AuthDirective(SchemaDirectiveResolver):
+    """Base auth directive definition."""
 
-    def __post_init__(self):
-        assert len(self.node_type_defs) <= len(self.type_defs)
+    has_resolver: ClassVar[Private[bool]] = True
+    message: Private[str] = dataclasses.field(default="User is not authorized.")
 
-    def can_handle(self, type_name: str) -> bool:
-        return len(self.type_defs) == 1 and (
-            type_name in self.type_defs or type_name in self.node_type_defs
-        )
-
-    def resolve(self, retval: Any, ok: bool, *, message: str) -> Any:
-        if ok:
-            if callable(retval):
-                retval = retval()
-            return retval
-
-        if self.optional:
-            return None
-        elif self.is_list:
-            return []
-        elif len(self.type_defs) == 1 and len(self.node_type_defs) == 1:
-            type_def = next(iter(self.type_defs.values()))
-            return type_def.origin.from_nodes([], total_count=0)
-
-        # In last case, raise an error
-        raise PermissionError(message)
-
-
-@dataclasses.dataclass(eq=True, unsafe_hash=True)
-class Requires(abc.ABC):
-    """Base requires definition."""
-
-    key: Private[uuid.UUID] = dataclasses.field(
-        default_factory=uuid.uuid4,
-        init=False,
-        compare=False,
-    )
-    class_key: Private[str] = dataclasses.field(default="", init=False)
-    type_name: Private[Optional[str]] = dataclasses.field(default=None, init=False)
-
-    def __post_init__(self):
-        self.class_key = self.__class__.__name__
-
-    def __call__(
+    def resolve(
         self,
+        helper: SchemaDirectiveHelper,
         _next: Callable,
         root: Any,
         info: GraphQLResolveInfo,
         *args,
         **kwargs,
-    ) -> AwaitableOrValue[Any]:
-        schema = cast(
-            Schema,
-            info.schema._strawberry_schema,  # type:ignore
-        )
-        ret_handler = _parse_ret_type(info.return_type, schema)
-        if self.type_name is not None and not ret_handler.can_handle(self.type_name):
-            return _next(root, info, *args, **kwargs)
+    ):
+        context = cast(StrawberryDjangoContext, info.context)
+        resolver = functools.partial(_next, root, info, *args, **kwargs)
 
-        user = _ensure_user(info)
-        partial = functools.partial(_next, root, info, *args, **kwargs)
-
-        if aio.is_awaitable(user, info=info):
-            return aio.resolve_async(
-                cast(Awaitable[UserType], user),
-                functools.partial(self.resolve, ret_handler, partial, root, info),
+        user = cast(UserType, context.request.user)
+        if not getattr(context, _user_ensured_attr, False):
+            return aio.resolve(
+                cast(UserType, get_user_or_anonymous(user)),
+                functools.partial(
+                    self.resolve_for_user,
+                    helper,
+                    resolver,
+                    root,
+                    info,
+                ),
+                info=info,
             )
 
-        return self.resolve(ret_handler, partial, root, info, cast(UserType, user))
+        return self.resolve_for_user(
+            helper,
+            resolver,
+            root,
+            info,
+            cast(UserType, user),
+        )
 
-    @abc.abstractmethod
-    def resolve(
+    def resolve_for_user(
         self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
+        helper: SchemaDirectiveHelper,
+        resolver: Callable,
         root: Any,
         info: GraphQLResolveInfo,
         user: UserType,
-    ) -> AwaitableOrValue[Any]:
-        """Resolve next, checking the required permissions for the user."""
+    ):
         raise NotImplementedError
 
+    def resolve_retval(
+        self,
+        helper: SchemaDirectiveHelper,
+        retval: Any,
+        auth_ok: AwaitableOrValue[bool],
+    ):
+        # If this is not bool, assume async. Avoid is_awaitable since it is slow
+        if not isinstance(auth_ok, bool):
+            return aio.resolve_async(
+                auth_ok, functools.partial(self.resolve_retval, helper, retval)
+            )
 
-@_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
-class LoginRequired(Requires):
-    """Defines that the given field/type can only be accessed by authenticated users."""
+        if auth_ok:
+            if callable(retval):
+                retval = retval()
+            return retval
+
+        # If the field is optional, return null
+        if helper.optional:
+            return None
+
+        # If it is a list, return an empty list
+        if helper.is_list:
+            return []
+
+        # If it is a Connection, try to return an empty connection, but only if
+        # it is the only possibility available...
+        if len(helper.ret_possibilities) == 1:
+            type_def = helper.ret_possibilities[0].type_def
+            if (
+                type_def
+                and type_def.concrete_of
+                and issubclass(type_def.concrete_of.origin, Connection)
+            ):
+                return type_def.origin.from_nodes([], total_count=0)
+
+        # In last case, raise an error
+        raise PermissionError(self.message)
+
+
+@schema_directive(locations=[Location.FIELD_DEFINITION])
+class LoginRequired(AuthDirective):
+    """Mark a field as only resolvable by authenticated users."""
 
     message: Private[str] = dataclasses.field(default="User is not authenticated.")
 
-    def resolve(
+    def resolve_for_user(
         self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
+        helper: SchemaDirectiveHelper,
+        resolver: Callable,
         root: Any,
         info: GraphQLResolveInfo,
         user: UserType,
     ):
-        return ret_handler.resolve(
-            _next,
-            user.is_active and user.is_authenticated,
-            message=self.message,
+        return self.resolve_retval(
+            helper,
+            resolver,
+            bool(user.is_active and user.is_authenticated),
         )
 
 
-@_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
-class StaffRequired(Requires):
-    """Defines that the given field/type can only be accessed by staff users."""
+@schema_directive(locations=[Location.FIELD_DEFINITION])
+class StaffRequired(AuthDirective):
+    """Mark a field as only resolvable by staff users."""
 
     message: Private[str] = dataclasses.field(default="User is not a staff member.")
 
-    def resolve(
+    def resolve_for_user(
         self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
+        helper: SchemaDirectiveHelper,
+        resolver: Callable,
         root: Any,
         info: GraphQLResolveInfo,
         user: UserType,
     ):
-        return ret_handler.resolve(
-            _next,
-            user.is_active and user.is_staff,
-            message=self.message,
+        return self.resolve_retval(
+            helper,
+            resolver,
+            bool(user.is_active and user.is_staff),
         )
 
 
-@_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
-class SuperuserRequired(Requires):
-    """Defines that the given field/type can only be accessed by superusers."""
+@schema_directive(locations=[Location.FIELD_DEFINITION])
+class SuperuserRequired(AuthDirective):
+    """Mark a field as only resolvable by superuser users."""
 
     message: Private[str] = dataclasses.field(default="User is not a superuser.")
 
-    def resolve(
+    def resolve_for_user(
         self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
+        helper: SchemaDirectiveHelper,
+        resolver: Callable,
         root: Any,
         info: GraphQLResolveInfo,
         user: UserType,
     ):
-        return ret_handler.resolve(
-            _next,
-            user.is_active and user.is_superuser,
-            message=self.message,
+        return self.resolve_retval(
+            helper,
+            resolver,
+            bool(user.is_active and user.is_superuser),
         )
 
 
-@strawberry.input()
+@strawberry.input
+@dataclasses.dataclass(eq=True, order=True, frozen=True)
 class PermDefinition:
     """Permission definition.
 
@@ -373,12 +286,22 @@ class PermDefinition:
         return f"{self.resource or ''}.{self.permission or ''}".strip(".")
 
 
+class PermTarget(enum.Enum):
+    """Permission location."""
+
+    ROOT = "root"
+    RETVAL = "retval"
+
+
 @dataclasses.dataclass
-class BasePermRequired(Requires):
-    """Base class for defining permissions requirement."""
+class PermDirective(AuthDirective):
+    """Permission directive."""
+
+    target: ClassVar[Private[Optional[PermTarget]]] = None
 
     perms: List[PermDefinition] = strawberry.field(
         description="Required perms to access this resource.",
+        default_factory=list,
     )
     any: bool = strawberry.field(  # noqa:A003
         description="If any or all perms listed are required.",
@@ -403,11 +326,30 @@ class BasePermRequired(Requires):
             perms = [PermDefinition.from_perm(p) if isinstance(p, str) else p for p in perms]
         self.perms = perms
 
+    def __hash__(self):
+        return hash(
+            (
+                self.__class__,
+                frozenset(self.perms),
+                self.any,
+            )
+        )
+
+    def __eq__(self, other: Self):
+        return (
+            self.__class__ == other.__class__
+            and set(self.perms) == set(other.perms)
+            and self.any == other.any
+            and self.message == other.message
+            and self.with_anonymous == other.with_anonymous
+            and self.with_superuser == other.with_superuser
+        )
+
     def get_cache(
         self,
         info: GraphQLResolveInfo,
         user: UserType,
-    ) -> Dict[Union[uuid.UUID, Tuple[uuid.UUID, Any]], bool]:
+    ) -> Dict[Union[Self, Tuple[Self, Any]], bool]:
         cache_key = f"_{self.__class__.__name__}_cache"
 
         cache = getattr(user, cache_key, None)
@@ -418,24 +360,20 @@ class BasePermRequired(Requires):
         setattr(user, cache_key, cache)
         return cache
 
-    def filter_queryset(
+    def get_queryset(
         self,
         qs: QuerySet[_M],
         user: UserType,
         *,
         ctype: ContentType = None,
     ) -> QuerySet[_M]:
-        # If results are already prefetched, we don't want to cause a refetch
-        # Let the resolver exclude the results later...
-        if qs._result_cache:  # type:ignore
+        # Do not do anything is results are cached, the target is the the retval
+        if qs._result_cache or self.target != PermTarget.RETVAL:  # type:ignore
             return qs
 
-        # We can't filter results for anonymous user. If we are not optimizing
-        # with_anonymous, return the qs without marking it as perm_safe, so this
-        # will trigger a check for each result. Otherwise filter_for_user will
-        # handle it its way.
-        if not self.with_anonymous and user.is_anonymous:
-            return qs
+        # If the user is anonymous, we can't filter object permissions for it
+        if user.is_anonymous:
+            return qs.none()
 
         return perm_safe(
             filter_for_user(
@@ -448,30 +386,50 @@ class BasePermRequired(Requires):
             )
         )
 
-    def resolve(
+    def resolve_for_user(
         self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
+        helper: SchemaDirectiveHelper,
+        resolver: Callable,
         root: Any,
         info: GraphQLResolveInfo,
         user: UserType,
     ):
         if self.with_superuser and user.is_active and user.is_superuser:
-            return ret_handler.resolve(_next, True, message=self.message)
+            return self.resolve_retval(helper, resolver, True)
         if self.with_anonymous and user.is_anonymous:
-            return ret_handler.resolve(_next, False, message=self.message)
+            return self.resolve_retval(helper, resolver, False)
 
         cache = self.get_cache(info, user)
-        if self.key in cache:
-            return ret_handler.resolve(_next, cache[self.key], message=self.message)
 
-        return self._resolve_safe(ret_handler, _next, root, info, user)
+        if self.target is None:
+            has_perm = cache.get(self)
+            if has_perm is None:
+                has_perm = self._has_perm_safe(root, info, user)
+            return self.resolve_retval(helper, resolver, has_perm)
+        elif self.target == PermTarget.ROOT:
+            has_perm = cache.get((self, root))
+            if has_perm is None:
+                has_perm = self._has_obj_perm_safe(root, info, user, root)
+            return self.resolve_retval(helper, resolver, has_perm)
+        elif self.target == PermTarget.RETVAL:
+            ret = resolver()
+            if ret is None:
+                # Retval is None, just return it
+                return None
+
+            # Avoid is_awaitable as much as we can
+            if not isinstance(ret, (list, Model, QuerySet)) and aio.is_awaitable(ret, info=info):
+                return aio.resolve_async(
+                    ret,
+                    functools.partial(self._resolve_obj_perms, helper, root, info, user),
+                )
+            return self._resolve_obj_perms(helper, root, info, user, ret)
+        else:
+            raise AssertionError(f"Unknown target {self.target!r}")
 
     @resolvers.async_unsafe
-    def _resolve_safe(
+    def _has_perm_safe(
         self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
         root: Any,
         info: GraphQLResolveInfo,
         user: UserType,
@@ -479,8 +437,8 @@ class BasePermRequired(Requires):
         cache = self.get_cache(info, user)
 
         # Maybe the result ended up in the cache in the meantime
-        if self.key in cache:
-            return ret_handler.resolve(_next, cache[self.key], message=self.message)
+        if self in cache:
+            return cache[self]
 
         f = any if self.any else all
         has_perm = f(
@@ -488,17 +446,85 @@ class BasePermRequired(Requires):
                 # Check for perm if permission is defined, otherwise check for module
                 user.has_perm(p.perm)
                 if p.permission
-                else user.has_module_perms(_ensure_str(p.resource))
+                else user.has_module_perms(cast(str, p.resource))
             )
             for p in self.perms
         )
-        cache[self.key] = has_perm
+        cache[self] = has_perm
 
-        return ret_handler.resolve(_next, has_perm, message=self.message)
+        return has_perm
+
+    @resolvers.async_unsafe
+    def _has_obj_perm_safe(
+        self,
+        root: Any,
+        info: GraphQLResolveInfo,
+        user: UserType,
+        obj: Any,
+    ) -> bool:
+        cache = self.get_cache(info, user)
+
+        # Maybe the result ended up in the cache in the meantime
+        key = (self, obj)
+        if key in cache:
+            return cache[key]
+
+        f = any if self.any else all
+        has_perm = f(is_perm_safe(root) or user.has_perm(p.perm, obj=root) for p in self.perms)
+        cache[key] = has_perm
+
+        return has_perm
+
+    def _resolve_obj_perms(
+        self,
+        helper: SchemaDirectiveHelper,
+        root: Any,
+        info: GraphQLResolveInfo,
+        user: UserType,
+        obj: Any,
+    ) -> Any:
+        # If retval is already perm safe, just return it
+        if is_perm_safe(obj):
+            return self.resolve_retval(helper, obj, True)
+
+        if not isinstance(obj, Iterable):
+            cache = self.get_cache(info, user)
+            has_perm = cache.get((self, obj))
+            if has_perm is not None:
+                return self.resolve_retval(helper, obj, has_perm)
+
+        return self._resolve_obj_perms_safe(helper, root, info, user, obj)
+
+    @resolvers.async_unsafe
+    def _resolve_obj_perms_safe(
+        self,
+        helper: SchemaDirectiveHelper,
+        root: Any,
+        info: GraphQLResolveInfo,
+        user: UserType,
+        obj: Any,
+    ) -> Any:
+        cache = self.get_cache(info, user)
+        f = any if self.any else all
+
+        def _check_obj(obj):
+            key = (self, obj)
+            has_perm = cache.get(key)
+            if has_perm is not None:
+                return has_perm
+
+            has_perm = f(is_perm_safe(obj) or user.has_perm(p.perm, obj) for p in self.perms)
+            cache[key] = has_perm
+            return has_perm
+
+        if isinstance(obj, Iterable):
+            return self.resolve_retval(helper, [i for i in obj if _check_obj(i)], True)
+
+        return self.resolve_retval(helper, obj, _check_obj(obj))
 
 
-@_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
-class PermRequired(BasePermRequired):
+@schema_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
+class PermRequired(PermDirective):
     """Defines permissions required to access the given object/field.
 
     Given a `resource` name, the user can access the decorated object/field
@@ -532,8 +558,8 @@ class PermRequired(BasePermRequired):
     """
 
 
-@_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
-class ObjPermRequired(BasePermRequired):
+@schema_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
+class ObjPermRequired(PermDirective):
     """Defines permissions required to access the given object/field at object level.
 
     Given a `resource` name, the user can access the decorated object/field
@@ -577,92 +603,11 @@ class ObjPermRequired(BasePermRequired):
 
     """
 
-    checker: Private[Optional[Callable[[UserType, str, Any], bool]]] = dataclasses.field(
-        default=None
-    )
-
-    def resolve(
-        self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
-        root: Any,
-        info: GraphQLResolveInfo,
-        user: UserType,
-    ):
-        if self.with_superuser and user.is_active and user.is_superuser:
-            return ret_handler.resolve(_next, True, message=self.message)
-        if self.with_anonymous and user.is_anonymous:
-            return ret_handler.resolve(_next, False, message=self.message)
-
-        retval = _next()
-        if retval is None:
-            # Retval is None, its fine to return it no matter what
-            return None
-
-        # Avoid is_awaitable as much as we can
-        if not isinstance(retval, (list, Model, QuerySet)) and aio.is_awaitable(retval, info=info):
-            return aio.resolve_async(
-                retval,
-                functools.partial(self._resolve_retval, ret_handler, root, info, user),
-            )
-
-        return self._resolve_retval(ret_handler, root, info, user, retval)
-
-    def _resolve_retval(
-        self,
-        ret_handler: ReturnHandler,
-        root: Any,
-        info: GraphQLResolveInfo,
-        user: UserType,
-        retval: TypeOrIterable[_T],
-    ) -> AwaitableOrValue[TypeOrIterable[_T]]:
-        # If retval is already perm safe, just return it
-        if is_perm_safe(retval):
-            return ret_handler.resolve(retval, True, message=self.message)
-
-        if not isinstance(retval, Iterable):
-            cache = self.get_cache(info, user)
-            has_perm = cache.get((self.key, retval))
-            if has_perm is not None:
-                return ret_handler.resolve(retval, has_perm, message=self.message)
-
-        return self._resolve_retval_safe(ret_handler, root, info, user, retval)
-
-    @resolvers.async_unsafe
-    def _resolve_retval_safe(
-        self,
-        ret_handler: ReturnHandler,
-        root: Any,
-        info: GraphQLResolveInfo,
-        user: UserType,
-        retval: TypeOrIterable[_T],
-    ) -> TypeOrIterable[_T]:
-        cache = self.get_cache(info, user)
-        checker = self.checker or _default_user_has_perm
-        f = any if self.any else all
-
-        def _check_obj(obj):
-            key = (self.key, obj)
-            has_perm = cache.get(key)
-            if has_perm is not None:
-                return has_perm
-
-            has_perm = f(is_perm_safe(obj) or checker(user, p.perm, obj) for p in self.perms)
-            cache[key] = has_perm
-            return has_perm
-
-        if isinstance(retval, Iterable):
-            return ret_handler.resolve(
-                [obj for obj in retval if _check_obj(obj)],
-                True,
-                message=self.message,
-            )
-
-        return ret_handler.resolve(retval, _check_obj(retval), message=self.message)
+    target: ClassVar[Private[PermTarget]] = PermTarget.RETVAL
 
 
-@_directive(locations=[Location.FIELD_DEFINITION])
-class RootPermRequired(BasePermRequired):
+@schema_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
+class RootPermRequired(PermDirective):
     """Defines permissions required to access the given field at object level.
 
     This will check the permissions for the root object to access the given field.
@@ -701,100 +646,4 @@ class RootPermRequired(BasePermRequired):
 
     """
 
-    checker: Private[Optional[Callable[[UserType, str, Any], bool]]] = dataclasses.field(
-        default=None
-    )
-
-    def resolve(
-        self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
-        root: Any,
-        info: GraphQLResolveInfo,
-        user: UserType,
-    ):
-        if self.with_superuser and user.is_active and user.is_superuser:
-            return ret_handler.resolve(_next, True, message=self.message)
-        if self.with_anonymous and user.is_anonymous:
-            return ret_handler.resolve(_next, False, message=self.message)
-
-        cache = self.get_cache(info, user)
-        key = (self.key, root)
-        if key in cache:
-            return ret_handler.resolve(_next, cache[key], message=self.message)
-
-        return self._resolve_safe(ret_handler, _next, root, info, user)
-
-    @resolvers.async_unsafe
-    def _resolve_safe(
-        self,
-        ret_handler: ReturnHandler,
-        _next: Callable,
-        root: Any,
-        info: GraphQLResolveInfo,
-        user: UserType,
-    ) -> bool:
-        cache = self.get_cache(info, user)
-        key = (self.key, root)
-
-        # Maybe the result ended up in the cache in the meantime
-        if key in cache:
-            return ret_handler.resolve(_next, cache[key], message=self.message)
-
-        f = any if self.any else all
-        checker = self.checker or _default_user_has_perm
-        has_perm = f(is_perm_safe(root) or checker(user, p.perm, root) for p in self.perms)
-        cache[key] = has_perm
-
-        return ret_handler.resolve(_next, has_perm, message=self.message)
-
-
-class DjangoPermissionsExtension(Extension):
-    """Per field, model and object permissions for resolvers."""
-
-    _cache: ClassVar[Dict[Tuple[str, str], List[Requires]]] = {}
-
-    def resolve(
-        self,
-        _next: Callable,
-        root: Any,
-        info: GraphQLResolveInfo,
-        *args,
-        **kwargs,
-    ) -> AwaitableOrValue[Any]:
-        typename = info.path.typename
-        assert typename
-
-        cache_key = (typename, info.field_name)
-        requires = self._cache.get(cache_key)
-        if requires is None:
-            schema = cast(
-                Schema,
-                info.schema._strawberry_schema,  # type:ignore
-            )
-            fields_or_types = []
-
-            type_ = schema.get_type_by_name(typename)
-            if type_ is not None:
-                for type_def in get_possible_type_definitions(type_):
-                    field = next(
-                        (
-                            f
-                            for f in type_def.fields
-                            if info.field_name == schema.config.name_converter.get_graphql_name(f)
-                        ),
-                    )
-                    fields_or_types.append(field)
-
-            ret_handler = _parse_ret_type(info.return_type, schema)
-            fields_or_types.extend(ret_handler.type_defs.values())
-            fields_or_types.extend(ret_handler.node_type_defs.values())
-
-            requires = get_directives(fields_or_types, instanceof=Requires)
-            self._cache[cache_key] = requires
-
-        if requires:
-            for r in reversed(requires):
-                _next = functools.partial(r, _next)
-
-        return _next(root, info, *args, **kwargs)
+    target: ClassVar[Private[PermTarget]] = PermTarget.ROOT

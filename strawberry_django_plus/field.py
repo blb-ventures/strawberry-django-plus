@@ -46,11 +46,9 @@ from strawberry_django.fields.types import (
 from strawberry_django.utils import is_similar_django_type
 from typing_extensions import Self
 
-from strawberry_django_plus.utils.inspect import get_directives
-
 from .descriptors import ModelProperty
 from .optimizer import OptimizerStore, PrefetchType
-from .permissions import BasePermRequired, ObjPermRequired, is_perm_safe, perm_safe
+from .permissions import PermDirective, is_perm_safe, perm_safe
 from .types import resolve_model_field_type
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
@@ -92,10 +90,6 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         origin = self.origin_django_type or self.origin._django_type
         return origin.model
-
-    @cached_property
-    def directive_filters(self) -> List[BasePermRequired]:
-        return cast(List[BasePermRequired], get_directives([self], instanceof=ObjPermRequired))
 
     @classmethod
     def from_django_type(
@@ -261,8 +255,8 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     @resolvers.async_unsafe
     def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
         need_perm_safe = False
-        for d in self.directive_filters:
-            qs = d.filter_queryset(
+        for d in PermDirective.for_origin(self):
+            qs = d.get_queryset(
                 qs,
                 info.context.request.user,
                 ctype=ContentType.objects.get_for_model(qs.model),

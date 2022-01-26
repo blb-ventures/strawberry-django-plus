@@ -27,9 +27,7 @@ from django.db.models.sql.query import Query
 from django.db.models.sql.where import WhereNode
 from graphql.type.definition import GraphQLResolveInfo
 from strawberry.django.context import StrawberryDjangoContext
-from strawberry.field import StrawberryField
 from strawberry.lazy_type import LazyType
-from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryContainer, StrawberryType, StrawberryTypeVar
 from strawberry.types.info import Info
 from strawberry.types.nodes import (
@@ -48,7 +46,6 @@ from strawberry_django_plus.utils.pyutils import (
     dicttree_intersect_diff,
     dicttree_merge,
 )
-from strawberry_django_plus.utils.typing import SchemaDirective
 
 if TYPE_CHECKING:
     from strawberry_django_plus.optimizer import OptimizerConfig
@@ -127,66 +124,6 @@ def get_django_type(type_, *, ensure_type=False):
         raise TypeError(f"{type_} does not contain a StrawberryDjangoType")
 
     return django_type
-
-
-@overload
-def get_directives(
-    fields_or_types: Sequence[Union[StrawberryField, TypeDefinition]],
-    *,
-    instanceof: Union[SchemaDirective[Type[_T]], Type[_T]],
-) -> List[_T]:
-    ...
-
-
-@overload
-def get_directives(
-    fields_or_types: Sequence[Union[StrawberryField, TypeDefinition]],
-    *,
-    instanceof: None = ...,
-) -> List[object]:
-    ...
-
-
-def get_directives(fields_or_types, *, instanceof=None):
-    """Retrieve all directives for the given field.
-
-    Args:
-        field:
-            The field itself
-        instanceof:
-            Optionally filter by instances of this directive type
-
-    Yields:
-        All found directives
-
-    """
-    from strawberry_django_plus.permissions import Requires
-
-    directives = []
-
-    options: List[Union[StrawberryField, TypeDefinition]] = []
-    for f_or_t in fields_or_types:
-        options.append(f_or_t)
-        if isinstance(f_or_t, StrawberryField):
-            options.extend(get_possible_type_definitions(f_or_t.type))
-
-    for f_or_t in options:
-        for d in f_or_t.directives or []:
-            d = d.instance or d
-            if instanceof is not None and isinstance(instanceof, StrawberrySchemaDirective):
-                instanceof = instanceof.wrap
-
-            if isinstance(f_or_t, TypeDefinition) and isinstance(d, Requires):
-                d.type_name = f_or_t.name
-
-            if instanceof is not None and not isinstance(d, instanceof):
-                continue
-
-            # Avoid duplicates
-            if d not in directives:
-                directives.append(d)
-
-    return directives
 
 
 def get_optimizer_config(

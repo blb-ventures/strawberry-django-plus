@@ -37,7 +37,10 @@ def _get_doc(obj):
 def _process_type(cls, *args, **kwargs):
     if kwargs.get("description") is None:
         kwargs["description"] = _cls_docs.get(cls)
-    return _original_process_type(cls, *args, **kwargs)
+    ret = _original_process_type(cls, *args, **kwargs)
+    for d in ret._type_definition.directives:
+        d.instance.register(ret._type_definition)
+    return ret
 
 
 def _wrap_dataclass(cls):
@@ -45,14 +48,17 @@ def _wrap_dataclass(cls):
     return _original_wrap_dataclass(cls)
 
 
-def _field_init(*args, **kwargs):
+def _field_init(self, *args, **kwargs):
     if kwargs.get("description") is None:
         base_resolver = kwargs.get("base_resolver")
         if base_resolver is not None:
             while isinstance(base_resolver, _StrawberryResolver):
                 base_resolver = base_resolver.wrapped_func
             kwargs["description"] = _get_doc(base_resolver)
-    return _original_field_init(*args, **kwargs)
+    ret = _original_field_init(self, *args, **kwargs)
+    for d in self.directives:
+        d.instance.register(self)
+    return ret
 
 
 def _field_call(self, resolver):

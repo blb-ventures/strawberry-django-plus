@@ -20,9 +20,8 @@ from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations
 
 from .field import StrawberryDjangoField, field
-from .permissions import ObjPermRequired
+from .permissions import PermDirective
 from .relay import Node, connection, node
-from .utils.inspect import get_directives
 from .utils.resolvers import (
     resolve_connection,
     resolve_model_id,
@@ -83,7 +82,7 @@ def _get_filters(info: Info = None):
     if not info:
         return []
 
-    return list(get_directives([info._field], instanceof=ObjPermRequired))
+    return PermDirective.for_origin(info._field)
 
 
 def _process_type(

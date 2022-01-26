@@ -8,6 +8,7 @@ from django.contrib.auth.models import AbstractUser
 from typing_extensions import Annotated
 
 from strawberry_django_plus import gql
+from strawberry_django_plus.directives import SchemaDirectiveExtension
 from strawberry_django_plus.gql import relay
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 
@@ -46,7 +47,7 @@ class MilestoneType(relay.Node):
     project: ProjectType
     issues: List["IssueType"]
 
-    @gql.field
+    @gql.django.field
     async def async_field(self, value: str) -> str:
         await asyncio.sleep(0.1)
         return f"value: {value}"
@@ -109,6 +110,7 @@ schema = gql.Schema(
     query=Query,
     mutation=Mutation,
     extensions=[
-        DjangoOptimizerExtension(),
+        SchemaDirectiveExtension,
+        DjangoOptimizerExtension,
     ],
 )
