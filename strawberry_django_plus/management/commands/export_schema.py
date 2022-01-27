@@ -26,6 +26,6 @@ class Command(BaseCommand):
         path = options.get("path")
         if path:
             with open(path, "w") as f:
-                f.write(path)
+                f.write(schema_output)
         else:
             print(schema_output)
