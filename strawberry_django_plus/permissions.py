@@ -562,7 +562,7 @@ class HasPermDirective(AuthDirective):
         return self.resolve_retval(helper, root, info, objs, True)
 
 
-@schema_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
+@schema_directive(locations=[Location.FIELD_DEFINITION])
 @final
 class HasPerm(HasPermDirective):
     """Defines permissions required to access the given object/field.
@@ -601,7 +601,7 @@ class HasPerm(HasPermDirective):
     target: ClassVar = None
 
 
-@schema_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
+@schema_directive(locations=[Location.FIELD_DEFINITION])
 @final
 class HasRootPerm(HasPermDirective):
     """Defines permissions required to access the given field at object level.
@@ -646,7 +646,7 @@ class HasRootPerm(HasPermDirective):
     target: ClassVar = PermTarget.ROOT
 
 
-@schema_directive(locations=[Location.OBJECT, Location.FIELD_DEFINITION])
+@schema_directive(locations=[Location.FIELD_DEFINITION])
 @final
 class HasObjPerm(HasPermDirective):
     """Defines permissions required to access the given object/field at object level.
