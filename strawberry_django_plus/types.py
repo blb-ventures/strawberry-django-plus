@@ -1,12 +1,17 @@
 import inspect
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Callable, Iterable, Type, TypeVar, Union
 
 from django.db.models.fields import Field
 from django.db.models.fields.reverse_related import ForeignObjectRel
 from strawberry import enum
+from strawberry.custom_scalar import ScalarWrapper
+from strawberry.type import StrawberryType
 from strawberry_django.fields.types import (
     resolve_model_field_type as _resolve_model_field,
 )
+from strawberry_django.fields.types import field_type_map
+
+from .utils.typing import TypeOrIterable
 
 if TYPE_CHECKING:
     from strawberry_django_plus.type import StrawberryDjangoType
@@ -17,6 +22,42 @@ except ImportError:
     has_choices_field = False
 else:
     has_choices_field = True
+
+
+_T = TypeVar("_T", bound=Union[StrawberryType, ScalarWrapper])
+
+
+def register(
+    fields: TypeOrIterable[Type[Field]],
+    /,
+    *,
+    for_input: bool = False,
+) -> Callable[[_T], _T]:
+    """Register types to convert `auto` fields to.
+
+    Args:
+        field:
+            Type or sequence of types to register
+        for_input:
+            If the type should be used for input only.
+
+    Examples:
+        To define a type that should be used for `ImageField`:
+
+        >>> @register(ImageField)
+        ... @strawberry.type
+        ... class SomeType:
+        ...     url: str
+
+    """
+
+    def _wrapper(type_):
+        for f in fields if isinstance(fields, Iterable) else [fields]:
+            field_type_map[f] = type_
+
+        return type_
+
+    return _wrapper
 
 
 def resolve_model_field_type(
