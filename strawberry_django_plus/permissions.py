@@ -54,6 +54,18 @@ _M = TypeVar("_M", bound=Model)
 _user_ensured_attr = "_user_ensured"
 _perm_safe_marker = "_strawberry_django_perm_safe_marker"
 
+_return_condition = """\
+When the condition fails, the following can happen (following this priority):
+1) If the field is mandatory (e.g. `String!`), this will result in an error.
+2) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
+3) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
+4) If the field is a relay `Connection`, an empty connection will be returned.
+"""
+
+
+def _desc(desc: str):
+    return f"{desc}\n\n{_return_condition.strip()}"
+
 
 def perm_safe(result: _T) -> _T:
     """Mark a result as safe to avoid requiring test permissions again for the results."""
@@ -225,7 +237,10 @@ class ConditionDirective(AuthDirective):
         raise NotImplementedError
 
 
-@schema_directive(locations=[Location.FIELD_DEFINITION])
+@schema_directive(
+    locations=[Location.FIELD_DEFINITION],
+    description=_desc("Can only be resolved by authenticated users."),
+)
 @final
 class IsAuthenticated(ConditionDirective):
     """Mark a field as only resolvable by authenticated users."""
@@ -236,7 +251,10 @@ class IsAuthenticated(ConditionDirective):
         return user.is_authenticated and user.is_active
 
 
-@schema_directive(locations=[Location.FIELD_DEFINITION])
+@schema_directive(
+    locations=[Location.FIELD_DEFINITION],
+    description=_desc("Can only be resolved by staff users."),
+)
 @final
 class IsStaff(ConditionDirective):
     """Mark a field as only resolvable by staff users."""
@@ -247,7 +265,10 @@ class IsStaff(ConditionDirective):
         return user.is_authenticated and user.is_staff
 
 
-@schema_directive(locations=[Location.FIELD_DEFINITION])
+@schema_directive(
+    locations=[Location.FIELD_DEFINITION],
+    description=_desc("Can only be resolved by superuser users."),
+)
 @final
 class IsSuperuser(ConditionDirective):
     """Mark a field as only resolvable by superuser users."""
@@ -562,7 +583,10 @@ class HasPermDirective(AuthDirective):
         return self.resolve_retval(helper, root, info, objs, True)
 
 
-@schema_directive(locations=[Location.FIELD_DEFINITION])
+@schema_directive(
+    locations=[Location.FIELD_DEFINITION],
+    description=_desc("Will check if the user has any/all permissions to resolve this."),
+)
 @final
 class HasPerm(HasPermDirective):
     """Defines permissions required to access the given object/field.
@@ -601,7 +625,13 @@ class HasPerm(HasPermDirective):
     target: ClassVar = None
 
 
-@schema_directive(locations=[Location.FIELD_DEFINITION])
+@schema_directive(
+    locations=[Location.FIELD_DEFINITION],
+    description=_desc(
+        "Will check if the user has any/all permissions for the parent "
+        "of this field to resolve this."
+    ),
+)
 @final
 class HasRootPerm(HasPermDirective):
     """Defines permissions required to access the given field at object level.
@@ -646,7 +676,13 @@ class HasRootPerm(HasPermDirective):
     target: ClassVar = PermTarget.ROOT
 
 
-@schema_directive(locations=[Location.FIELD_DEFINITION])
+@schema_directive(
+    locations=[Location.FIELD_DEFINITION],
+    description=_desc(
+        "Will check if the user has any/all permissions for the resolved "
+        "value of this field before returning it."
+    ),
+)
 @final
 class HasObjPerm(HasPermDirective):
     """Defines permissions required to access the given object/field at object level.
