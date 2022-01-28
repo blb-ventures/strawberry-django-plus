@@ -16,9 +16,11 @@ from strawberry.field import StrawberryField
 from strawberry.private import is_private
 from strawberry.schema.base import BaseSchema
 from strawberry.schema_directive import StrawberrySchemaDirective
+from strawberry.type import StrawberryContainer
 
 _original_print_schema = printer.print_schema
 _directives = weakref.WeakKeyDictionary()
+_extra_types = weakref.WeakKeyDictionary()
 
 
 def _normalize_dataclasses(value: Any) -> Any:
@@ -81,6 +83,11 @@ def _print_schema_directive(directive: StrawberrySchemaDirective, schema: Schema
         if default == dataclasses.MISSING:
             default = UNSET
 
+        f_type = StrawberryAnnotation(field.type, namespace=module.__dict__).resolve()
+        while isinstance(f_type, StrawberryContainer):
+            f_type = f_type.of_type
+        _extra_types.setdefault(schema, set()).add(f_type)
+
         arg = StrawberryArgument(
             python_name=field.name,
             graphql_name=None,
@@ -106,10 +113,22 @@ def _print_schema_directive(directive: StrawberrySchemaDirective, schema: Schema
 
 
 def print_schema(schema: BaseSchema) -> str:
+    graphql_core_schema = schema._schema  # type: ignore
     parts = [_original_print_schema(schema)]
+
+    for type_ in _extra_types.get(schema, []):
+        try:
+            type_ = schema.schema_converter.from_type(type_)  # type:ignore
+        except TypeError:
+            continue
+
+        if type_.name not in graphql_core_schema.type_map:
+            parts.insert(0, printer._print_type(type_, schema))
+
     directives = _directives.get(schema)
     if directives:
         parts.insert(0, "\n\n".join(directives))
+
     return "\n\n".join(parts)
 
 

@@ -1,9 +1,19 @@
+import enum
 import inspect
-from typing import TYPE_CHECKING, Callable, Iterable, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from django.db.models.fields import Field
 from django.db.models.fields.reverse_related import ForeignObjectRel
-from strawberry import enum
+import strawberry
 from strawberry.custom_scalar import ScalarWrapper
 from strawberry.type import StrawberryType
 from strawberry_django.fields.types import (
@@ -64,12 +74,47 @@ def resolve_model_field_type(
     model_field: Union[Field, ForeignObjectRel],
     django_type: "StrawberryDjangoType",
 ):
+    """Resolve type for model field."""
     if has_choices_field and isinstance(model_field, (TextChoicesField, IntegerChoicesField)):
         field_type = model_field.choices_enum
         enum_def = getattr(field_type, "_enum_definition", None)
         if enum_def is None:
             doc = field_type.__doc__ and inspect.cleandoc(field_type.__doc__)
-            enum_def = enum(field_type, description=doc)._enum_definition
+            enum_def = strawberry.enum(field_type, description=doc)._enum_definition
         return enum_def
 
     return _resolve_model_field(model_field, django_type)
+
+
+@strawberry.type
+class OperationMessage:
+    """An error that happened while executing an operation."""
+
+    @strawberry.enum(name="OperationMessageKind")
+    class Kind(enum.Enum):
+        """The kind of the returned message."""
+
+        INFO = "info"
+        WARNING = "warning"
+        ERROR = "error"
+        PERMISSION = "permission"
+        VALIDATION = "validation"
+
+    kind: Kind = strawberry.field(description="The kind of this message.")
+    message: str = strawberry.field(description="The error message.")
+    field: Optional[str] = strawberry.field(
+        description=(
+            "The field that caused the error, or `null` if it "
+            "isn't associated with any particular field."
+        ),
+        default=None,
+    )
+
+
+@strawberry.type
+class OperationMessages:
+    """Multiple messages returned by an operation."""
+
+    messages: List[OperationMessage] = strawberry.field(
+        description="List of messages returned by the operation.",
+    )

@@ -217,14 +217,14 @@ class GlobalID:
         return origin
 
     @overload
-    def resolve_node(self, info: Info, ensure_type: NodeType) -> AwaitableOrValue[NodeType]:
+    def resolve_node(self, info: Info, *, ensure_type: NodeType) -> AwaitableOrValue[NodeType]:
         ...
 
     @overload
-    def resolve_node(self, info: Info, ensure_type=None) -> AwaitableOrValue["Node"]:
+    def resolve_node(self, info: Info, *, ensure_type: None = ...) -> AwaitableOrValue["Node"]:
         ...
 
-    def resolve_node(self, info, ensure_type=None):
+    def resolve_node(self, info, *, ensure_type=None):
         """Resolve the type name and node id info to the node itself.
 
         Tip: When you know the expected type, calling `ensure_type` should help

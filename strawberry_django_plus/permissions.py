@@ -27,6 +27,8 @@ from strawberry.schema_directive import Location
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Self, final
 
+from strawberry_django_plus.types import OperationMessage
+
 from .directives import SchemaDirectiveHelper, SchemaDirectiveResolver, schema_directive
 from .relay import Connection
 from .utils import aio, resolvers
@@ -56,10 +58,11 @@ _perm_safe_marker = "_strawberry_django_perm_safe_marker"
 
 _return_condition = """\
 When the condition fails, the following can happen (following this priority):
-1) If the field is mandatory (e.g. `String!`), this will result in an error.
-2) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
-3) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
-4) If the field is a relay `Connection`, an empty connection will be returned.
+1) If the return value can return an `OperationMessage`, it is returned as that type.
+2) If the field is mandatory (e.g. `String!`), this will result in an error.
+3) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
+4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
+5) If the field is a relay `Connection`, an empty connection will be returned.
 """
 
 
@@ -175,6 +178,14 @@ class AuthDirective(SchemaDirectiveResolver):
                 retval = retval()
             return retval
 
+        for p in helper.ret_possibilities:
+            if p.type_def and issubclass(p.type_def.origin, OperationMessage):
+                return p.type_def.origin(
+                    kind=OperationMessage.Kind.PERMISSION,
+                    message=self.message,
+                    field=info.field_name,
+                )
+
         # If the field is optional, return null
         if helper.optional:
             return None
@@ -279,7 +290,7 @@ class IsSuperuser(ConditionDirective):
         return user.is_authenticated and user.is_superuser
 
 
-@strawberry.input
+@strawberry.input(description="Permission definition for schema directives.")
 @dataclasses.dataclass(eq=True, order=True, frozen=True)
 class PermDefinition:
     """Permission definition.
@@ -337,7 +348,7 @@ class HasPermDirective(AuthDirective):
 
     perms: List[PermDefinition] = strawberry.field(
         description="Required perms to access this resource.",
-        default_factory=list,
+        default_factory=None,
     )
     any: bool = strawberry.field(  # noqa:A003
         description="If any or all perms listed are required.",
