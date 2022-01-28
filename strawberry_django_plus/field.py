@@ -270,8 +270,14 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         return retval
 
     @resolvers.async_unsafe
-    def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> _M:
-        return self.get_queryset(qs, info, **kwargs).get()
+    def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> Optional[_M]:
+        try:
+            return self.get_queryset(qs, info, **kwargs).get()
+        except self.model.DoesNotExist:
+            if not self.is_optional:
+                raise
+
+        return None
 
 
 @overload
