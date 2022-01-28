@@ -30,7 +30,7 @@ class DjangoInputMutationField(relay.InputMutationField):
     This is basically the same as `relay.InputMutationField`, but it ensure that
     the mutation resolver gets called in an async safe environment.
 
-    Do not instantiate this directly. Instead, use `@gql.django.inpt_mutation`
+    Do not instantiate this directly. Instead, use `@gql.django.input_mutation`
 
     """
 
