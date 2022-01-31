@@ -236,10 +236,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         kwargs: Dict[str, Any],
     ) -> Union[Awaitable[Any], Any]:
         if self.base_resolver is not None:
-            # Unlike strawberry_django, we don't enforce this on sync_to_async since it adds
-            # a lot of overhead which might be unnecessary. Leave it up to the implementation
-            # to decide what to do...
-            result = self.base_resolver(*args, **kwargs)
+            result = self.resolver(source, info, args, kwargs)
         elif source is None:
             result = self.model._default_manager.all()
         else:
@@ -273,7 +270,18 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         return resolvers.resolve_result(result, info=info, qs_resolver=qs_resolver)
 
-    @resolvers.async_unsafe
+    @resolvers.async_safe
+    def resolver(
+        self,
+        source: Any,
+        info: Info,
+        args: List[Any],
+        kwargs: Dict[str, Any],
+    ) -> Any:
+        assert self.base_resolver
+        return self.base_resolver(*args, **kwargs)
+
+    @resolvers.async_safe
     def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
         if not self.base_resolver:
             nodes: Optional[List[relay.GlobalID]] = kwargs.get("ids")
@@ -297,7 +305,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         return retval
 
-    @resolvers.async_unsafe
+    @resolvers.async_safe
     def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> Optional[_M]:
         try:
             qs = self.get_queryset(qs, info, **kwargs)

@@ -17,6 +17,7 @@ from typing import (
     cast,
     overload,
 )
+import warnings
 
 from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Model, QuerySet
@@ -46,8 +47,9 @@ _async_to_sync = cast(
 
 
 @overload
-def async_unsafe(
-    f: Callable[_P, _R],
+def async_safe(
+    func: Callable[_P, _R],
+    /,
     *,
     thread_sensitive: bool = True,
 ) -> Callable[_P, AwaitableOrValue[_R]]:
@@ -55,23 +57,24 @@ def async_unsafe(
 
 
 @overload
-def async_unsafe(
-    f: None,
+def async_safe(
+    func: None,
+    /,
     *,
     thread_sensitive: bool = True,
 ) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
     ...
 
 
-def async_unsafe(f=None, *, thread_sensitive=True):
-    """Decorates a function as async unsafe, ensuring it is called in a sync context always.
+def async_safe(func=None, /, *, thread_sensitive=True):
+    """Decorates a function to be async safe, ensuring it is called in a sync context always.
 
     - If `f` is a coroutine function, this is a noop.
     - When running, if an asyncio loop is running, the function will
       be called wrapped in an asgi.sync_to_async_ context.
 
     Args:
-        f:
+        func:
             The function to call
         thread_sensitive:
             If the sync function should run in the same thread as all other
@@ -85,23 +88,32 @@ def async_unsafe(f=None, *, thread_sensitive=True):
 
     """
 
-    def make_resolver(func):
-        if inspect.iscoroutinefunction(func) or inspect.isasyncgenfunction(func):
-            return func
+    def make_resolver(f):
+        if inspect.iscoroutinefunction(f) or inspect.isasyncgenfunction(f):
+            return f
 
-        @functools.wraps(func)
+        async_resolver = sync_to_async(f, thread_sensitive=thread_sensitive)
+
+        @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            resolver = func
             if is_async():
-                resolver = sync_to_async(func, thread_sensitive=thread_sensitive)
+                resolver = async_resolver
+            else:
+                resolver = f
+
             return resolver(*args, **kwargs)
 
         return wrapper
 
-    if f is not None:
-        return make_resolver(f)
+    if func is not None:
+        return make_resolver(func)
 
     return make_resolver
+
+
+def async_unsafe(*args, **kwargs):
+    warnings.warn("use `async_safe` instead", DeprecationWarning)
+    return async_safe(*args, **kwargs)
 
 
 @_async_to_sync
@@ -119,7 +131,7 @@ async def resolve_sync(value: Awaitable[_T]) -> _T:
     return await value
 
 
-getattr_async_unsafe = async_unsafe(lambda obj, key, *args: getattr(obj, key, *args))
+getattr_async_unsafe = async_safe(lambda obj, key, *args: getattr(obj, key, *args))
 
 
 @overload
@@ -275,7 +287,7 @@ def resolve_result(res, *, info=None, qs_resolver=None):
         qs_resolver = qs_resolver or resolve_qs
         return qs_resolver(res)
     elif callable(res):
-        return resolve_result(async_unsafe(res)(), info=info, qs_resolver=qs_resolver)
+        return resolve_result(async_safe(res)(), info=info, qs_resolver=qs_resolver)
     elif is_awaitable(res, info=info):
         return resolve_async(
             res,
@@ -500,7 +512,7 @@ def resolve_connection(
 
     return resolve(
         nodes,
-        async_unsafe(
+        async_safe(
             functools.partial(
                 from_nodes,
                 total_count=total_count,

@@ -43,10 +43,10 @@ except AttributeError:
 try:
     from .integrations.guardian import get_user_or_anonymous
 
-    get_user_or_anonymous = resolvers.async_unsafe(get_user_or_anonymous)
+    get_user_or_anonymous = resolvers.async_safe(get_user_or_anonymous)
 except ImportError:
     # Access the user's id to force it to be loaded from the database
-    get_user_or_anonymous = resolvers.async_unsafe(lambda u: (u, u.id)[0])
+    get_user_or_anonymous = resolvers.async_safe(lambda u: (u, u.id)[0])
 
 
 _T = TypeVar("_T")
@@ -509,7 +509,7 @@ class HasPermDirective(AuthDirective):
         else:
             raise AssertionError(f"Unknown target {self.target!r}")
 
-    @resolvers.async_unsafe
+    @resolvers.async_safe
     def _has_perm_safe(
         self,
         root: Any,
@@ -529,7 +529,7 @@ class HasPermDirective(AuthDirective):
 
         return has_perm
 
-    @resolvers.async_unsafe
+    @resolvers.async_safe
     def _has_obj_perm_safe(
         self,
         root: Any,
@@ -573,7 +573,7 @@ class HasPermDirective(AuthDirective):
 
         return self.resolve_retval(helper, root, info, obj, has_perm)
 
-    @resolvers.async_unsafe
+    @resolvers.async_safe
     def _resolve_iterable_perms_safe(
         self,
         helper: SchemaDirectiveHelper,

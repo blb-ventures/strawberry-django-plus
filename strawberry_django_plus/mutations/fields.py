@@ -36,7 +36,7 @@ from strawberry_django_plus.types import (
     OperationMessageList,
 )
 from strawberry_django_plus.utils import aio
-from strawberry_django_plus.utils.resolvers import async_unsafe, resolve_sync
+from strawberry_django_plus.utils.resolvers import async_safe, resolve_sync
 
 from . import resolvers
 
@@ -134,7 +134,7 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
                 ]
             )
 
-    @async_unsafe
+    @async_safe
     def resolver(
         self,
         source: Any,
@@ -155,7 +155,7 @@ class DjangoCreateMutationField(DjangoInputMutationField):
 
     """
 
-    @async_unsafe
+    @async_safe
     def resolver(
         self,
         source: Any,
@@ -176,7 +176,7 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
 
     """
 
-    @async_unsafe
+    @async_safe
     def resolver(
         self,
         source: Any,
@@ -228,7 +228,7 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 
     """
 
-    @async_unsafe
+    @async_safe
     def resolver(
         self,
         source: Any,

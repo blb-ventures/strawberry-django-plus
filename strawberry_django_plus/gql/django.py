@@ -26,7 +26,7 @@ from strawberry_django_plus.types import (
     OperationMessage,
     OperationMessageList,
 )
-from strawberry_django_plus.utils.resolvers import async_unsafe, resolve_qs
+from strawberry_django_plus.utils.resolvers import async_safe, resolve_qs
 
 __all__ = [
     # strawberry_django
@@ -46,7 +46,7 @@ __all__ = [
     "NodeListInput",
     "OperationMessage",
     "OperationMessageList",
-    "async_unsafe",
+    "async_safe",
     "create_mutation",
     "delete_mutation",
     "field",
