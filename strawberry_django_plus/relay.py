@@ -21,12 +21,13 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    _eval_type,
     cast,
     get_args,
     get_origin,
     overload,
 )
-from typing import _eval_type  # type:ignore
+import uuid  # type:ignore
 
 from graphql import GraphQLID
 import strawberry
@@ -303,9 +304,12 @@ class Node(abc.ABC):
         type_name = info.path.typename
         assert type_name
 
-        # str is the default and is faster to check for it than is_awaitable
         if isinstance(node_id, str):
+            # str is the default and is faster to check for it than is_awaitable
             return GlobalID(type_name=type_name, node_id=node_id)
+        elif isinstance(node_id, (int, uuid.UUID)):
+            # those are very common ids and are safe to convert to str
+            return GlobalID(type_name=type_name, node_id=str(node_id))
         elif aio.is_awaitable(node_id, info=info):
             return aio.resolve_async(  # type:ignore
                 node_id,

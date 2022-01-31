@@ -132,6 +132,7 @@ async def resolve_sync(value: Awaitable[_T]) -> _T:
 
 
 getattr_async_unsafe = async_safe(lambda obj, key, *args: getattr(obj, key, *args))
+getattr_str_async_unsafe = async_safe(lambda obj, key, *args: str(getattr(obj, key, *args)))
 
 
 @overload
@@ -416,7 +417,7 @@ def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
         # Prefer to retrieve this from the cache
         return str(root.__dict__[attr])
     except KeyError:
-        return getattr_async_unsafe(root, attr)
+        return getattr_str_async_unsafe(root, attr)
 
 
 def resolve_connection(
