@@ -37,6 +37,7 @@ from strawberry_django_plus.types import (
     OperationMessageList,
 )
 from strawberry_django_plus.utils import aio
+from strawberry_django_plus.utils.inspect import get_possible_types
 from strawberry_django_plus.utils.resolvers import async_safe, resolve_sync
 
 from . import resolvers
@@ -115,12 +116,14 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
     @type.setter
     def type(self, type_: Any) -> None:  # noqa:A003
         if type_ is not None:
-            type_def = getattr(type_, "_type_definition", None)
-            name = to_camel_case(
-                (type_def and type_def.name) or getattr(type_, "name", None) or type_.__name__
-            )
+            name = to_camel_case(self.python_name)
             cap_name = name[0].upper() + name[1:]
-            type_ = strawberry.union(f"{cap_name}Payload", (type_, OperationMessageList))
+
+            if isinstance(type_, StrawberryAnnotation):
+                type_ = type_.annotation
+
+            types_ = tuple(get_possible_types(type_))
+            type_ = strawberry.union(f"{cap_name}Payload", types_ + (OperationMessageList,))
 
         self.type_annotation = type_
 
