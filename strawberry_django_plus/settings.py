@@ -1,5 +1,5 @@
 import dataclasses
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, List
 
 from django.conf import settings
 
@@ -22,6 +22,9 @@ class Config:
 
     """
 
+    REMOVE_DUPLICATED_SUFFIX: List[str] = dataclasses.field(
+        default_factory=lambda: ["Input", "Partial"],
+    )
     FIELDS_USE_GLOBAL_ID: bool = dataclasses.field(default=True)
 
     # Trick type checking into thinking that we only have the defined configs

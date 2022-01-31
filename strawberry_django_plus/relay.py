@@ -3,7 +3,6 @@
 import abc
 import base64
 import dataclasses
-import inspect
 import sys
 from typing import (
     Any,
@@ -848,7 +847,7 @@ class InputMutationField(RelayField):
             python_name="input",
             graphql_name=None,
             type_annotation=StrawberryAnnotation(new_type, namespace=namespace),
-            description=inspect.cleandoc(type_dict["__doc__"]),
+            description=type_dict["__doc__"],
         )
 
         return super().__call__(resolver)

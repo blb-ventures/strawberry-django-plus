@@ -31,7 +31,6 @@ from django.db.models.query_utils import DeferredAttribute
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, StrawberryArgument, is_unset
-from strawberry.enum import EnumDefinition
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
@@ -209,15 +208,14 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
             # resolve type of auto field
             if field.is_auto:
-                field_type = resolve_model_field_type(model_field, django_type)
-                field.type_annotation = StrawberryAnnotation(field_type)
-
-            if is_optional(model_field, django_type.is_input, django_type.is_partial):
-                assert field.type_annotation
-                annotation = field.type_annotation.annotation
-                if isinstance(annotation, EnumDefinition):
-                    annotation = annotation.wrapped_cls
-                field.type_annotation.annotation = Optional[annotation]  # type:ignore
+                field.type_annotation = StrawberryAnnotation(
+                    resolve_model_field_type(
+                        model_field,
+                        django_type,
+                        is_input=django_type.is_input,
+                        is_partial=django_type.is_partial,
+                    )
+                )
 
             if field.description is None:
                 description = (

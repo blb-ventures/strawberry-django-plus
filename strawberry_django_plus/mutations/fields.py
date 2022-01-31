@@ -1,4 +1,3 @@
-import inspect
 import sys
 from typing import (
     Any,
@@ -31,11 +30,7 @@ from strawberry.utils.str_converters import to_camel_case
 
 from strawberry_django_plus import relay
 from strawberry_django_plus.field import StrawberryDjangoField
-from strawberry_django_plus.types import (
-    NodeInput,
-    OperationMessage,
-    OperationMessageList,
-)
+from strawberry_django_plus.types import NodeInput, OperationInfo, OperationMessage
 from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_possible_types
 from strawberry_django_plus.utils.resolvers import async_safe, resolve_sync
@@ -87,11 +82,12 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         self.input_type = input_type
         if self.input_type and not self.base_resolver:
             namespace = sys.modules[self.input_type.__module__].__dict__
+            type_def = getattr(input_type, "_type_definition", None)
             self.default_args["input"] = StrawberryArgument(
                 python_name="input",
                 graphql_name=None,
                 type_annotation=StrawberryAnnotation(self.input_type, namespace=namespace),
-                description=self.input_type.__doc__ and inspect.cleandoc(self.input_type.__doc__),
+                description=type_def and type_def.description,
             )
 
     def __call__(self, resolver: Callable[..., Iterable[relay.Node]]):
@@ -105,7 +101,7 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         # Transform the return value into a union of it with OperationMessages
         resolver.__annotations__["return"] = strawberry.union(
             f"{cap_name}Payload",
-            (annotation.resolve(), OperationMessageList),
+            (annotation.resolve(), OperationInfo),
         )
         return super().__call__(resolver)
 
@@ -123,7 +119,7 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
                 type_ = type_.annotation
 
             types_ = tuple(get_possible_types(type_))
-            type_ = strawberry.union(f"{cap_name}Payload", types_ + (OperationMessageList,))
+            type_ = strawberry.union(f"{cap_name}Payload", types_ + (OperationInfo,))
 
         self.type_annotation = type_
 
@@ -138,11 +134,11 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         try:
             return self.resolver(source, info, input_obj, args, kwargs)
         except ValidationError as e:
-            return OperationMessageList(
+            return OperationInfo(
                 messages=list(_get_validation_errors(e)),
             )
         except (PermissionDenied, PermissionError) as e:
-            return OperationMessageList(
+            return OperationInfo(
                 messages=[
                     OperationMessage(
                         kind=OperationMessage.Kind.PERMISSION,
@@ -454,7 +450,7 @@ def update(
 
     Examples:
         >>> @gql.django.input
-        ... class ProductInput(NodeInput):
+        ... class ProductInput(IdInput):
         ...     name: gql.auto
         ...     price: gql.auto
         ...

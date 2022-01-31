@@ -2,9 +2,8 @@ import enum
 import inspect
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
-    Dict,
+    Generic,
     Iterable,
     List,
     Optional,
@@ -15,13 +14,15 @@ from typing import (
 )
 
 from django.db import models
+from django.db.models.fields import NOT_PROVIDED
+from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ForeignObjectRel
 import strawberry
-from strawberry.arguments import UNSET
 from strawberry.custom_scalar import ScalarWrapper
 from strawberry.file_uploads import Upload
 from strawberry.type import StrawberryType
 from strawberry_django.fields.types import (
+    DjangoModelType,
     ManyToManyInput,
     ManyToOneInput,
     OneToManyInput,
@@ -49,6 +50,9 @@ else:
 
 
 _T = TypeVar("_T", bound=Union[StrawberryType, ScalarWrapper, type])
+
+K = TypeVar("K")
+D = TypeVar("D")
 
 input_field_type_map[models.FileField] = Upload
 input_field_type_map[models.ImageField] = Upload
@@ -90,37 +94,50 @@ def register(
     return _wrapper
 
 
-@strawberry.input(description="Input of a node interface object.")
-class NodeInput:
+@strawberry.type(
+    description="Input of an object that implements the `Node` interface.",
+)
+class NodeType(relay.Node):
     """Set the value to the selected node.
 
-    Tip: Override this to add more fields to update the node.
+    Notes:
+        This can be used as a base class for input types that receive an
+        `id` of type `GlobalID` when inheriting from it.
 
     """
 
-    id: Optional[relay.GlobalID]  # noqa:A003
+    id: relay.GlobalID  # noqa:A003
 
 
 @strawberry.input(
-    description=(
-        "Add/remove/set the selected nodes.\n\n"
-        "NOTE: If passing `set`, `add`/`remove` should not be passed together'."
-    )
+    description="Input of an object that implements the `Node` interface.",
 )
-class NodeListInput:
-    """Add/remove/set the selected nodes.
+class NodeInput:
+    """Set the value to the selected node.
 
-    Tip: Override this and define `data` as an input to be passed to `through_data`.
+    Notes:
+        This can be used as a base class for input types that receive an
+        `id` of type `GlobalID` when inheriting from it.
 
     """
 
-    add: Optional[List[relay.GlobalID]] = UNSET
-    remove: Optional[List[relay.GlobalID]] = UNSET
-    set: Optional[List[relay.GlobalID]] = UNSET  # noqa:A003
+    id: relay.GlobalID  # noqa:A003
 
-    @property
-    def data(self) -> Optional[Union[Dict[str, Any], object]]:
-        return None
+
+@strawberry.input(description=("Add/remove/set the selected nodes."))
+class ListInput(Generic[K]):
+    """Add/remove/set the selected nodes."""
+
+    set: Optional[List[K]]  # noqa:A003
+    add: Optional[List[K]]
+    remove: Optional[List[K]]
+
+
+@strawberry.input(description=("Add/remove/set the selected nodes, passing `data` through."))
+class ListThroughInput(ListInput[K], Generic[K, D]):
+    """Add/remove/set the selected nodes."""
+
+    data: Optional[D]
 
 
 @strawberry.type
@@ -149,7 +166,7 @@ class OperationMessage:
 
 
 @strawberry.type
-class OperationMessageList:
+class OperationInfo:
     """Multiple messages returned by an operation."""
 
     messages: List[OperationMessage] = strawberry.field(
@@ -158,39 +175,62 @@ class OperationMessageList:
 
 
 def resolve_model_field_type(
-    model_field: Union[models.Field, ForeignObjectRel],
+    field: Union[models.Field, ForeignObjectRel],
     django_type: "StrawberryDjangoType",
+    *,
+    is_input: bool = False,
+    is_partial: bool = False,
 ):
     """Resolve type for model field."""
-    if has_choices_field and isinstance(model_field, (TextChoicesField, IntegerChoicesField)):
-        field_type = model_field.choices_enum
+    if has_choices_field and isinstance(field, (TextChoicesField, IntegerChoicesField)):
+        field_type = field.choices_enum
         enum_def = getattr(field_type, "_enum_definition", None)
         if enum_def is None:
             doc = field_type.__doc__ and inspect.cleandoc(field_type.__doc__)
             enum_def = strawberry.enum(field_type, description=doc)._enum_definition
-        retval = enum_def
+        retval = enum_def.wrapped_cls
     else:
-        retval = _resolve_model_field(model_field, django_type)
+        retval = _resolve_model_field(field, django_type)
 
-    if config.FIELDS_USE_GLOBAL_ID:
-        is_lookup = False
-        if isinstance(retval, FilterLookup):
-            is_lookup = True
-            retval = get_args(retval)[0]
+        if config.FIELDS_USE_GLOBAL_ID:
+            is_lookup = False
+            if isinstance(retval, FilterLookup):
+                is_lookup = True
+                retval = get_args(retval)[0]
 
-        retval = {
-            strawberry.ID: relay.GlobalID,
-            DjangoModelFilterInput: NodeInput,
-            OneToOneInput: NodeInput,
-            OneToManyInput: NodeInput,
-            ManyToOneInput: NodeListInput,
-            ManyToManyInput: NodeListInput,
-        }.get(
-            retval,  # type:ignore
-            retval,
-        )
+            retval = {
+                strawberry.ID: relay.GlobalID,
+                DjangoModelType: NodeType,
+                DjangoModelFilterInput: NodeInput,
+                OneToOneInput: NodeInput,
+                OneToManyInput: NodeInput,
+                ManyToOneInput: ListInput[NodeInput],
+                ManyToManyInput: ListInput[NodeInput],
+            }.get(
+                retval,  # type:ignore
+                retval,
+            )
 
-        if is_lookup:
-            retval = FilterLookup[retval]
+            if is_lookup:
+                retval = FilterLookup[retval]
+
+    if getattr(field, "primary_key", False):
+        # Primary keys are always required
+        optional = False
+    elif isinstance(field, ManyToManyField):
+        # Many to many is always a list on get, but optional otherwise
+        optional = is_input or is_partial
+    elif isinstance(field, ForeignObjectRel):
+        optional = is_input or is_partial or field.null
+    else:
+        if is_partial:
+            optional = True
+        elif is_input:
+            optional = field.blank or field.default is not NOT_PROVIDED
+        else:
+            optional = field.null
+
+    if optional:
+        retval = Optional[retval]
 
     return retval

@@ -37,7 +37,7 @@ from strawberry_django.fields.types import (
 from typing_extensions import TypeAlias
 
 from strawberry_django_plus import relay
-from strawberry_django_plus.types import NodeInput, NodeListInput
+from strawberry_django_plus.types import ListInput, NodeInput
 from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_model_fields
 from strawberry_django_plus.utils.resolvers import resolve_sync
@@ -127,7 +127,7 @@ def parse_input(info: Info, data: Any):
         return ParsedObject(
             pk=parse_input(info, data.set),
         )
-    elif isinstance(data, (ManyToOneInput, ManyToManyInput, NodeListInput)):
+    elif isinstance(data, (ManyToOneInput, ManyToManyInput, ListInput)):
         d = getattr(data, "data", None)
         if dataclasses.is_dataclass(d):
             d = dataclasses.asdict(d)

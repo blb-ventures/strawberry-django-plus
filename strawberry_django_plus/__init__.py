@@ -1,9 +1,11 @@
 import inspect
+import re
 
 from strawberry import auto as _auto
 from strawberry import object_type as _object_type
 from strawberry.enum import EnumDefinition as _EnumDefinition
 from strawberry.field import StrawberryField as _StrawberryField
+from strawberry.schema.name_converter import NameConverter as _NameConverter
 from strawberry.schema_directive import (
     StrawberrySchemaDirective as _StrawberrySchemaDirective,
 )
@@ -26,6 +28,7 @@ _original_field_init = _StrawberryField.__init__
 _original_field_call = _StrawberryField.__call__
 _original_enum_init = _EnumDefinition.__init__
 _original_schema_directive_init = _StrawberrySchemaDirective.__init__
+_original_from_generic = _NameConverter.from_generic
 
 
 def _get_doc(obj):
@@ -85,9 +88,22 @@ def _schema_directive_init(self, *args, **kwargs):
     return _original_schema_directive_init(self, *args, **kwargs)
 
 
+def _from_generic(*args, **kwargs):
+    from .settings import config
+
+    v = _original_from_generic(*args, **kwargs)
+    for p in config.REMOVE_DUPLICATED_SUFFIX:
+        if not v.endswith(p):
+            continue
+        v = re.sub(rf"{p}(?!$)", "", v)
+
+    return v
+
+
 _object_type._process_type = _process_type
 _object_type._wrap_dataclass = _wrap_dataclass
 _StrawberryField.__init__ = _field_init
 _StrawberryField.__call__ = _field_call
 _EnumDefinition.__init__ = _enum_init
 _StrawberrySchemaDirective.__init__ = _schema_directive_init
+_NameConverter.from_generic = _from_generic

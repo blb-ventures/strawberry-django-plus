@@ -29,7 +29,7 @@ from typing_extensions import Self, final
 
 from .directives import SchemaDirectiveHelper, SchemaDirectiveResolver, schema_directive
 from .relay import Connection
-from .types import OperationMessage, OperationMessageList
+from .types import OperationInfo, OperationMessage
 from .utils import aio, resolvers
 from .utils.query import filter_for_user
 from .utils.typing import UserType
@@ -184,7 +184,7 @@ class AuthDirective(SchemaDirectiveResolver):
                     message=self.message,
                     field=info.field_name,
                 )
-            elif p.type_def and issubclass(p.type_def.origin, OperationMessageList):
+            elif p.type_def and issubclass(p.type_def.origin, OperationInfo):
                 return p.type_def.origin(
                     messages=[
                         OperationMessage(

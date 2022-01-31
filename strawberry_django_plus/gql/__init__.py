@@ -22,6 +22,7 @@ from strawberry import (
 )
 
 from strawberry_django_plus import relay
+from strawberry_django_plus.descriptors import model_cached_property, model_property
 from strawberry_django_plus.relay import (
     Connection,
     Node,
@@ -29,6 +30,15 @@ from strawberry_django_plus.relay import (
     input_mutation,
     node,
 )
+from strawberry_django_plus.types import (
+    ListInput,
+    ListThroughInput,
+    NodeInput,
+    NodeType,
+    OperationInfo,
+    OperationMessage,
+)
+from strawberry_django_plus.utils import aio, resolvers
 
 from . import django
 
@@ -54,12 +64,23 @@ __all__ = [
     "subscription",
     "type",
     "union",
-    # strawberry_django_plus
+    # relay
     "relay",
     "Node",
     "Connection",
     "node",
     "connection",
     "input_mutation",
+    # strawberry_django_plus
     "django",
+    "NodeType",
+    "NodeInput",
+    "ListInput",
+    "ListThroughInput",
+    "OperationInfo",
+    "OperationMessage",
+    "model_cached_property",
+    "model_property",
+    "resolvers",
+    "aio",
 ]
