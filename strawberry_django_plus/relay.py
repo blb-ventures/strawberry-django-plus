@@ -21,13 +21,13 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    _eval_type,
     cast,
     get_args,
     get_origin,
     overload,
 )
-import uuid  # type:ignore
+from typing import _eval_type  # type:ignore
+import uuid
 
 from graphql import GraphQLID
 import strawberry

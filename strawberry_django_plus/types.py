@@ -35,6 +35,7 @@ from strawberry_django.fields.types import (
 from strawberry_django.filters import DjangoModelFilterInput, FilterLookup
 
 from . import relay
+from .settings import config
 
 if TYPE_CHECKING:
     from .type import StrawberryDjangoType
@@ -171,7 +172,7 @@ def resolve_model_field_type(
     else:
         retval = _resolve_model_field(model_field, django_type)
 
-    if isinstance(django_type, relay.Node):
+    if config.FIELDS_USE_GLOBAL_ID:
         is_lookup = False
         if isinstance(retval, FilterLookup):
             is_lookup = True
