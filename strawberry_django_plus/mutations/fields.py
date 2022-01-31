@@ -23,6 +23,7 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, StrawberryArgument, is_unset
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
+from strawberry.type import StrawberryType
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
@@ -78,7 +79,7 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
     """
 
     def __init__(self, *args, **kwargs):
-        input_type: Optional[type] = kwargs.pop("input_type")
+        input_type: Optional[type] = kwargs.pop("input_type", None)
 
         super().__init__(*args, **kwargs)
 
@@ -93,10 +94,6 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
             )
 
     def __call__(self, resolver: Callable[..., Iterable[relay.Node]]):
-        # No return means this is probably a lambda from this module
-        if "return" not in resolver.__annotations__:
-            return super().__call__(resolver)
-
         name = to_camel_case(resolver.__name__)
         cap_name = name[0].upper() + name[1:]
         namespace = sys.modules[resolver.__module__].__dict__
@@ -110,6 +107,22 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
             (annotation.resolve(), OperationMessageList),
         )
         return super().__call__(resolver)
+
+    @property
+    def type(self) -> Union[StrawberryType, type]:  # noqa:A003
+        return super().type
+
+    @type.setter
+    def type(self, type_: Any) -> None:  # noqa:A003
+        if type_ is not None:
+            type_def = getattr(type_, "_type_definition", None)
+            name = to_camel_case(
+                (type_def and type_def.name) or getattr(type_, "name", None) or type_.__name__
+            )
+            cap_name = name[0].upper() + name[1:]
+            type_ = strawberry.union(f"{cap_name}Payload", (type_, OperationMessageList))
+
+        self.type_annotation = type_
 
     def get_result(
         self,
@@ -140,7 +153,7 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         self,
         source: Any,
         info: Info,
-        data: Optional[type],
+        data: Optional[object],
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
