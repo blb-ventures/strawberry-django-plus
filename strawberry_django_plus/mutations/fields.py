@@ -363,7 +363,7 @@ def input_mutation(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
-        directives=directives or (),
+        directives=directives,
         filters=filters,
     )
     if resolver is not None:
@@ -403,17 +403,18 @@ def create(
     """
     return DjangoCreateMutationField(
         input_type=input_type,
-        name=name,
-        field_name=field_name,
-        filters=filters,
-        is_subscription=is_subscription,
+        python_name=None,
+        django_name=field_name,
+        graphql_name=name,
+        type_annotation=None,
         description=description,
-        init=init,
-        permission_classes=permission_classes,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
         directives=directives,
+        filters=filters,
     )
 
 
@@ -447,17 +448,18 @@ def update(
     """
     return DjangoUpdateMutationField(
         input_type=input_type,
-        name=name,
-        field_name=field_name,
-        filters=filters,
-        is_subscription=is_subscription,
+        python_name=None,
+        django_name=field_name,
+        graphql_name=name,
+        type_annotation=None,
         description=description,
-        init=init,
-        permission_classes=permission_classes,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
         directives=directives,
+        filters=filters,
     )
 
 
@@ -476,15 +478,16 @@ def delete(
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Any:
     return DjangoDeleteMutationField(
-        name=name,
-        field_name=field_name,
-        filters=filters,
-        is_subscription=is_subscription,
+        python_name=None,
+        django_name=field_name,
+        graphql_name=name,
+        type_annotation=None,
         description=description,
-        init=init,
-        permission_classes=permission_classes,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
         directives=directives,
+        filters=filters,
     )
