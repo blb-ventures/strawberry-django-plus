@@ -78,10 +78,11 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
     """
 
     def __init__(self, *args, **kwargs):
-        self.input_type: Optional[type] = kwargs.pop("input_type")
+        input_type: Optional[type] = kwargs.pop("input_type")
 
         super().__init__(*args, **kwargs)
 
+        self.input_type = input_type
         if self.input_type and not self.base_resolver:
             namespace = sys.modules[self.input_type.__module__].__dict__
             self.default_args["input"] = StrawberryArgument(

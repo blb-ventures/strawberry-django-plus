@@ -663,6 +663,7 @@ class RelayField(StrawberryField):
     default_args: Dict[str, StrawberryArgument]
 
     def __init__(self, *args, **kwargs):
+        self.default_args = getattr(self.__class__, "default_args", {}).copy()
         base_resolver = kwargs.pop("base_resolver", None)
         super().__init__(*args, **kwargs)
         if base_resolver:
