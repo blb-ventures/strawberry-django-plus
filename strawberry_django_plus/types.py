@@ -35,7 +35,6 @@ from strawberry_django.fields.types import (
 from strawberry_django.filters import DjangoModelFilterInput, FilterLookup
 
 from . import relay
-from .utils.typing import TypeOrIterable
 
 if TYPE_CHECKING:
     from .type import StrawberryDjangoType
@@ -48,14 +47,14 @@ else:
     has_choices_field = True
 
 
-_T = TypeVar("_T", bound=Union[StrawberryType, ScalarWrapper])
+_T = TypeVar("_T", bound=Union[StrawberryType, ScalarWrapper, type])
 
 input_field_type_map[models.FileField] = Upload
 input_field_type_map[models.ImageField] = Upload
 
 
 def register(
-    fields: TypeOrIterable[Type[models.Field]],
+    fields: Union[Type[models.Field], List[Type[models.Field]]],
     /,
     *,
     for_input: bool = False,
