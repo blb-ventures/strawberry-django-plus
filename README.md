@@ -13,23 +13,24 @@ integration, enhancing its overall functionality.
 
 ## Features
 
-- All of supported features by `strawberry-django`.
-- Extension that [automatically optimize queries](#automatic-queryset-optimization) (using
-  `only`/`select_related`/`prefetch_related`) to solve graphql `N+1` problems, with support for
-  fragment spread, inline fragments, `@include`/`@skip` directives, prefetch merging, etc
+- All of supported features by `strawberry` and `strawberry-django`.
+- [Query optimizer extension](#query-optimizer-extension) that automatically optimizes querysets
+  (using `only`/`select_related`/`prefetch_related`) to solve graphql `N+1` problems, with support
+  for fragment spread, inline fragments, `@include`/`@skip` directives, prefetch merging, etc
+- [Django choices enums using](#django-choices-enums) support for better enum typing (requires
+  [django-choices-field](https://github.com/bellini666/django-choices-field))
+- [Permissioned resolvers](#permissioned-resolvers) using schema directives, supporting both
+  [django authentication system](https://docs.djangoproject.com/en/4.0/topics/auth/default/),
+  direct and per-object permission checking for backends that implement those (e.g.
+  [django-guardian](https://django-guardian.readthedocs.io/en/stable])).
+- [Crud mutations for Django](#crud-mutations), with automatic errors validation integration.
+- [Relay support](#relay-support) for queries, connections and input mutations, all integrated with
+  django type directly.
+- [Django Debug Toolbar integration](#django-debug-toolbar-integration) with graphiql to
+  display metrics like SQL queries
 - Improved sync/async resolver that priorizes the model's cache to avoid have to use
   [sync_to_async](https://docs.djangoproject.com/en/4.0/topics/async/#asgiref.sync.sync_to_async)
   when not needed.
-- Support for [Django choices enums using](#django-choices-enums) (requires
-  [django-choices-field](https://github.com/bellini666/django-choices-field))
-- [Permissioning](#permissioning) using schema directives with the default
-  [django authentication system](https://docs.djangoproject.com/en/4.0/topics/auth/default/),
-  with support for both direct and per-object permission checking for backends that
-  support those (e.g. [django-guardian](https://django-guardian.readthedocs.io/en/stable])).
-- [Relay support](#relay-support) for queries, connections and input mutations.
-- [Django Debug Toolbar integration](#django-debug-toolbar-integration) with graphiql to
-  display metrics like SQL queries
-- (Coming Soon...) Improved Django mutations with automatic validation errors integration.
 - A well typed and documented API.
 
 ## Installation
@@ -64,7 +65,7 @@ gql.relay
 
 ## How To
 
-### Automatic QuerySet Optimization
+### Query optimizer extension
 
 The automatic optimization is enabled by adding the `DjangoOptimizerExtension` to your
 strawberry's schema config.
@@ -265,7 +266,7 @@ and mutations.
 If you want to name it differently, decorate the class with `@gql.enum` with your preferred
 name so that strawberry-django-plus will not try to register it again.
 
-### Permissioning
+### Permissioned resolvers
 
 Permissioning is done using schema directives by applying them to the fields that requires
 permission checking.
@@ -330,6 +331,10 @@ schema = strawberry.Schema(
     ]
 )
 ```
+
+### Crud mutations
+
+... (documentation coming soon)
 
 ### Relay Support
 
