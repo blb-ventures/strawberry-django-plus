@@ -27,10 +27,9 @@ from strawberry.schema_directive import Location
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Self, final
 
-from strawberry_django_plus.types import OperationMessage
-
 from .directives import SchemaDirectiveHelper, SchemaDirectiveResolver, schema_directive
 from .relay import Connection
+from .types import OperationMessage, OperationMessageList
 from .utils import aio, resolvers
 from .utils.query import filter_for_user
 from .utils.typing import UserType
@@ -184,6 +183,16 @@ class AuthDirective(SchemaDirectiveResolver):
                     kind=OperationMessage.Kind.PERMISSION,
                     message=self.message,
                     field=info.field_name,
+                )
+            elif p.type_def and issubclass(p.type_def.origin, OperationMessageList):
+                return p.type_def.origin(
+                    messages=[
+                        OperationMessage(
+                            kind=OperationMessage.Kind.PERMISSION,
+                            message=self.message,
+                            field=info.field_name,
+                        )
+                    ],
                 )
 
         # If the field is optional, return null

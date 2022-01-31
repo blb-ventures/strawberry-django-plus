@@ -28,12 +28,14 @@ from django.db.models.fields.related_descriptors import (
 )
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.db.models.query_utils import DeferredAttribute
+import strawberry
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, is_unset
+from strawberry.arguments import UNSET, StrawberryArgument, is_unset
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
+from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
     StrawberryDjangoField as _StrawberryDjangoField,
 )
@@ -43,9 +45,10 @@ from strawberry_django.fields.types import (
     is_optional,
     resolve_model_field_name,
 )
-from strawberry_django.utils import is_similar_django_type
+from strawberry_django.utils import is_similar_django_type, unwrap_type
 from typing_extensions import Self
 
+from . import relay
 from .descriptors import ModelProperty
 from .optimizer import OptimizerStore, PrefetchType
 from .permissions import HasPermDirective, is_perm_safe, perm_safe
@@ -81,6 +84,24 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             prefetch_related=kwargs.pop("prefetch_related", None),
         )
         super().__init__(*args, **kwargs)
+
+    @property
+    def arguments(self) -> List[StrawberryArgument]:
+        is_node = isinstance(unwrap_type(self.type), relay.Node)
+        return [
+            (
+                (
+                    argument("ids", List[relay.GlobalID], is_optional=is_optional)
+                    if self.is_list
+                    else argument("id", relay.GlobalID, is_optional=is_optional)
+                )
+                if is_node
+                and arg.python_name == "pk"
+                and arg.type_annotation.annotation == strawberry.ID
+                else arg
+            )
+            for arg in super().arguments
+        ]
 
     @cached_property
     def model(self) -> Type[models.Model]:
@@ -220,7 +241,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             # to decide what to do...
             result = self.base_resolver(*args, **kwargs)
         elif source is None:
-            result = self.model.objects.all()
+            result = self.model._default_manager.all()
         else:
             # Small optimization to async resolvers avoid having to call it in an sync_to_async
             # context if the value is already cached, since it will not hit the db anymore
@@ -254,6 +275,13 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
     @resolvers.async_unsafe
     def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
+        if not self.base_resolver:
+            nodes: Optional[List[relay.GlobalID]] = kwargs.get("ids")
+            if isinstance(nodes, list):
+                if nodes:
+                    assert {n.resolve_type(info) for n in nodes} == {unwrap_type(self.type)}
+                qs = qs.filter(pk__in=[n.node_id for n in nodes])
+
         need_perm_safe = False
         for d in HasPermDirective.for_origin(self):
             qs = d.get_queryset(
@@ -272,7 +300,13 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     @resolvers.async_unsafe
     def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> Optional[_M]:
         try:
-            return self.get_queryset(qs, info, **kwargs).get()
+            qs = self.get_queryset(qs, info, **kwargs)
+            if not self.base_resolver:
+                node = kwargs.get("id")
+                if isinstance(node, relay.GlobalID):
+                    assert node.resolve_type(info) == unwrap_type(self.type)
+                    qs = qs.filter(pk=node.node_id)
+            return qs.get()
         except self.model.DoesNotExist:
             if not self.is_optional:
                 raise

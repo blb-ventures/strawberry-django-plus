@@ -3,6 +3,7 @@
 import abc
 import base64
 import dataclasses
+import inspect
 import sys
 from typing import (
     Any,
@@ -30,7 +31,7 @@ from typing import _eval_type  # type:ignore
 from graphql import GraphQLID
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument, is_unset
+from strawberry.arguments import UNSET, StrawberryArgument
 from strawberry.custom_scalar import ScalarDefinition
 from strawberry.field import StrawberryField
 from strawberry.permission import BasePermission
@@ -41,6 +42,7 @@ from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.str_converters import to_camel_case
+from typing_extensions import Annotated
 
 from .utils import aio
 
@@ -217,7 +219,12 @@ class GlobalID:
         return origin
 
     @overload
-    def resolve_node(self, info: Info, *, ensure_type: NodeType) -> AwaitableOrValue[NodeType]:
+    def resolve_node(
+        self,
+        info: Info,
+        *,
+        ensure_type: Type[NodeType],
+    ) -> AwaitableOrValue[NodeType]:
         ...
 
     @overload
@@ -800,6 +807,7 @@ class InputMutationField(RelayField):
         name = to_camel_case(resolver.__name__)
         cap_name = name[0].upper() + name[1:]
         namespace = sys.modules[resolver.__module__].__dict__
+        annotations = resolver.__annotations__
         resolver = StrawberryResolver(resolver)
 
         args = resolver.arguments
@@ -808,9 +816,25 @@ class InputMutationField(RelayField):
             "__annotations__": {},
         }
         for arg in args:
+            annotation = annotations[arg.python_name]
+            if get_origin(annotation) is Annotated:
+                directives = tuple(
+                    d for d in get_args(annotation)[1:] if isinstance(d, StrawberrySchemaDirective)
+                )
+            else:
+                directives = ()
+
             type_dict["__annotations__"][arg.python_name] = arg.type
-            if not is_unset(arg.default):
-                type_dict[arg.python_name] = arg.default
+            arg_field = strawberry.field(
+                name=arg.graphql_name,
+                is_subscription=arg.is_subscription,
+                description=arg.description,
+                default=arg.default,
+                directives=directives,
+            )
+            arg_field.graphql_name = arg.graphql_name
+            arg_field.type_annotation = arg.type_annotation
+            type_dict[arg.python_name] = arg_field
 
         # TODO: We are not creating a type for the output payload, as it is not easy to
         # do that with the typing system. Is there a way to solve that automatically?
@@ -819,7 +843,7 @@ class InputMutationField(RelayField):
             python_name="input",
             graphql_name=None,
             type_annotation=StrawberryAnnotation(new_type, namespace=namespace),
-            description=type_dict["__doc__"],
+            description=inspect.cleandoc(type_dict["__doc__"]),
         )
 
         return super().__call__(resolver)

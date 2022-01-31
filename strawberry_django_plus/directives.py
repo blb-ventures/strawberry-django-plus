@@ -221,10 +221,6 @@ class SchemaDirectiveExtension(Extension):
 
         ret_possibilities = []
         for type_ in ret_types:
-            if isinstance(type_, GraphQLObjectType):
-                ret_possibilities.append(SchemaDirectiveHelperReturnType(ret_type=type_))
-                continue
-
             t = schema.get_type_by_name(ret_type.name)
             if t is None:
                 continue

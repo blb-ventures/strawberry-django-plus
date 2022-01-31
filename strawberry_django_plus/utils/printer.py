@@ -1,14 +1,25 @@
 import dataclasses
 import sys
-from typing import Any, Dict, Iterable, Mapping
+from typing import Any, Dict, Iterable, Mapping, cast
 import weakref
 
 from graphql.language.directive_locations import DirectiveLocation
 from graphql.language.printer import print_ast
-from graphql.type.definition import GraphQLArgument
+from graphql.type.definition import (
+    GraphQLArgument,
+    GraphQLInputObjectType,
+    is_input_object_type,
+    is_object_type,
+)
 from graphql.type.directives import GraphQLDirective
 from graphql.utilities.ast_from_value import ast_from_value
-from graphql.utilities.print_schema import print_directive
+from graphql.utilities.print_schema import (
+    print_block,
+    print_description,
+    print_directive,
+    print_input_value,
+    print_type,
+)
 from strawberry import Schema, printer
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, StrawberryArgument, is_unset
@@ -17,6 +28,7 @@ from strawberry.private import is_private
 from strawberry.schema.base import BaseSchema
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryContainer
+from strawberry.types.types import TypeDefinition
 
 _original_print_schema = printer.print_schema
 _directives = weakref.WeakKeyDictionary()
@@ -112,6 +124,43 @@ def _print_schema_directive(directive: StrawberrySchemaDirective, schema: Schema
     return f" @{d.name}{_print_schema_directive_args(directive, args)}"
 
 
+def _print_input_object(type_: GraphQLInputObjectType, schema: BaseSchema) -> str:
+    strawberry_type = cast(TypeDefinition, schema.get_type_by_name(type_.name))
+
+    fields = []
+    for i, (name, field) in enumerate(type_.fields.items()):
+        strawberry_field = next(
+            (
+                f
+                for f in strawberry_type.fields
+                if name == schema.config.name_converter.get_graphql_name(f)
+            ),
+            None,
+        )
+        fields.append(
+            print_description(field, "  ", not i)
+            + "  "
+            + print_input_value(name, field)
+            + printer.print_field_directives(strawberry_field, schema=schema)
+        )
+
+    return (
+        print_description(type_)
+        + f"input {type_.name}"
+        + printer.print_type_directives(type_, schema)
+        + print_block(fields)
+    )
+
+
+def _print_type(field, schema: BaseSchema) -> str:
+    if is_object_type(field):
+        return printer._print_object(field, schema)
+    elif is_input_object_type(field):
+        return _print_input_object(field, schema)
+
+    return print_type(field)
+
+
 def print_schema(schema: BaseSchema) -> str:
     graphql_core_schema = schema._schema  # type: ignore
     parts = [_original_print_schema(schema)]
@@ -134,3 +183,4 @@ def print_schema(schema: BaseSchema) -> str:
 
 printer.print_schema_directive = _print_schema_directive
 printer.print_schema = print_schema
+printer._print_type = _print_type

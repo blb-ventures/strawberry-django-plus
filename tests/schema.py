@@ -5,6 +5,7 @@ from typing import Iterable, List, Optional, Type, cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
+from strawberry.types.info import Info
 from typing_extensions import Annotated
 
 from strawberry_django_plus import gql
@@ -106,6 +107,7 @@ class Mutation:
     @gql.django.input_mutation
     def create_project(
         self,
+        info: Info,
         name: str,
         cost: Annotated[decimal.Decimal, gql.argument(description="The project's cost")],
         status: Project.Status = Project.Status.ACTIVE,

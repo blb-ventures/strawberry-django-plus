@@ -3,7 +3,9 @@ import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
+    Awaitable,
     Callable,
+    Coroutine,
     Iterable,
     List,
     Literal,
@@ -16,7 +18,7 @@ from typing import (
     overload,
 )
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Model, QuerySet
 from django.db.models.manager import BaseManager
 from strawberry.types.info import Info
@@ -37,6 +39,10 @@ _M = TypeVar("_M", bound=Model)
 _R = TypeVar("_R")
 _P = ParamSpec("_P")
 _sentinel = object()
+_async_to_sync = cast(
+    Callable[[Callable[[Awaitable[_T]], Coroutine[Any, Any, _T]]], Callable[[Awaitable[_T]], _T]],
+    async_to_sync,
+)
 
 
 @overload
@@ -96,6 +102,21 @@ def async_unsafe(f=None, *, thread_sensitive=True):
         return make_resolver(f)
 
     return make_resolver
+
+
+@_async_to_sync
+async def resolve_sync(value: Awaitable[_T]) -> _T:
+    """Resolves the given value, resolving any returned awaitable.
+
+    Args:
+        value:
+            The awaitable to be resolved
+
+    Returns:
+        The resolved value.
+
+    """
+    return await value
 
 
 getattr_async_unsafe = async_unsafe(lambda obj, key, *args: getattr(obj, key, *args))
@@ -326,7 +347,7 @@ def resolve_model_node(
     ...
 
 
-def resolve_model_node(source, node_id, *, info=None, required=False):
+def resolve_model_node(source, node_id, *, info: Info = None, required=False):
     """Resolve model nodes, ensuring it is retrieved in a sync context.
 
     Args:
@@ -350,6 +371,8 @@ def resolve_model_node(source, node_id, *, info=None, required=False):
     if not issubclass(source, Model):
         django_type = get_django_type(source, ensure_type=True)
         source = cast(Type[_M], django_type.model)
+    else:
+        django_type = source
 
     if isinstance(node_id, GlobalID):
         node_id = node_id.node_id

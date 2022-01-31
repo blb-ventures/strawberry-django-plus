@@ -323,8 +323,10 @@ def test_mutation(db, gql_client: GraphQLTestClient):
     query = """
     mutation CreateProject ($input: CreateProjectInput!) {
         createProject (input: $input) {
-          name
-          cost
+          ... on ProjectType {
+            name
+            cost
+          }
         }
       }
     """
