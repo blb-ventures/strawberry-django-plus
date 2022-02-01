@@ -223,15 +223,32 @@ class GlobalID:
         self,
         info: Info,
         *,
+        required: Literal[True] = ...,
         ensure_type: Type[NodeType],
     ) -> AwaitableOrValue[NodeType]:
         ...
 
     @overload
-    def resolve_node(self, info: Info, *, ensure_type: None = ...) -> AwaitableOrValue["Node"]:
+    def resolve_node(
+        self,
+        info: Info,
+        *,
+        required: Literal[True],
+        ensure_type: None = ...,
+    ) -> AwaitableOrValue["Node"]:
         ...
 
-    def resolve_node(self, info, *, ensure_type=None):
+    @overload
+    def resolve_node(
+        self,
+        info: Info,
+        *,
+        required: bool = ...,
+        ensure_type: None = ...,
+    ) -> AwaitableOrValue[Optional["Node"]]:
+        ...
+
+    def resolve_node(self, info, *, required: bool = False, ensure_type: type = None):
         """Resolve the type name and node id info to the node itself.
 
         Tip: When you know the expected type, calling `ensure_type` should help
@@ -242,6 +259,9 @@ class GlobalID:
         Args:
             info:
                 The strawberry execution info resolve the type name from
+            required:
+                If the value is required to exist. Note that asking to ensure
+                the type automatically makes required true.
             ensure_type:
                 Optionally check if the returned node is really an instance
                 of this type.
@@ -255,9 +275,13 @@ class GlobalID:
 
         """
         n_type = self.resolve_type(info)
-        node = n_type.resolve_node(self.node_id, info=info)
+        node = n_type.resolve_node(
+            self.node_id,
+            info=info,
+            required=required or ensure_type is not None,
+        )
 
-        if ensure_type is not None:
+        if node is not None and ensure_type is not None:
             return aio.resolve(node, lambda n: n, info=info, ensure_type=ensure_type)
 
         return node
@@ -445,8 +469,8 @@ class Node(abc.ABC):
         node_id: str,
         *,
         info: Optional[Info] = None,
-        required: Literal[False] = ...,
-    ) -> AwaitableOrValue[Optional[NodeType]]:
+        required: Literal[True],
+    ) -> AwaitableOrValue[NodeType]:
         ...
 
     @overload
@@ -457,8 +481,8 @@ class Node(abc.ABC):
         node_id: str,
         *,
         info: Optional[Info] = None,
-        required: Literal[True] = ...,
-    ) -> AwaitableOrValue[NodeType]:
+        required: bool = ...,
+    ) -> AwaitableOrValue[Optional[NodeType]]:
         ...
 
     @classmethod

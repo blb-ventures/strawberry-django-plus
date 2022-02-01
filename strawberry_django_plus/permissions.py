@@ -18,6 +18,7 @@ from typing import (
 )
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import PermissionDenied
 from django.db.models import Model, QuerySet, Value
 from graphql.type.definition import GraphQLResolveInfo
 import strawberry
@@ -215,7 +216,7 @@ class AuthDirective(SchemaDirectiveResolver):
                 return type_def.origin.from_nodes([], total_count=0)
 
         # In last case, raise an error
-        raise PermissionError(self.message)
+        raise PermissionDenied(self.message)
 
 
 @dataclasses.dataclass

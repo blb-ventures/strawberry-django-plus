@@ -15,7 +15,12 @@ from typing import (
     overload,
 )
 
-from django.core.exceptions import NON_FIELD_ERRORS, PermissionDenied, ValidationError
+from django.core.exceptions import (
+    NON_FIELD_ERRORS,
+    ObjectDoesNotExist,
+    PermissionDenied,
+    ValidationError,
+)
 from django.db import models
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
@@ -40,27 +45,40 @@ from . import resolvers
 _T = TypeVar("_T")
 
 
-def _get_validation_errors(error: ValidationError):
-    if hasattr(error, "error_dict"):
+def _get_validation_errors(error: Exception):
+    if isinstance(error, PermissionDenied):
+        kind = OperationMessage.Kind.PERMISSION
+    elif isinstance(error, ValidationError):
+        kind = OperationMessage.Kind.VALIDATION
+    elif isinstance(error, ObjectDoesNotExist):
+        kind = OperationMessage.Kind.ERROR
+    else:
+        kind = OperationMessage.Kind.ERROR
+
+    if isinstance(error, ValidationError) and hasattr(error, "error_dict"):
         # convert field errors
         for field, field_errors in error.message_dict.items():
             for e in field_errors:
                 yield OperationMessage(
-                    kind=OperationMessage.Kind.VALIDATION,
+                    kind=kind,
                     field=to_camel_case(field) if field != NON_FIELD_ERRORS else None,
                     message=e,
                 )
-    elif hasattr(error, "error_list"):
+    elif isinstance(error, ValidationError) and hasattr(error, "error_list"):
         # convert non-field errors
         for e in error.error_list:
             yield OperationMessage(
-                kind=OperationMessage.Kind.VALIDATION,
+                kind=kind,
                 message=e.message,
             )
     else:
+        msg = getattr(error, "msg", None)
+        if msg is None:
+            msg = str(error)
+
         yield OperationMessage(
-            kind=OperationMessage.Kind.VALIDATION,
-            message=error.message,
+            kind=kind,
+            message=msg,
         )
 
 
@@ -123,6 +141,7 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
 
         self.type_annotation = type_
 
+    @async_safe
     def get_result(
         self,
         source: Any,
@@ -131,23 +150,18 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
         input_obj = kwargs.pop("input", None)
+        # FIXME: Any other exception types that we should capture here?
         try:
             return self.resolver(source, info, input_obj, args, kwargs)
         except ValidationError as e:
             return OperationInfo(
                 messages=list(_get_validation_errors(e)),
             )
-        except (PermissionDenied, PermissionError) as e:
+        except (PermissionDenied, ObjectDoesNotExist) as e:
             return OperationInfo(
-                messages=[
-                    OperationMessage(
-                        kind=OperationMessage.Kind.PERMISSION,
-                        message=str(e) or "Permission denied...",
-                    )
-                ]
+                messages=list(_get_validation_errors(e)),
             )
 
-    @async_safe
     def resolver(
         self,
         source: Any,
@@ -168,7 +182,6 @@ class DjangoCreateMutationField(DjangoInputMutationField):
 
     """
 
-    @async_safe
     def resolver(
         self,
         source: Any,
@@ -189,7 +202,6 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
 
     """
 
-    @async_safe
     def resolver(
         self,
         source: Any,
@@ -221,7 +233,6 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 
     """
 
-    @async_safe
     def resolver(
         self,
         source: Any,
@@ -235,7 +246,7 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
         vdata = vars(data)
         pk = vdata.pop("id")
         if isinstance(pk, relay.GlobalID):
-            instance = pk.resolve_node(info)
+            instance = pk.resolve_node(info, required=True)
             if aio.is_awaitable(instance, info=info):
                 instance = resolve_sync(instance)
             instance = cast(models.Model, instance)
