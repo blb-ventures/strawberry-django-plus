@@ -35,6 +35,7 @@ from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
+from strawberry.union import StrawberryUnion
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
     StrawberryDjangoField as _StrawberryDjangoField,
@@ -109,8 +110,23 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         if model:
             return model
 
-        origin = self.origin_django_type or self.origin._django_type
-        return origin.model
+        origin = self.origin_django_type or getattr(self.origin, "_django_type", None)
+        model = origin and origin.model
+
+        if isinstance(self.type, StrawberryUnion):
+            mlist = []
+            for t in self.type.types:
+                dj_type = getattr(t, "_django_type", None)
+                if dj_type:
+                    mlist.append(dj_type.model)
+                else:
+                    model = getattr(t, "model", None)
+                    if model:
+                        mlist.append(model)
+            assert len(mlist) == 1
+            model = mlist[0]
+
+        return cast(Type[models.Model], model)
 
     @classmethod
     def from_django_type(
@@ -225,6 +241,10 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 )
                 if description:
                     field.description = str(description)
+
+        # FIXME: How to properly workaround this for mutations?
+        if django_type.is_input and is_unset(field.default_value):
+            field.default = UNSET
 
         return field
 

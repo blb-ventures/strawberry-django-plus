@@ -19,7 +19,7 @@ from django.core.exceptions import NON_FIELD_ERRORS, PermissionDenied, Validatio
 from django.db import models
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument, is_unset
+from strawberry.arguments import UNSET, StrawberryArgument
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryType
@@ -178,7 +178,7 @@ class DjangoCreateMutationField(DjangoInputMutationField):
         kwargs: Dict[str, Any],
     ) -> Any:
         assert data is not None
-        return resolvers.create(info, self.model, data)
+        return resolvers.create(info, self.model, vars(data))
 
 
 class DjangoUpdateMutationField(DjangoInputMutationField):
@@ -200,37 +200,17 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
     ) -> Any:
         assert data is not None
 
-        if "filters" not in kwargs:
-            node = kwargs["ids" if self.is_list else "id"]
-            if node is None or is_unset(node):
-                raise ValueError("No filters provided for update mutation")
+        vdata = vars(data)
+        pk = vdata.pop("id")
+        if isinstance(pk, relay.GlobalID):
+            instance = pk.resolve_node(info)
+            if aio.is_awaitable(instance, info=info):
+                instance = resolve_sync(instance)
+            instance = cast(models.Model, instance)
+        else:
+            instance = self.model._default_manager.get(pk=pk)
 
-        instances = self.get_queryset(
-            queryset=self.model._default_manager.all(),
-            info=info,
-            data=data,
-            **kwargs,
-        )
-        if not self.is_list:
-            try:
-                instances = instances.get()
-            except self.model.MultipleObjectsReturned:
-                if isinstance(data, NodeInput):
-                    node = data.id
-                elif "id" in kwargs:  # noqa:SIM401
-                    node = kwargs["id"]
-                else:
-                    node = None
-
-                if isinstance(node, relay.GlobalID):
-                    instances = node.resolve_node(info)
-                    if aio.is_awaitable(instances, info=info):
-                        instances = resolve_sync(instances)
-                    instances = cast(models.Model, instances)
-                else:
-                    raise
-
-        return resolvers.update(info, instances, data)
+        return resolvers.update(info, instance, vdata)
 
 
 class DjangoDeleteMutationField(DjangoInputMutationField):
@@ -252,33 +232,17 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
     ) -> Any:
         assert data is None
 
-        if "filters" not in kwargs:
-            node = kwargs["ids" if self.is_list else "id"]
-            if node is None or is_unset(node):
-                raise ValueError("No filters provided for update mutation")
+        vdata = vars(data)
+        pk = vdata.pop("id")
+        if isinstance(pk, relay.GlobalID):
+            instance = pk.resolve_node(info)
+            if aio.is_awaitable(instance, info=info):
+                instance = resolve_sync(instance)
+            instance = cast(models.Model, instance)
+        else:
+            instance = self.model._default_manager.get(pk=pk)
 
-        instances = self.get_queryset(
-            queryset=self.model._default_manager.all(),
-            info=info,
-            **kwargs,
-        )
-        if not self.is_list:
-            try:
-                instances = instances.get()
-            except self.model.MultipleObjectsReturned:
-                node = kwargs.get("id")
-                if isinstance(node, relay.GlobalID):
-                    instances = node.resolve_node(
-                        info,
-                        ensure_type=cast(Type[relay.Node], self.model),
-                    )
-                    if aio.is_awaitable(instances, info=info):
-                        instances = resolve_sync(instances)
-                    instances = cast(models.Model, instances)
-                else:
-                    raise
-
-        return resolvers.delete(info, instances)
+        return resolvers.delete(info, instance, data=vdata)
 
 
 @overload
@@ -432,7 +396,7 @@ def create(
 
 
 def update(
-    input_type: type,
+    input_type: Type[NodeInput],
     *,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
@@ -477,6 +441,7 @@ def update(
 
 
 def delete(
+    input_type: Type[NodeInput] = NodeInput,
     *,
     name: Optional[str] = None,
     field_name: Optional[str] = None,

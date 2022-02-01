@@ -113,7 +113,9 @@ def _get_model_hints(
         store.only.append(pk.attname)
 
     for f_selection in get_selections(selection, typename=typename).values():
-        field = fields[f_selection.name]
+        field = fields.get(f_selection.name, None)
+        if not field:
+            continue
 
         # Add annotations from the field if they exist
         field_store = getattr(field, "store", None)

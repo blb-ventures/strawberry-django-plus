@@ -25,7 +25,7 @@ from django.db.models.fields.reverse_related import (
     OneToOneRel,
 )
 import strawberry
-from strawberry.arguments import is_unset
+from strawberry.arguments import UNSET, is_unset
 from strawberry.file_uploads.scalars import Upload
 from strawberry.types.info import Info
 from strawberry_django.fields.types import (
@@ -47,7 +47,6 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
-_InputType: TypeAlias = Union[Dict[str, Any], type]
 _InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
 
 
@@ -117,8 +116,9 @@ def parse_input(info: Info, data: Any):
             node = resolve_sync(node)
         return node
     elif isinstance(data, NodeInput):
+        pk = parse_input(info, getattr(data, "id", UNSET))
         data = parse_input(info, dataclasses.asdict(data))
-        pk = data.pop("id")
+        data.pop("id", None)
         return ParsedObject(
             pk=pk,
             data=data if len(data) else None,
@@ -145,7 +145,7 @@ def parse_input(info: Info, data: Any):
 def create(
     info: Info,
     model: Type[_M],
-    data: _InputType,
+    data: Dict[str, Any],
     *,
     full_clean: bool = True,
 ) -> _M:
@@ -156,7 +156,7 @@ def create(
 def create(
     info: Info,
     model: Type[_M],
-    data: List[_InputType],
+    data: List[Dict[str, Any]],
     *,
     full_clean: bool = True,
 ) -> List[_M]:
@@ -182,7 +182,7 @@ def create(
 def update(
     info: Info,
     instance: _M,
-    data: _InputType,
+    data: Dict[str, Any],
     *,
     full_clean: bool = True,
 ) -> _M:
@@ -193,7 +193,7 @@ def update(
 def update(
     info: Info,
     instance: Iterable[_M],
-    data: _InputType,
+    data: Dict[str, Any],
     *,
     full_clean: bool = True,
 ) -> List[_M]:
@@ -212,7 +212,7 @@ def update(info, instance, data, *, full_clean=True):
         instances = [instance]
 
     obj_models = [obj.__class__ for obj in instances]
-    assert set(obj_models) == 1
+    assert len(set(obj_models)) == 1
     fields = get_model_fields(obj_models[0])
     files: List[Tuple[models.FileField, Union[Upload, Literal[False]]]] = []
     m2m: List[Tuple[Union[ManyToManyField, ForeignObjectRel], Any]] = []
@@ -260,17 +260,27 @@ def update(info, instance, data, *, full_clean=True):
 
 
 @overload
-def delete(info: Info, instance: _M) -> _M:
+def delete(
+    info: Info,
+    instance: _M,
+    *,
+    data: Optional[Dict[str, Any]] = None,
+) -> _M:
     ...
 
 
 @overload
-def delete(info: Info, instance: Iterable[_M]) -> List[_M]:
+def delete(
+    info: Info,
+    instance: Iterable[_M],
+    *,
+    data: Optional[Dict[str, Any]] = None,
+) -> List[_M]:
     ...
 
 
 @transaction.atomic
-def delete(info, instance):
+def delete(info, instance, *, data=None):
     if isinstance(instance, Iterable):
         many = True
         instances = list(instance)

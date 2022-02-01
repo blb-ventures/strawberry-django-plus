@@ -36,6 +36,7 @@ __all__ = [
     # strawberry_django_plus
     "create_mutation",
     "delete_mutation",
+    "update_mutation",
     "field",
     "input",
     "input_mutation",
@@ -43,6 +44,5 @@ __all__ = [
     "mutations",
     "type",
     "types",
-    "update_mutation",
     "partial",
 ]
