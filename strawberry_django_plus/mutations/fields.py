@@ -456,6 +456,7 @@ def delete(
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Any:
     return DjangoDeleteMutationField(
+        input_type=input_type,
         python_name=None,
         django_name=field_name,
         graphql_name=name,

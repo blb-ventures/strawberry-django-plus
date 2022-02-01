@@ -265,10 +265,15 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             attname = self.django_name or self.python_name
             attr = getattr(source.__class__, attname, None)
             try:
-                if isinstance(attr, DeferredAttribute):
-                    result = source.__dict__[attr.field.attname]
-                elif isinstance(attr, ModelProperty):
+                if isinstance(attr, ModelProperty):
                     result = source.__dict__[attr.name]
+                elif isinstance(attr, DeferredAttribute):
+                    # If the value is cached, retrieve it with getattr because
+                    # some fields wrap values at that time (e.g. FileField).
+                    # If this next like fails, it will raise KeyError and get
+                    # us out of the loop before we can do getattiiiiiiiiiiiiiiiiir
+                    source.__dict__[attr.field.attname]
+                    result = getattr(source, attr.field.attname)
                 elif isinstance(attr, ForwardManyToOneDescriptor):
                     # This will raise KeyError if it is not cached
                     result = attr.field.get_cached_value(source)  # type:ignore
