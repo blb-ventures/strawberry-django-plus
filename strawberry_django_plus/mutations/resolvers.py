@@ -288,7 +288,7 @@ def delete(info, instance, *, data=None):
         many = False
         instances = [instance]
 
-    assert {obj.__class__ for obj in instances} == 1
+    assert len({obj.__class__ for obj in instances}) == 1
     for instance in instances:
         pk = instance.pk
         instance.delete()

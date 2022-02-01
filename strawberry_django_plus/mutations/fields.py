@@ -226,11 +226,11 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
         self,
         source: Any,
         info: Info,
-        data: None,
+        data: type,
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> Any:
-        assert data is None
+        assert data is not None
 
         vdata = vars(data)
         pk = vdata.pop("id")
