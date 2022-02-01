@@ -246,13 +246,18 @@ def interface(
         ...     otherfield: str = gql.django.field()
 
     """
-    return type(
-        model,
-        is_interface=True,
-        name=name,
-        description=description,
-        directives=directives,
-    )
+
+    def wrapper(cls):
+        return _process_type(
+            cls,
+            model,
+            name=name,
+            is_interface=True,
+            description=description,
+            directives=directives,
+        )
+
+    return wrapper
 
 
 @__dataclass_transform__(
@@ -267,7 +272,7 @@ def input(  # noqa:A001
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     partial: bool = False,
 ) -> Callable[[_T], _T]:
-    """Annotates a class as a Django GraphQL interface.
+    """Annotates a class as a Django GraphQL input.
 
     Examples:
         It can be used like this:
@@ -278,10 +283,53 @@ def input(  # noqa:A001
         ...     otherfield: str = gql.django.field()
 
     """
-    return type(
-        model,
-        is_input=True,
-        name=name,
-        description=description,
-        directives=directives,
-    )
+
+    def wrapper(cls):
+        return _process_type(
+            cls,
+            model,
+            name=name,
+            is_input=True,
+            description=description,
+            directives=directives,
+            partial=partial,
+        )
+
+    return wrapper
+
+
+@__dataclass_transform__(
+    order_default=True,
+    field_descriptors=(StrawberryField, field, _field, node, connection),
+)
+def partial(  # noqa:A001
+    model: Type[Model],
+    *,
+    name: str = None,
+    description: str = None,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL partial.
+
+    Examples:
+        It can be used like this:
+
+        >>> @gql.django.partial(SomeModel)
+        ... class X:
+        ...     some_field: gql.auto
+        ...     otherfield: str = gql.django.field()
+
+    """
+
+    def wrapper(cls):
+        return _process_type(
+            cls,
+            model,
+            name=name,
+            is_input=True,
+            description=description,
+            directives=directives,
+            partial=True,
+        )
+
+    return wrapper

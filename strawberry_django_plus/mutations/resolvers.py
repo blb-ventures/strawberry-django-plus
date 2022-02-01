@@ -68,9 +68,9 @@ class ParsedObject:
     pk: Optional[Union[strawberry.ID, Model]]
     data: Optional[Dict[str, Any]] = None
 
-    def parse(self, model: Type[_M]) -> Tuple[_M, Optional[Dict[str, Any]]]:
+    def parse(self, model: Type[_M]) -> Tuple[Optional[_M], Optional[Dict[str, Any]]]:
         if self.pk is None:
-            return model(), {}
+            return None, self.data
         elif isinstance(self.pk, models.Model):
             assert isinstance(self.pk, model)
             return self.pk, self.data
@@ -344,10 +344,12 @@ def update_m2m(
         parsed = []
         for v in values:
             obj, data = _parse_pk(v, manager.model)
-            assert obj
-            if data is not None:
-                update(info, obj, data)
-            parsed.append(obj)
+            if obj:
+                if data is not None:
+                    update(info, obj, data)
+                parsed.append(obj)
+            elif data:
+                parsed.append(data)
 
         if parsed:
             manager.set(parsed, **extras)
@@ -358,18 +360,22 @@ def update_m2m(
             parsed = []
             for v in value.add:
                 obj, data = _parse_pk(v, manager.model)
-                assert obj
-                if data is not None:
-                    update(info, obj, data)
-                parsed.append(obj)
+                if obj:
+                    if data is not None:
+                        update(info, obj, data)
+                    parsed.append(obj)
+                elif data:
+                    parsed.append(data)
             manager.add(*parsed, **extras)
 
         if value.remove:
             parsed = []
             for v in value.remove:
                 obj, data = _parse_pk(v, manager.model)
-                assert obj
-                if data is not None:
-                    update(info, obj, data)
-                parsed.append(obj)
+                if obj:
+                    if data is not None:
+                        update(info, obj, data)
+                    parsed.append(obj)
+                elif data:
+                    parsed.append(data)
             manager.remove(*parsed)

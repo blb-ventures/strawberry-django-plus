@@ -124,6 +124,21 @@ class NodeInput:
     id: relay.GlobalID  # noqa:A003
 
 
+@strawberry.input(
+    description="Input of an object that implements the `Node` interface.",
+)
+class NodePartial(NodeInput):
+    """Set the value to the selected node.
+
+    Notes:
+        This can be used as a base class for input types that receive an
+        `id` of type `GlobalID` when inheriting from it.
+
+    """
+
+    id: Optional[relay.GlobalID]  # noqa:A003
+
+
 @strawberry.input(description=("Add/remove/set the selected nodes."))
 class ListInput(Generic[K]):
     """Add/remove/set the selected nodes."""
@@ -205,7 +220,7 @@ def resolve_model_field_type(
                 OneToOneInput: NodeInput,
                 OneToManyInput: NodeInput,
                 ManyToOneInput: ListInput[NodeInput],
-                ManyToManyInput: ListInput[NodeInput],
+                ManyToManyInput: ListInput[NodePartial],
             }.get(
                 retval,  # type:ignore
                 retval,
