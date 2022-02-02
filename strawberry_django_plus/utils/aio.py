@@ -1,10 +1,25 @@
-from typing import Awaitable, Callable, Optional, Type, TypeVar, Union, cast, overload
+import asyncio
+from asyncio.exceptions import CancelledError
+import dataclasses
+import functools
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Generic,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from graphql.pyutils.is_awaitable import is_awaitable as _is_awaitable
 from graphql.type.definition import GraphQLResolveInfo
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import TypeGuard
+from typing_extensions import ParamSpec, TypeGuard
 
 __all__ = [
     "is_awaitable",
@@ -13,7 +28,9 @@ __all__ = [
 ]
 
 _T = TypeVar("_T")
+_P = ParamSpec("_P")
 _R = TypeVar("_R")
+_E = TypeVar("_E")
 
 
 def is_awaitable(
@@ -144,3 +161,93 @@ def resolve(value, resolver, *, ensure_type=None, info=None):
         raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
 
     return ret
+
+
+@overload
+def resolver(
+    func: Callable[_P, AwaitableOrValue[_R]],
+    *,
+    on_result: Callable[[_R], _T],
+    on_error: Callable[[Exception], _E],
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
+) -> Callable[_P, AwaitableOrValue[Union[_T, _E]]]:
+    ...
+
+
+@overload
+def resolver(
+    func: Callable[_P, AwaitableOrValue[_R]],
+    *,
+    on_result: Callable[[_R], _T],
+    on_error: None = ...,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
+) -> Callable[_P, AwaitableOrValue[_T]]:
+    ...
+
+
+@overload
+def resolver(
+    func: Callable[_P, AwaitableOrValue[_R]],
+    *,
+    on_result: None = ...,
+    on_error: Callable[[Exception], _E],
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
+) -> Callable[_P, AwaitableOrValue[Union[_R, _E]]]:
+    ...
+
+
+@overload
+def resolver(
+    func: Callable[_P, AwaitableOrValue[_R]],
+    *,
+    on_result: None = ...,
+    on_error: None = ...,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
+) -> Callable[_P, AwaitableOrValue[_R]]:
+    ...
+
+
+def resolver(func, *, on_result=None, on_error=None, info=None) -> Any:
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            retval = func(*args, **kwargs)
+        except Exception as e:
+            if on_error is None:
+                raise
+
+            retval = on_error(e)
+            if isinstance(retval, BaseException):
+                raise retval
+
+        if is_awaitable(retval, info=info):
+            future = asyncio.Future()
+
+            def resolve_future(task: asyncio.Task):
+                if future.cancelled():
+                    return
+
+                try:
+                    exc = task.exception()
+                    if exc is not None:
+                        if on_error is not None:
+                            exc = on_error(exc)
+
+                        if isinstance(exc, BaseException):
+                            future.set_exception(exc)
+                        else:
+                            future.set_result(exc)
+                    else:
+                        future.set_result(task.result())
+                except CancelledError:
+                    future.cancel()
+
+            asyncio.create_task(retval).add_done_callback(resolve_future)
+            return future
+
+        if on_result is not None:
+            retval = on_result(retval)
+
+        return retval
+
+    return wrapped

@@ -1,4 +1,5 @@
 import dataclasses
+import functools
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -255,7 +256,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         kwargs: Dict[str, Any],
     ) -> Union[Awaitable[Any], Any]:
         if self.base_resolver is not None:
-            result = self.resolver(source, info, args, kwargs)
+            result = functools.partial(self.resolver, source, info, args, kwargs)
         elif source is None:
             result = self.model._default_manager.all()
         else:
@@ -270,7 +271,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                     # If the value is cached, retrieve it with getattr because
                     # some fields wrap values at that time (e.g. FileField).
                     # If this next like fails, it will raise KeyError and get
-                    # us out of the loop before we can do getattiiiiiiiiiiiiiiiiir
+                    # us out of the loop before we can do getattr
                     source.__dict__[attr.field.attname]
                     result = getattr(source, attr.field.attname)
                 elif isinstance(attr, ForwardManyToOneDescriptor):
@@ -294,7 +295,6 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         return resolvers.resolve_result(result, info=info, qs_resolver=qs_resolver)
 
-    @resolvers.async_safe
     def resolver(
         self,
         source: Any,

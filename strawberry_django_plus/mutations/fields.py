@@ -1,3 +1,4 @@
+import functools
 import sys
 from typing import (
     Any,
@@ -35,8 +36,9 @@ from strawberry_django_plus import relay
 from strawberry_django_plus.field import StrawberryDjangoField
 from strawberry_django_plus.permissions import get_with_perms
 from strawberry_django_plus.types import NodeInput, OperationInfo, OperationMessage
+from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_possible_types
-from strawberry_django_plus.utils.resolvers import async_safe
+from strawberry_django_plus.utils.resolvers import async_safe, resolve_result
 
 from . import resolvers
 
@@ -78,6 +80,15 @@ def _get_validation_errors(error: Exception):
             kind=kind,
             message=msg,
         )
+
+
+def _map_exception(error: Exception):
+    if isinstance(error, (ValidationError, PermissionDenied, ObjectDoesNotExist)):
+        return OperationInfo(
+            messages=list(_get_validation_errors(error)),
+        )
+
+    return error
 
 
 class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
@@ -139,7 +150,6 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
 
         self.type_annotation = type_
 
-    @async_safe
     def get_result(
         self,
         source: Any,
@@ -148,17 +158,10 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
         input_obj = kwargs.pop("input", None)
+
         # FIXME: Any other exception types that we should capture here?
-        try:
-            return self.resolver(source, info, input_obj, args, kwargs)
-        except ValidationError as e:
-            return OperationInfo(
-                messages=list(_get_validation_errors(e)),
-            )
-        except (PermissionDenied, ObjectDoesNotExist) as e:
-            return OperationInfo(
-                messages=list(_get_validation_errors(e)),
-            )
+        resolver = aio.resolver(self.resolver, on_error=_map_exception, info=info)
+        return resolver(source, info, input_obj, args, kwargs)
 
     def resolver(
         self,
@@ -168,8 +171,11 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
-        assert self.base_resolver
-        return self.base_resolver(*args, **kwargs, **vars(data))
+        resolver = self.base_resolver
+        assert resolver
+        if not resolver.is_async:
+            resolver = async_safe(resolver)
+        return resolver(*args, **kwargs, **vars(data))
 
 
 class DjangoCreateMutationField(DjangoInputMutationField):
@@ -180,6 +186,7 @@ class DjangoCreateMutationField(DjangoInputMutationField):
 
     """
 
+    @async_safe
     def resolver(
         self,
         source: Any,
@@ -200,6 +207,7 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
 
     """
 
+    @async_safe
     def resolver(
         self,
         source: Any,
@@ -225,6 +233,7 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 
     """
 
+    @async_safe
     def resolver(
         self,
         source: Any,

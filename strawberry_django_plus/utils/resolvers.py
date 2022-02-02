@@ -20,6 +20,7 @@ import warnings
 from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Model, QuerySet
 from django.db.models.manager import BaseManager
+from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.utils import is_async
@@ -84,7 +85,11 @@ def async_safe(func=None, /, *, thread_sensitive=True):
     """
 
     def make_resolver(f):
-        if inspect.iscoroutinefunction(f) or inspect.isasyncgenfunction(f):
+        if (
+            inspect.iscoroutinefunction(f)
+            or inspect.isasyncgenfunction(f)
+            or (isinstance(f, StrawberryResolver) and f.is_async)
+        ):
             return f
 
         async_resolver = sync_to_async(f, thread_sensitive=thread_sensitive)
