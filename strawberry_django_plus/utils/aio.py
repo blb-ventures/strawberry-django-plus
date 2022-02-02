@@ -1,12 +1,10 @@
 import asyncio
 from asyncio.exceptions import CancelledError
-import dataclasses
 import functools
 from typing import (
     Any,
     Awaitable,
     Callable,
-    Generic,
     Optional,
     Type,
     TypeVar,

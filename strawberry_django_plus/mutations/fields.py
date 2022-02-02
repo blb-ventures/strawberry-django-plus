@@ -1,4 +1,3 @@
-import functools
 import sys
 from typing import (
     Any,
@@ -38,7 +37,7 @@ from strawberry_django_plus.permissions import get_with_perms
 from strawberry_django_plus.types import NodeInput, OperationInfo, OperationMessage
 from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_possible_types
-from strawberry_django_plus.utils.resolvers import async_safe, resolve_result
+from strawberry_django_plus.utils.resolvers import async_safe
 
 from . import resolvers
 
