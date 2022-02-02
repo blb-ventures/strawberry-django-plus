@@ -1,9 +1,10 @@
 import functools
-from typing import List, Set, Type, TypeVar
+from typing import List, Optional, Set, Type, TypeVar
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Exists, F, Model, Q, QuerySet
+from strawberry_django.utils import is_async
 
 from .typing import TypeOrIterable, UserType
 
@@ -58,7 +59,6 @@ def filter_for_user(
     user: UserType,
     perms: TypeOrIterable[str],
     *,
-    ctype: ContentType = None,
     any_perm: bool = True,
     with_groups: bool = True,
     with_superuser: bool = False,
@@ -79,12 +79,14 @@ def filter_for_user(
     # We don't want to query the database here because this might not be async safe
     # Try to retrieve the ContentType from cache. If it is not there, we will
     # query it through the queryset
-    if not ctype:
-        try:
-            meta = model._meta
-            ctype = ContentType.objects._get_from_cache(meta)  # type:ignore
-        except KeyError:
-            pass
+    ctype: Optional[ContentType] = None
+    try:
+        meta = model._meta
+        ctype = ContentType.objects._get_from_cache(meta)  # type:ignore
+    except KeyError:
+        # If we are not running async, retrieve it
+        if not is_async():
+            ctype = ContentType.objects.get_for_model(model)
 
     app_labels = set()
     perms_list = []

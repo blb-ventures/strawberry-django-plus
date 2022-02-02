@@ -9,7 +9,6 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
 from strawberry.schema_directive import StrawberrySchemaDirective
-from strawberry.types.info import Info
 from strawberry.unset import _Unset
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
@@ -20,7 +19,6 @@ from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations
 
 from .field import StrawberryDjangoField, field
-from .permissions import HasPermDirective
 from .relay import Node, connection, node
 from .utils.resolvers import (
     resolve_connection,
@@ -78,13 +76,6 @@ def _has_own_node_resolver(cls, name: str) -> bool:
     return True
 
 
-def _get_filters(info: Info = None):
-    if not info:
-        return []
-
-    return HasPermDirective.for_origin(info._field)
-
-
 def _process_type(
     cls: _O,
     model: Type[Model],
@@ -132,7 +123,7 @@ def _process_type(
             cls.resolve_nodes = types.MethodType(
                 lambda *args, **kwargs: resolve_model_nodes(
                     *args,
-                    filters=_get_filters(kwargs.get("info")),
+                    filter_perms=True,
                     **kwargs,
                 ),
                 cls,
@@ -142,7 +133,7 @@ def _process_type(
             cls.resolve_connection = types.MethodType(
                 lambda *args, **kwargs: resolve_connection(
                     *args,
-                    filters=_get_filters(kwargs.get("info")),
+                    filter_perms=True,
                     **kwargs,
                 ),
                 cls,

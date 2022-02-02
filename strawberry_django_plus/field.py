@@ -17,7 +17,6 @@ from typing import (
     overload,
 )
 
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
@@ -52,7 +51,7 @@ from typing_extensions import Self
 from . import relay
 from .descriptors import ModelProperty
 from .optimizer import OptimizerStore, PrefetchType
-from .permissions import HasPermDirective, is_perm_safe, perm_safe
+from .permissions import filter_with_perms
 from .types import resolve_model_field_type
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
@@ -315,20 +314,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                     assert {n.resolve_type(info) for n in nodes} == {unwrap_type(self.type)}
                 qs = qs.filter(pk__in=[n.node_id for n in nodes])
 
-        need_perm_safe = False
-        for d in HasPermDirective.for_origin(self):
-            qs = d.get_queryset(
-                qs,
-                info.context.request.user,
-                ctype=ContentType.objects.get_for_model(qs.model),
-            )
-            need_perm_safe = need_perm_safe or is_perm_safe(qs)
-
-        retval = list(self.get_queryset(qs, info, **kwargs))
-        if need_perm_safe:
-            retval = perm_safe(retval)
-
-        return retval
+        return list(self.get_queryset(filter_with_perms(qs, info), info, **kwargs))
 
     @resolvers.async_safe
     def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> Optional[_M]:

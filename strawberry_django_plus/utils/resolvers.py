@@ -1,7 +1,6 @@
 import functools
 import inspect
 from typing import (
-    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -10,7 +9,6 @@ from typing import (
     List,
     Literal,
     Optional,
-    Sequence,
     Type,
     TypeVar,
     Union,
@@ -30,10 +28,7 @@ from typing_extensions import ParamSpec
 from strawberry_django_plus.relay import Connection, GlobalID, Node, NodeType
 
 from .aio import is_awaitable, resolve, resolve_async
-from .inspect import get_django_type, get_optimizer_config
-
-if TYPE_CHECKING:
-    from strawberry_django_plus.permissions import HasPermDirective
+from .inspect import get_django_type
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -280,10 +275,10 @@ def resolve_result(res, *, info=None, qs_resolver=None):
             res = cast(QuerySet, res.all())
 
         if info is not None:
-            config = get_optimizer_config(info)
-            if config is not None:
+            ext = optimizer.optimizer.get()
+            if ext is not None:
                 # If optimizer extension is enabled, optimize this queryset
-                res = optimizer.optimize(qs=res, info=info, config=config)
+                res = ext.optimize(qs=res, info=info)
 
         qs_resolver = qs_resolver or resolve_qs
         return qs_resolver(res)
@@ -304,7 +299,7 @@ def resolve_model_nodes(
     *,
     info: Optional[Info] = None,
     node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
-    filters: Sequence["HasPermDirective"] = None,
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[QuerySet[_M]]:
     """Resolve model nodes, ensuring those are prefetched in a sync context.
 
@@ -322,6 +317,9 @@ def resolve_model_nodes(
         The resolved queryset, already prefetched from the database
 
     """
+    # avoid circular import
+    from strawberry_django_plus.permissions import filter_with_perms
+
     if not issubclass(source, Model):
         django_type = get_django_type(source, ensure_type=True)
         source = cast(Type[_M], django_type.model)
@@ -330,10 +328,9 @@ def resolve_model_nodes(
     if node_ids is not None:
         qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
 
-    if filters:
+    if filter_perms:
         assert info
-        for f in filters:
-            qs = f.get_queryset(qs, info.context.request.user)
+        qs = filter_with_perms(qs, info)
 
     return resolve_result(qs, info=info)
 
@@ -430,7 +427,7 @@ def resolve_connection(
     after: Optional[str] = None,
     first: Optional[int] = None,
     last: Optional[int] = None,
-    filters: Sequence["HasPermDirective"] = None,
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[Connection[NodeType]]:
     """Resolve model connection, ensuring those are prefetched in a sync context.
 
@@ -460,7 +457,9 @@ def resolve_connection(
         The resolved connection
 
     """
-    from strawberry_django_plus import optimizer  # avoid circular import
+    # avoid circular import
+    from strawberry_django_plus import optimizer
+    from strawberry_django_plus.permissions import filter_with_perms
 
     if nodes is None:
         if not issubclass(source, Model):
@@ -482,40 +481,28 @@ def resolve_connection(
                 after=after,
                 first=first,
                 last=last,
-                filters=filters,
+                filter_perms=filter_perms,
             ),
         )
 
     # FIXME: Remove cast once pyright resolves the negative TypeGuard form
     nodes = cast(QuerySet[_M], nodes)
-    from_nodes = Connection.from_nodes
 
-    if filters:
-        from strawberry_django_plus.permissions import is_perm_safe, perm_safe
-
+    if filter_perms:
         assert info
-        need_perm_safe = False
-        for f in filters:
-            nodes = f.get_queryset(
-                nodes,
-                info.context.request.user,
-            )
-            need_perm_safe = need_perm_safe or is_perm_safe(nodes)
-
-        if need_perm_safe:
-            from_nodes = lambda *args, **kwargs: perm_safe(Connection.from_nodes(*args, **kwargs))
+        nodes = filter_with_perms(nodes, info)
 
     if info is not None:
-        config = get_optimizer_config(info)
-        if config is not None:
+        ext = optimizer.optimizer.get()
+        if ext is not None:
             # If optimizer extension is enabled, optimize this queryset
-            nodes = optimizer.optimize(nodes, info=info, config=config)
+            nodes = ext.optimize(nodes, info=info)
 
     return resolve(
         nodes,
         async_safe(
             functools.partial(
-                from_nodes,
+                Connection.from_nodes,
                 total_count=total_count,
                 before=before,
                 after=after,

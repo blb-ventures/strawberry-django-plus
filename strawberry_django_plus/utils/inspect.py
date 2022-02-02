@@ -25,11 +25,8 @@ from django.db.models.fields.reverse_related import ForeignObjectRel
 from django.db.models.query import Prefetch, QuerySet
 from django.db.models.sql.query import Query
 from django.db.models.sql.where import WhereNode
-from graphql.type.definition import GraphQLResolveInfo
-from strawberry.django.context import StrawberryDjangoContext
 from strawberry.lazy_type import LazyType
 from strawberry.type import StrawberryContainer, StrawberryType, StrawberryTypeVar
-from strawberry.types.info import Info
 from strawberry.types.nodes import (
     FragmentSpread,
     InlineFragment,
@@ -48,7 +45,6 @@ from strawberry_django_plus.utils.pyutils import (
 )
 
 if TYPE_CHECKING:
-    from strawberry_django_plus.optimizer import OptimizerConfig
     from strawberry_django_plus.type import StrawberryDjangoType
 
 try:
@@ -124,25 +120,6 @@ def get_django_type(type_, *, ensure_type=False):
         raise TypeError(f"{type_} does not contain a StrawberryDjangoType")
 
     return django_type
-
-
-def get_optimizer_config(
-    context: Union[GraphQLResolveInfo, Info, StrawberryDjangoContext]
-) -> Optional["OptimizerConfig"]:
-    """Get the django optimizer config for the current execution context.
-
-    Args:
-        info:
-            The current execution info
-
-    Returns:
-        The current config or None in case the extension is not enabled
-
-    """
-    if isinstance(context, (GraphQLResolveInfo, Info)):
-        context = context.context
-
-    return getattr(context, "_django_optimizer_config", None)
 
 
 def get_possible_types(

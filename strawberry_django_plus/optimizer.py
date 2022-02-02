@@ -1,4 +1,5 @@
 import contextlib
+import contextvars
 import dataclasses
 from typing import (
     Any,
@@ -426,6 +427,12 @@ class OptimizerStore:
         return qs
 
 
+optimizer: contextvars.ContextVar[Optional["DjangoOptimizerExtension"]] = contextvars.ContextVar(
+    "optimizer_ctx",
+    default=None,
+)
+
+
 class DjangoOptimizerExtension(Extension):
     """Automatically optimize returned querysets from internal resolvers.
 
@@ -463,7 +470,7 @@ class DjangoOptimizerExtension(Extension):
         execution_context: ExecutionContext = None,
     ):
         super().__init__(execution_context=execution_context)  # type:ignore
-        self._config = OptimizerConfig(
+        self.config = OptimizerConfig(
             enable_only=enable_only_optimization,
             enable_select_related=enable_select_related_optimization,
             enable_prefetch_related=enable_prefetch_related_optimization,
@@ -477,10 +484,10 @@ class DjangoOptimizerExtension(Extension):
         cls._disabled = False
 
     def on_request_start(self) -> AwaitableOrValue[None]:
-        if self._disabled:
-            return
+        optimizer.set(self)
 
-        self.execution_context.context._django_optimizer_config = self._config
+    def on_request_end(self) -> AwaitableOrValue[None]:
+        optimizer.set(None)
 
     def resolve(
         self,
@@ -499,6 +506,18 @@ class DjangoOptimizerExtension(Extension):
             if isinstance(ret, BaseManager):
                 ret = ret.all()
             if not ret._result_cache:  # type:ignore
-                return resolvers.resolve_qs(optimize(qs=ret, info=info, config=self._config))
+                return resolvers.resolve_qs(optimize(qs=ret, info=info, config=self.config))
 
         return ret
+
+    def optimize(
+        self,
+        qs: Union[QuerySet[_M], BaseManager[_M]],
+        info: Union[GraphQLResolveInfo, Info],
+        *,
+        store: Optional["OptimizerStore"] = None,
+    ) -> QuerySet[_M]:
+        if self._disabled:
+            return qs
+
+        return optimize(qs, info, config=self.config, store=store)

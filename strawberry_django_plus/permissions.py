@@ -1,3 +1,4 @@
+import contextvars
 import dataclasses
 import enum
 import functools
@@ -6,27 +7,31 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    Generic,
     Iterable,
-    Iterator,
     List,
+    Literal,
     Optional,
     Tuple,
+    Type,
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
-from django.db.models import Model, QuerySet, Value
+from django.db import models
+from django.db.models import Model, QuerySet
 from graphql.type.definition import GraphQLResolveInfo
 import strawberry
 from strawberry.django.context import StrawberryDjangoContext
 from strawberry.private import Private
 from strawberry.schema_directive import Location
+from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Self, final
+
+from strawberry_django_plus import relay
 
 from .directives import SchemaDirectiveHelper, SchemaDirectiveResolver, schema_directive
 from .relay import Connection
@@ -64,44 +69,146 @@ When the condition fails, the following can happen (following this priority):
 4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
 5) If the field is a relay `Connection`, an empty connection will be returned.
 """
+_desc = lambda desc: f"{desc}\n\n{_return_condition.strip()}"
+
+perm_safe: contextvars.ContextVar[Optional[List[bool]]] = contextvars.ContextVar(
+    "perm_safe",
+    default=None,
+)
+running_checks: contextvars.ContextVar[List["HasPermDirective"]] = contextvars.ContextVar(
+    "running_checks",
+    default=[],
+)
 
 
-def _desc(desc: str):
-    return f"{desc}\n\n{_return_condition.strip()}"
+def init_checker(checker: "HasPermDirective"):
+    checks = running_checks.get()[:]
+    checks.append(checker)
+    running_checks.set(checks)
+
+    perms = perm_safe.get() or []
+    perm_safe.set(perms[:])
 
 
-def perm_safe(result: _T) -> _T:
-    """Mark a result as safe to avoid requiring test permissions again for the results."""
-    # Queryset may copy itself and loose the mark
-    if isinstance(result, QuerySet) and _perm_safe_marker not in result.query.annotations:
-        result = result.annotate(
-            **{_perm_safe_marker: Value(True)},
+def clear_checker():
+    return
+    perm_safe.set(None)
+    checks = running_checks.get()
+    if checks:
+        checks.clear()
+
+
+def set_perm_safe(value: bool):
+    ps = perm_safe.get()
+    if ps is not None:
+        ps.append(value)
+
+
+def is_perm_safe():
+    ps = perm_safe.get()
+    return not ps or all(ps)
+
+
+def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
+    checks = running_checks.get()
+    if not checks:
+        return qs
+
+    # Do not do anything is results are cached, the target is the the retval
+    if qs._result_cache:  # type:ignore
+        set_perm_safe(False)
+        return qs
+
+    user = cast(StrawberryDjangoContext, info.context).request.user
+    # If the user is anonymous, we can't filter object permissions for it
+    if user.is_anonymous:
+        set_perm_safe(False)
+        return qs.none()
+
+    for check in checks:
+        if check.target != PermTarget.RETVAL:
+            continue
+
+        qs = filter_for_user(
+            qs,
+            cast(UserType, user),
+            [p.perm for p in check.perms],
+            any_perm=check.any,
+            with_superuser=check.with_superuser,
         )
 
-    try:
-        setattr(result, _perm_safe_marker, True)
-    except AttributeError:
-        if isinstance(result, Iterable):
-            result = cast(_T, PermSafeIterable(result))
-
-    return result
+    set_perm_safe(True)
+    return qs
 
 
-def is_perm_safe(result: Any) -> bool:
-    """Check if the obj's perm was already checked and is safe to skip this step."""
-    return getattr(result, _perm_safe_marker, False)
+@overload
+def get_with_perms(
+    pk: strawberry.ID,
+    info: Info,
+    *,
+    required: Literal[True],
+    model: Type[_M],
+) -> _M:
+    ...
 
 
-class PermSafeIterable(Generic[_T]):
-    """Helper to mark a base iterable as perm safe (e.g. `list`)"""
+@overload
+def get_with_perms(
+    pk: strawberry.ID,
+    info: Info,
+    *,
+    required: bool = ...,
+    model: Type[_M],
+) -> Optional[_M]:
+    ...
 
-    def __init__(self, iterable: Iterable[_T]):
-        super().__init__()
-        setattr(self, _perm_safe_marker, True)
-        self.iterable = iterable
 
-    def __iter__(self) -> Iterator[_T]:
-        return iter(self.iterable)
+@overload
+def get_with_perms(
+    pk: relay.GlobalID,
+    info: Info,
+    *,
+    required: Literal[True],
+    model: Type[_M] = ...,
+) -> _M:
+    ...
+
+
+@overload
+def get_with_perms(
+    pk: relay.GlobalID,
+    info: Info,
+    *,
+    required: bool = ...,
+    model: Type[_M] = ...,
+) -> Optional[_M]:
+    ...
+
+
+def get_with_perms(pk, info, *, required=False, model=None):
+    if isinstance(pk, relay.GlobalID):
+        instance = pk.resolve_node(info, required=required, ensure_type=model)
+        if aio.is_awaitable(instance, info=info):
+            instance = resolvers.resolve_sync(instance)
+        instance = cast(models.Model, instance)
+    else:
+        instance = model._default_manager.get(pk=pk)
+
+    if instance is None:
+        return None
+
+    checks = running_checks.get()
+    if not checks:
+        return instance
+
+    user = cast(StrawberryDjangoContext, info.context).request.user
+    for check in checks:
+        f = any if check.any else all
+        checker = check.obj_perm_checker(info, cast(UserType, user))
+        if not f(checker(p, instance) for p in check.perms):
+            raise PermissionDenied(check.message)
+
+    return instance
 
 
 @dataclasses.dataclass
@@ -172,6 +279,9 @@ class AuthDirective(SchemaDirectiveResolver):
                 auth_ok,
                 functools.partial(self.resolve_retval, helper, root, info, retval),
             )
+
+        # Make sure any chained resolvers will not try to validate the result again
+        clear_checker()
 
         if auth_ok:
             if callable(retval):
@@ -368,18 +478,18 @@ class HasPermDirective(AuthDirective):
         default="You don't have permission to access this resource.",
     )
     perm_checker: Private[
-        Callable[[Any, GraphQLResolveInfo, UserType], Callable[[PermDefinition], bool]]
+        Callable[[GraphQLResolveInfo, UserType], Callable[[PermDefinition], bool]]
     ] = dataclasses.field(
-        default=lambda root, info, user: lambda perm: (
+        default=lambda info, user: lambda perm: (
             user.has_perm(perm.perm)
             if perm.permission
             else user.has_module_perms(cast(str, perm.resource))
         ),
     )
     obj_perm_checker: Private[
-        Callable[[Any, GraphQLResolveInfo, UserType], Callable[[PermDefinition, Any], bool]]
+        Callable[[GraphQLResolveInfo, UserType], Callable[[PermDefinition, Any], bool]]
     ] = dataclasses.field(
-        default=lambda root, info, user: functools.partial(user.has_perm),
+        default=lambda info, user: functools.partial(user.has_perm),
     )
     with_anonymous: Private[bool] = dataclasses.field(default=True)
     with_superuser: Private[bool] = dataclasses.field(default=False)
@@ -443,32 +553,6 @@ class HasPermDirective(AuthDirective):
         setattr(user, cache_key, cache)
         return cache
 
-    def get_queryset(
-        self,
-        qs: QuerySet[_M],
-        user: UserType,
-        *,
-        ctype: ContentType = None,
-    ) -> QuerySet[_M]:
-        # Do not do anything is results are cached, the target is the the retval
-        if qs._result_cache or self.target != PermTarget.RETVAL:  # type:ignore
-            return qs
-
-        # If the user is anonymous, we can't filter object permissions for it
-        if user.is_anonymous:
-            return qs.none()
-
-        return perm_safe(
-            filter_for_user(
-                qs,
-                user,
-                [p.perm for p in self.perms],
-                any_perm=self.any,
-                ctype=ctype,
-                with_superuser=self.with_superuser,
-            )
-        )
-
     def resolve_for_user(
         self,
         helper: SchemaDirectiveHelper,
@@ -495,6 +579,8 @@ class HasPermDirective(AuthDirective):
                 has_perm = self._has_obj_perm_safe(root, info, user, root)
             return self.resolve_retval(helper, root, info, resolver, has_perm)
         elif self.target == PermTarget.RETVAL:
+            init_checker(self)
+
             ret = resolver()
             if ret is None:
                 # Retval is None, just return it
@@ -524,7 +610,7 @@ class HasPermDirective(AuthDirective):
             return cache[self]
 
         f = any if self.any else all
-        checker = self.perm_checker(root, info, user)
+        checker = self.perm_checker(info, user)
         has_perm = f(checker(p) for p in self.perms)
         cache[self] = has_perm
 
@@ -546,7 +632,7 @@ class HasPermDirective(AuthDirective):
             return cache[key]
 
         f = any if self.any else all
-        checker = self.obj_perm_checker(root, info, user)
+        checker = self.obj_perm_checker(info, user)
         has_perm = f(checker(p, root) for p in self.perms)
 
         cache[key] = has_perm
@@ -560,8 +646,7 @@ class HasPermDirective(AuthDirective):
         user: UserType,
         obj: Any,
     ) -> Any:
-        # If retval is already perm safe, just return it
-        if is_perm_safe(obj):
+        if is_perm_safe():
             return self.resolve_retval(helper, root, info, obj, True)
 
         if isinstance(obj, Iterable):
@@ -583,14 +668,14 @@ class HasPermDirective(AuthDirective):
         user: UserType,
         objs: Iterable[Any],
     ) -> Any:
+        if is_perm_safe():
+            return self.resolve_retval(helper, root, info, objs, True)
+
         cache = self.get_cache(info, user)
         f = any if self.any else all
-        checker = self.obj_perm_checker(root, info, user)
+        checker = self.obj_perm_checker(info, user)
 
         def _check_obj(obj):
-            if is_perm_safe(obj):
-                return True
-
             key = (self, obj)
             if key in cache:
                 return cache[key]

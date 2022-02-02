@@ -11,7 +11,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
     overload,
 )
 
@@ -21,7 +20,6 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from django.db import models
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, StrawberryArgument
@@ -35,10 +33,10 @@ from strawberry.utils.str_converters import to_camel_case
 
 from strawberry_django_plus import relay
 from strawberry_django_plus.field import StrawberryDjangoField
+from strawberry_django_plus.permissions import get_with_perms
 from strawberry_django_plus.types import NodeInput, OperationInfo, OperationMessage
-from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_possible_types
-from strawberry_django_plus.utils.resolvers import async_safe, resolve_sync
+from strawberry_django_plus.utils.resolvers import async_safe
 
 from . import resolvers
 
@@ -214,13 +212,7 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
 
         vdata = vars(data)
         pk = vdata.pop("id")
-        if isinstance(pk, relay.GlobalID):
-            instance = pk.resolve_node(info)
-            if aio.is_awaitable(instance, info=info):
-                instance = resolve_sync(instance)
-            instance = cast(models.Model, instance)
-        else:
-            instance = self.model._default_manager.get(pk=pk)
+        instance = get_with_perms(pk, info, required=True, model=self.model)
 
         return resolvers.update(info, instance, vdata)
 
@@ -245,13 +237,7 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 
         vdata = vars(data)
         pk = vdata.pop("id")
-        if isinstance(pk, relay.GlobalID):
-            instance = pk.resolve_node(info, required=True)
-            if aio.is_awaitable(instance, info=info):
-                instance = resolve_sync(instance)
-            instance = cast(models.Model, instance)
-        else:
-            instance = self.model._default_manager.get(pk=pk)
+        instance = get_with_perms(pk, info, required=True, model=self.model)
 
         return resolvers.delete(info, instance, data=vdata)
 
