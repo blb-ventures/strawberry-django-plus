@@ -126,8 +126,8 @@ async def resolve_sync(value: Awaitable[_T]) -> _T:
     return await value
 
 
-getattr_async_unsafe = async_safe(lambda obj, key, *args: getattr(obj, key, *args))
-getattr_str_async_unsafe = async_safe(lambda obj, key, *args: str(getattr(obj, key, *args)))
+getattr_async_safe = async_safe(lambda obj, key, *args: getattr(obj, key, *args))
+getattr_str_async_safe = async_safe(lambda obj, key, *args: str(getattr(obj, key, *args)))
 
 
 @overload
@@ -409,12 +409,13 @@ def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
 
     """
     assert isinstance(root, Model)
-    attr = root._meta.pk.attname  # type:ignore
+    pk = root.__class__._meta.pk
+    assert pk
     try:
         # Prefer to retrieve this from the cache
-        return str(root.__dict__[attr])
+        return str(root.__dict__[pk.attname])
     except KeyError:
-        return getattr_str_async_unsafe(root, attr)
+        return getattr_str_async_safe(root, pk.attname)
 
 
 def resolve_connection(

@@ -285,7 +285,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 else:
                     raise KeyError
             except KeyError:
-                result = resolvers.getattr_async_unsafe(source, attname)
+                result = resolvers.getattr_async_safe(source, attname)
 
         if self.is_list:
             qs_resolver = lambda qs: self.get_queryset_as_list(qs, info, **kwargs)
