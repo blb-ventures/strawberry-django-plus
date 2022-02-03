@@ -10,6 +10,7 @@ from debug_toolbar.middleware import DebugToolbarMiddleware as _DebugToolbarMidd
 from debug_toolbar.middleware import _HTML_TYPES
 from debug_toolbar.middleware import show_toolbar
 from debug_toolbar.panels.sql import panel, tracking
+from debug_toolbar.panels.templates import TemplatesPanel
 from debug_toolbar.panels.templates import panel as tpanel
 from debug_toolbar.toolbar import DebugToolbar
 from django.core.serializers.json import DjangoJSONEncoder
@@ -62,6 +63,9 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
 
 
 DebugToolbar.store = _store  # type:ignore
+# FIXME: This is breaking async views when it tries to render the user
+# without being in an async safe context. How to properly handle this?
+TemplatesPanel._store_template_info = lambda *args, **kwargs: None
 
 
 def _wrap_cursor(connection, panel):
