@@ -242,7 +242,7 @@ def optimize(
         qs = cast(QuerySet[_M], qs.all())
 
     # If the queryset already has cached results, just return it
-    if qs._result_cache:  # type:ignore
+    if qs._result_cache is not None:  # type:ignore
         return qs
 
     if isinstance(info, Info):
@@ -505,7 +505,7 @@ class DjangoOptimizerExtension(Extension):
         if isinstance(ret, (BaseManager, QuerySet)):
             if isinstance(ret, BaseManager):
                 ret = ret.all()
-            if not ret._result_cache:  # type:ignore
+            if ret._result_cache is None:  # type:ignore
                 return resolvers.resolve_qs(optimize(qs=ret, info=info, config=self.config))
 
         return ret

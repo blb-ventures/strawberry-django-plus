@@ -115,7 +115,7 @@ def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
         return qs
 
     # Do not do anything is results are cached, the target is the the retval
-    if qs._result_cache:  # type:ignore
+    if qs._result_cache is not None:  # type:ignore
         set_perm_safe(False)
         return qs
 
