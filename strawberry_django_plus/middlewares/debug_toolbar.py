@@ -1,6 +1,7 @@
 # Based on https://github.com/flavors/django-graphiql-debug-toolbar
 
 import collections
+import contextvars
 import json
 from typing import Optional
 import weakref
@@ -9,6 +10,7 @@ from debug_toolbar.middleware import DebugToolbarMiddleware as _DebugToolbarMidd
 from debug_toolbar.middleware import _HTML_TYPES
 from debug_toolbar.middleware import show_toolbar
 from debug_toolbar.panels.sql import panel, tracking
+from debug_toolbar.panels.templates import panel as tpanel
 from debug_toolbar.toolbar import DebugToolbar
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http.request import HttpRequest
@@ -19,6 +21,7 @@ from strawberry.django.views import BaseView
 
 _store_cache = weakref.WeakKeyDictionary()
 _original_store = DebugToolbar.store
+_recording = contextvars.ContextVar("debug-toolbar-recording", default=True)
 
 
 def _store(toolbar: DebugToolbar):
@@ -70,12 +73,20 @@ def _wrap_cursor(connection, panel):
     c._djdt_chunked_cursor = c.chunked_cursor
 
     def cursor(*args, **kwargs):
-        return tracking.state.Wrapper(c._djdt_cursor(*args, **kwargs), args[0], panel)
+        if _recording.get():
+            wrapper = tracking.NormalCursorWrapper
+        else:
+            wrapper = tracking.ExceptionCursorWrapper
+        return wrapper(c._djdt_cursor(*args, **kwargs), args[0], panel)
 
     def chunked_cursor(*args, **kwargs):
         cursor = c._djdt_chunked_cursor(*args, **kwargs)
         if not isinstance(cursor, tracking.BaseCursorWrapper):
-            return tracking.state.Wrapper(cursor, args[0], panel)
+            if _recording.get():
+                wrapper = tracking.NormalCursorWrapper
+            else:
+                wrapper = tracking.ExceptionCursorWrapper
+            return wrapper(cursor, args[0], panel)
         return cursor
 
     c.cursor = cursor
@@ -101,6 +112,7 @@ tracking.wrap_cursor = _wrap_cursor
 tracking.unwrap_cursor = _unwrap_cursor
 panel.wrap_cursor = _wrap_cursor
 panel.unwrap_cursor = _unwrap_cursor
+tpanel.recording = _recording
 
 
 class DebugToolbarMiddleware(_DebugToolbarMiddleware):
