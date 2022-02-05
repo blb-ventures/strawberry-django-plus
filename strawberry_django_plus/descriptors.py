@@ -3,6 +3,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Dict,
     Generic,
     Optional,
     Type,
@@ -41,6 +42,7 @@ class ModelProperty(Generic[_M, _R]):
         func: Callable[[_M], _R],
         *,
         cached: bool = False,
+        meta: Optional[Dict[Any, Any]] = None,
         only: Optional["TypeOrSequence[str]"] = None,
         select_related: Optional["TypeOrSequence[str]"] = None,
         prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
@@ -51,6 +53,7 @@ class ModelProperty(Generic[_M, _R]):
 
         self.func = func
         self.cached = cached
+        self.meta = meta
         self.store = OptimizerStore.with_hints(
             only=only,
             select_related=select_related,
@@ -102,6 +105,7 @@ def model_property(
     func: Callable[[_M], _R],
     *,
     cached: bool = False,
+    meta: Optional[Dict[Any, Any]] = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[Union[str, Prefetch]]"] = None,
@@ -114,6 +118,7 @@ def model_property(
     func: None = ...,
     *,
     cached: bool = False,
+    meta: Optional[Dict[Any, Any]] = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[Union[str, Prefetch]]"] = None,
@@ -125,6 +130,7 @@ def model_property(
     func=None,
     *,
     cached: bool = False,
+    meta: Optional[Dict[Any, Any]] = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[Union[str, Prefetch]]"] = None,
@@ -133,6 +139,7 @@ def model_property(
         return ModelProperty(
             f,
             cached=cached,
+            meta=meta,
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
@@ -147,6 +154,7 @@ def model_property(
 def model_cached_property(
     func=None,
     *,
+    meta: Optional[Dict[Any, Any]] = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[Union[str, Prefetch]]"] = None,
@@ -189,6 +197,7 @@ def model_cached_property(
     return model_property(
         func,
         cached=True,
+        meta=meta,
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
