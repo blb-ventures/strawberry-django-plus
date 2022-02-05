@@ -39,7 +39,8 @@ class ProjectType(relay.Node):
     due_date: gql.auto
     cost: gql.auto
     milestones: List["MilestoneType"]
-    milestones_conn: "relay.Connection[MilestoneType]" = relay.connection()
+    # FIXME: Nested connections are currently not working
+    # milestones_conn: "relay.Connection[MilestoneType]" = relay.connection()
 
 
 @gql.django.type(Milestone)
