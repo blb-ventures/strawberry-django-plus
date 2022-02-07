@@ -5,6 +5,7 @@ from typing import (
     Any,
     Awaitable,
     Callable,
+    Coroutine,
     Optional,
     Type,
     TypeVar,
@@ -240,7 +241,7 @@ def resolver(func, *, on_result=None, on_error=None, info=None) -> Any:
                 except CancelledError:
                     future.cancel()
 
-            asyncio.create_task(retval).add_done_callback(resolve_future)
+            asyncio.create_task(cast(Coroutine, retval)).add_done_callback(resolve_future)
             return future
 
         if on_result is not None:
