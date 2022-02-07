@@ -645,11 +645,11 @@ class Connection(Generic[NodeType]):
         if after:
             after_type, after_parsed = from_base64(after)
             assert after_type == _connection_typename
-            start = max(start, int(after_parsed))
+            start = max(start, int(after_parsed) + 1)
         if before:
             before_type, before_parsed = from_base64(before)
             assert before_type == _connection_typename
-            end = min(end, int(before_parsed))
+            end = min(end, int(before_parsed) - 1)
 
         if isinstance(first, int):
             if first < 0:
