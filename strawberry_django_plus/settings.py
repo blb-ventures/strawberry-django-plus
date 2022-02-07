@@ -1,5 +1,5 @@
 import dataclasses
-from typing import TYPE_CHECKING, Final, List
+from typing import TYPE_CHECKING, Final, List, Optional
 
 from django.conf import settings
 
@@ -22,6 +22,7 @@ class Config:
 
     """
 
+    RELAY_MAX_RESULTS: Optional[int] = dataclasses.field(default=100)
     REMOVE_DUPLICATED_SUFFIX: List[str] = dataclasses.field(
         default_factory=lambda: ["Input", "Partial"],
     )

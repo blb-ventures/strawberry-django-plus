@@ -3,6 +3,7 @@
 import abc
 import base64
 import dataclasses
+import math
 import sys
 from typing import (
     Any,
@@ -44,6 +45,7 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Annotated
 
+from .settings import config
 from .utils import aio
 
 __all__ = [
@@ -651,16 +653,32 @@ class Connection(Generic[NodeType]):
             assert before_type == _connection_typename
             end = min(end, int(before_parsed) - 1)
 
+        has_first_or_last = False
+        max_results = config.RELAY_MAX_RESULTS
+        if max_results is None:
+            max_results = math.inf
+
         if isinstance(first, int):
             if first < 0:
                 raise ValueError("Argument 'first' must be a non-negative integer.")
+
+            has_first_or_last = True
+            if first > max_results:
+                raise ValueError(f"Argument 'first' cannot be higher than {max_results}.")
 
             end = min(end, start + first)
         if isinstance(last, int):
             if last < 0:
                 raise ValueError("Argument 'last' must be a non-negative integer.")
 
+            if last > max_results:
+                raise ValueError(f"Argument 'last' cannot be higher than {max_results}.")
+
+            has_first_or_last = True
             start = max(start, end - last)
+
+        if not has_first_or_last:
+            end = min(end, start + max_results)
 
         edges = [
             Edge(cursor=to_base64(_connection_typename, start + i), node=v)
