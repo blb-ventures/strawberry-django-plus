@@ -651,7 +651,7 @@ class Connection(Generic[NodeType]):
         if before:
             before_type, before_parsed = from_base64(before)
             assert before_type == _connection_typename
-            end = min(end, int(before_parsed) - 1)
+            end = min(end, int(before_parsed))
 
         has_first_or_last = False
         max_results = config.RELAY_MAX_RESULTS
