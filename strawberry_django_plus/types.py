@@ -127,7 +127,7 @@ class NodeInput:
 @strawberry.input(
     description="Input of an object that implements the `Node` interface.",
 )
-class NodePartial(NodeInput):
+class NodeInputPartial(NodeInput):
     """Set the value to the selected node.
 
     Notes:
@@ -220,7 +220,7 @@ def resolve_model_field_type(
                 OneToOneInput: NodeInput,
                 OneToManyInput: NodeInput,
                 ManyToOneInput: ListInput[NodeInput],
-                ManyToManyInput: ListInput[NodePartial],
+                ManyToManyInput: ListInput[NodeInputPartial],
             }.get(
                 retval,  # type:ignore
                 retval,
