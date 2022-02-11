@@ -1,5 +1,4 @@
 import dataclasses
-import functools
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -127,6 +126,14 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             model = mlist[0]
 
         return cast(Type[models.Model], model)
+
+    @cached_property
+    def safe_resolver(self):
+        resolver = self.base_resolver
+        assert resolver
+        if not resolver.is_async:
+            resolver = resolvers.async_safe(resolver)
+        return resolver
 
     @classmethod
     def from_django_type(
@@ -256,7 +263,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         kwargs: Dict[str, Any],
     ) -> Union[Awaitable[Any], Any]:
         if self.base_resolver is not None:
-            result = functools.partial(self.resolver, source, info, args, kwargs)
+            result = self.resolver(source, info, args, kwargs)
         elif source is None:
             result = self.model._default_manager.all()
         else:
@@ -302,8 +309,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> Any:
-        assert self.base_resolver
-        return self.base_resolver(*args, **kwargs)
+        return self.safe_resolver(*args, **kwargs)
 
     @resolvers.async_safe
     def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:

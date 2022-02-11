@@ -170,11 +170,7 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
-        resolver = self.base_resolver
-        assert resolver
-        if not resolver.is_async:
-            resolver = async_safe(resolver)
-        return resolver(*args, **kwargs, **vars(data))
+        return self.safe_resolver(*args, **kwargs, **vars(data))
 
 
 class DjangoCreateMutationField(DjangoInputMutationField):
