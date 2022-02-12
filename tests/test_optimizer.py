@@ -1,5 +1,3 @@
-"""General tests for the demo app."""
-
 import pytest
 
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
@@ -311,20 +309,3 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
-
-
-@pytest.mark.django_db(transaction=True)
-def test_mutation(db, gql_client: GraphQLTestClient):
-    query = """
-    mutation CreateProject ($input: CreateProjectInput!) {
-        createProject (input: $input) {
-          ... on ProjectType {
-            name
-            cost
-          }
-        }
-      }
-    """
-    with assert_num_queries(1):
-        res = gql_client.query(query, {"input": {"name": "Some Project", "cost": "12.50"}})
-        assert res.data == {"createProject": {"name": "Some Project", "cost": "12.50"}}

@@ -5,6 +5,7 @@ from typing import Iterable, List, Optional, Type, cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from strawberry.types.info import Info
 from typing_extensions import Annotated
 
@@ -115,6 +116,9 @@ class Mutation:
         due_date: Optional[datetime.datetime] = None,
     ) -> ProjectType:
         """Create project documentation."""
+        if cost > 500:
+            raise ValidationError({"cost": "Cost cannot be higher than 500"})
+
         return cast(
             ProjectType,
             Project.objects.create(
