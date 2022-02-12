@@ -91,7 +91,6 @@ def init_checker(checker: "HasPermDirective"):
 
 
 def clear_checker():
-    return
     perm_safe.set(None)
     checks = running_checks.get()
     if checks:
@@ -106,7 +105,7 @@ def set_perm_safe(value: bool):
 
 def is_perm_safe():
     ps = perm_safe.get()
-    return not ps or all(ps)
+    return bool(ps and all(ps))
 
 
 def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
