@@ -99,6 +99,7 @@ strictSetInference = "error"
 DJANGO_SETTINGS_MODULE = "tests.settings"
 python_files = "tests/test_*.py"
 addopts = "-p no:warnings --nomigrations --cov=./ --cov-report term-missing:skip-covered"
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
