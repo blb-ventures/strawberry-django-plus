@@ -2,7 +2,7 @@ from typing import Generic, List, TypeVar
 
 import factory
 
-from .models import Issue, Milestone, Project
+from demo.models import Issue, Milestone, Project
 
 _T = TypeVar("_T")
 

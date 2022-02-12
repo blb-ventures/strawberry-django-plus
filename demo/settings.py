@@ -4,9 +4,9 @@ from django.db import models
 from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 
-for cls in [QuerySet, BaseManager, models.ForeignKey]:
+for cls in [QuerySet, BaseManager, models.ForeignKey, models.ManyToManyField]:
     if not hasattr(cls, "__class_getitem__"):
-        cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)  # noqa
+        cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "strawberry.django",
     "strawberry_django_plus",
-    "tests",
+    "demo",
 ]
 
 DATABASES = {
@@ -95,7 +95,7 @@ LOGGING = {
     "loggers": {
         "django.db.backends": {
             "handlers": ["console"],
-            "level": "DEBUG",
+            "level": "INFO",
         },
         "strawberry.execution": {
             "handlers": ["console"],
@@ -106,4 +106,4 @@ LOGGING = {
 
 SECRET_KEY = "dummy"
 
-ROOT_URLCONF = "tests.urls"
+ROOT_URLCONF = "demo.urls"
