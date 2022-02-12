@@ -1,15 +1,25 @@
-from django.test.client import AsyncClient, Client  # type:ignore
+from typing import Dict, Tuple, Type, Union, cast
+
+from django.test.client import AsyncClient  # type:ignore
+from django.test.client import Client
 import pytest
 
-from .utils import GraphQLTestClient
+from strawberry_django_plus.optimizer import DjangoOptimizerExtension
+from tests.utils import GraphQLTestClient
 
 
 @pytest.fixture(params=["sync", "async", "sync_no_optimizer", "async_no_optimizer"])
 def gql_client(request):
-    opts = {
-        "sync": (Client, True),
-        "async": (AsyncClient, True),
-        "sync_no_optimizer": (Client, False),
-        "async_no_optimizer": (AsyncClient, False),
-    }[request.param]
-    yield GraphQLTestClient(opts[0](), optimizer_enabled=opts[1])
+    client, path, with_optimizer = cast(
+        Dict[str, Tuple[Union[Type[Client], Type[AsyncClient]], str, bool]],
+        {
+            "sync": (Client, "/graphql/", True),
+            "async": (AsyncClient, "/graphql_async/", True),
+            "sync_no_optimizer": (Client, "/graphql/", False),
+            "async_no_optimizer": (AsyncClient, "/graphql_async/", False),
+        },
+    )[request.param]
+    token = DjangoOptimizerExtension.enabled.set(with_optimizer)
+    with GraphQLTestClient(path, client()) as c:
+        yield c
+    DjangoOptimizerExtension.enabled.reset(token)

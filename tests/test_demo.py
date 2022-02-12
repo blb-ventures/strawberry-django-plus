@@ -1,11 +1,12 @@
+"""General tests for the demo app."""
+
 import pytest
 
+from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.relay import to_base64
 
 from .faker import IssueFactory, MilestoneFactory, ProjectFactory
 from .utils import GraphQLTestClient, assert_num_queries
-
-# Those are simple general tests. Still need to write specific ones...
 
 
 @pytest.mark.django_db(transaction=True)
@@ -53,9 +54,7 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
                     r["milestone"]["asyncField"] = "value: foo"
                 expected.append(r)
 
-    # FIXME: Why async is failing to track queries?
-    n_queries = 2 if gql_client.optimizer_enabled else 18
-    with assert_num_queries(n_queries, is_async=gql_client.is_async):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 18):
         res = gql_client.query(query, {"isAsync": gql_client.is_async})
 
     assert res.data == {
@@ -134,9 +133,7 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                     }
                 )
 
-    # FIXME: Why async is failing to track queries?
-    n_queries = 2 if gql_client.optimizer_enabled else 56
-    with assert_num_queries(n_queries, is_async=gql_client.is_async):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 56):
         res = gql_client.query(query)
 
     assert res.data == {
@@ -207,8 +204,7 @@ def test_query_prefetch(db, gql_client: GraphQLTestClient):
 
     assert len(expected) == 2
     for e in expected:
-        n_queries = 3 if gql_client.optimizer_enabled else 4
-        with assert_num_queries(n_queries, is_async=gql_client.is_async):
+        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 4):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
@@ -311,8 +307,7 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
 
     assert len(expected) == 3
     for e in expected:
-        n_queries = 3 if gql_client.optimizer_enabled else 8
-        with assert_num_queries(n_queries, is_async=gql_client.is_async):
+        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 8):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
@@ -330,6 +325,6 @@ def test_mutation(db, gql_client: GraphQLTestClient):
         }
       }
     """
-    with assert_num_queries(1, is_async=gql_client.is_async):
+    with assert_num_queries(1):
         res = gql_client.query(query, {"input": {"name": "Some Project", "cost": "12.50"}})
         assert res.data == {"createProject": {"name": "Some Project", "cost": "12.50"}}

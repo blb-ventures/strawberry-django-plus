@@ -1,10 +1,8 @@
-import contextlib
 import contextvars
 import dataclasses
 from typing import (
     Any,
     Callable,
-    ClassVar,
     Dict,
     List,
     Optional,
@@ -459,7 +457,10 @@ class DjangoOptimizerExtension(Extension):
 
     """
 
-    _disabled: ClassVar[bool] = False
+    enabled: contextvars.ContextVar[bool] = contextvars.ContextVar(
+        "optimizer_enabled_ctx",
+        default=True,
+    )
 
     def __init__(
         self,
@@ -476,14 +477,10 @@ class DjangoOptimizerExtension(Extension):
             enable_prefetch_related=enable_prefetch_related_optimization,
         )
 
-    @classmethod
-    @contextlib.contextmanager
-    def disable(cls):
-        cls._disabled = True
-        yield
-        cls._disabled = False
-
     def on_request_start(self) -> AwaitableOrValue[None]:
+        if not self.enabled.get():
+            return
+
         optimizer.set(self)
 
     def on_request_end(self) -> AwaitableOrValue[None]:
@@ -498,8 +495,7 @@ class DjangoOptimizerExtension(Extension):
         **kwargs,
     ) -> AwaitableOrValue[Any]:
         ret = _next(root, info, *args, **kwargs)
-
-        if self._disabled:
+        if optimizer.get() is None:
             return ret
 
         if isinstance(ret, (BaseManager, QuerySet)):
@@ -517,7 +513,4 @@ class DjangoOptimizerExtension(Extension):
         *,
         store: Optional["OptimizerStore"] = None,
     ) -> QuerySet[_M]:
-        if self._disabled:
-            return qs
-
         return optimize(qs, info, config=self.config, store=store)
