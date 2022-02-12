@@ -136,23 +136,23 @@ class NodeInputPartial(NodeInput):
 
     """
 
-    id: Optional[relay.GlobalID]  # noqa:A003
+    id: Optional[relay.GlobalID] = strawberry.field(default=None)  # noqa:A003
 
 
 @strawberry.input(description=("Add/remove/set the selected nodes."))
 class ListInput(Generic[K]):
     """Add/remove/set the selected nodes."""
 
-    set: Optional[List[K]]  # noqa:A003
-    add: Optional[List[K]]
-    remove: Optional[List[K]]
+    set: Optional[List[K]] = strawberry.field(default=None)  # noqa:A003
+    add: Optional[List[K]] = strawberry.field(default=None)
+    remove: Optional[List[K]] = strawberry.field(default=None)
 
 
 @strawberry.input(description=("Add/remove/set the selected nodes, passing `data` through."))
 class ListThroughInput(ListInput[K], Generic[K, D]):
     """Add/remove/set the selected nodes."""
 
-    data: Optional[D]
+    data: Optional[D] = strawberry.field(default=None)
 
 
 @strawberry.type

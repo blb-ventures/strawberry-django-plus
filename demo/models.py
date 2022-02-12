@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -46,7 +46,6 @@ class Project(models.Model):
 
 class Milestone(models.Model):
     issues: "RelatedManager[Issue]"
-    comment_set: "RelatedManager[MilestoneComment]"
 
     id = models.BigAutoField(  # noqa: A003
         verbose_name="ID",
@@ -105,6 +104,11 @@ class Issue(models.Model):
         blank=True,
         default=None,
     )
+    tags = models.ManyToManyField["Tag", Any](
+        "Tag",
+        related_name="issues",
+        related_query_name="issue",
+    )
 
     @property
     def name_with_kind(self) -> str:
@@ -116,33 +120,13 @@ class Issue(models.Model):
         return f"{self.kind}: {self.priority}"
 
 
-class IssueComment(models.Model):
+class Tag(models.Model):
+    issues: "RelatedManager[Issue]"
+
     id = models.BigAutoField(  # noqa: A003
         verbose_name="ID",
         primary_key=True,
     )
-    issue_id: int
-    issue = models.ForeignKey(
-        Issue,
-        on_delete=models.CASCADE,
-        related_name="comments",
-        related_query_name="comments",
-    )
-    comment = models.CharField(
+    name = models.CharField(
         max_length=255,
-    )
-
-
-class MilestoneComment(models.Model):
-    id = models.BigAutoField(  # noqa: A003
-        verbose_name="ID",
-        primary_key=True,
-    )
-    text = models.CharField(
-        max_length=255,
-    )
-    milestone_id: int
-    milestone = models.ForeignKey(
-        Milestone,
-        on_delete=models.CASCADE,
     )

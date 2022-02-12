@@ -111,7 +111,7 @@ def parse_input(info: Info, data: Any):
     elif isinstance(data, list):
         return [parse_input(info, v) for v in data]
     elif isinstance(data, relay.GlobalID):
-        node = data.resolve_node(info)
+        node = data.resolve_node(info, required=True)
         if aio.is_awaitable(node, info=info):
             node = resolve_sync(node)
         return node
@@ -346,9 +346,9 @@ def update_m2m(
 
     values = value.set if isinstance(value, ParsedObjectList) else value
     if isinstance(values, list):
-        if getattr(value, "add", None):
+        if isinstance(value, ParsedObjectList) and getattr(value, "add", None):
             raise ValueError("'add' cannot be used together with 'set'")
-        if getattr(value, "remove", None):
+        if isinstance(value, ParsedObjectList) and getattr(value, "remove", None):
             raise ValueError("'remove' cannot be used together with 'set'")
 
         parsed = []

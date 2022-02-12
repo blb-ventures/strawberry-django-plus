@@ -2,7 +2,7 @@ from typing import Generic, List, TypeVar
 
 import factory
 
-from demo.models import Issue, Milestone, Project
+from demo.models import Issue, Milestone, Project, Tag
 
 _T = TypeVar("_T")
 
@@ -31,7 +31,7 @@ class MilestoneFactory(_BaseFactory[Milestone]):
 
     name = factory.Sequence(lambda n: f"Milestone {n}")
     due_date = factory.Faker("future_date")
-    project = factory.SubFactory(Project)
+    project = factory.SubFactory(ProjectFactory)
 
 
 class IssueFactory(_BaseFactory[Issue]):
@@ -40,5 +40,12 @@ class IssueFactory(_BaseFactory[Issue]):
 
     name = factory.Sequence(lambda n: f"Issue {n}")
     kind = factory.Iterator(Issue.Kind)
-    milestone = factory.SubFactory(Milestone)
+    milestone = factory.SubFactory(MilestoneFactory)
     priority = factory.Faker("pyint", min_value=0, max_value=5)
+
+
+class TagFactory(_BaseFactory[Tag]):
+    class Meta:
+        model = Tag
+
+    name = factory.Sequence(lambda n: f"Tag {n}")

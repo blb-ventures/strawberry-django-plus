@@ -163,8 +163,9 @@ def _get_model_hints(
                     store.prefetch_related.append(model_fieldname)
                 elif len(f_types) == 1:
                     remote_field = model_field.remote_field
+                    remote_model = remote_field.model
                     f_store = _get_model_hints(
-                        remote_field.model,
+                        remote_model,
                         schema,
                         f_types[0],
                         f_selection,
@@ -172,14 +173,18 @@ def _get_model_hints(
                         model_cache=model_cache,
                         level=level + 1,
                     )
-                    if (config is None or config.enable_only) and f_store.only:
+                    if (
+                        (config is None or config.enable_only)
+                        and f_store.only
+                        and not isinstance(remote_field, ManyToManyRel)
+                    ):
                         # If adding a reverse relation, make sure to select its pointer to us,
                         # or else this might causa a refetch from the database
-                        f_store.only.append(cast(str, resolve_model_field_name(remote_field)))
+                        f_store.only.append(remote_field.attname or remote_field.name)
 
-                    model_cache.setdefault(remote_field.model, []).append((level, f_store))
+                    model_cache.setdefault(remote_model, []).append((level, f_store))
 
-                    f_qs = f_store.apply(remote_field.model.objects.all(), config=config)
+                    f_qs = f_store.apply(remote_model.objects.all(), config=config)
                     f_prefetch = Prefetch(path, queryset=f_qs)
                     f_prefetch._optimizer_sentinel = _sentinel  # type:ignore
                     store.prefetch_related.append(f_prefetch)

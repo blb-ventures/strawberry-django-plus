@@ -58,7 +58,7 @@ class GraphQLTestClient(TestClient):
         files: Optional[Dict[str, object]] = None,
     ):
         kwargs: Dict[str, object] = {"data": body}
-        if files:
+        if files:  # pragma:nocover
             kwargs["format"] = "multipart"
         else:
             kwargs["content_type"] = "application/json"

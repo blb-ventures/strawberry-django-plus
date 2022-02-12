@@ -15,7 +15,7 @@ from strawberry_django_plus.gql import relay
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.permissions import HasPerm, IsAuthenticated
 
-from .models import Issue, Milestone, Project
+from .models import Issue, Milestone, Project, Tag
 
 UserModel = cast(Type[AbstractUser], get_user_model())
 
@@ -61,8 +61,31 @@ class MilestoneType(relay.Node):
 class IssueType(relay.Node):
     name: gql.auto
     milestone: MilestoneType
+    priority: gql.auto
+    kind: gql.auto
     name_with_priority: gql.auto
     name_with_kind: str = gql.django.field(only=["kind", "name"])
+    tags: List["TagType"]
+
+
+@gql.django.type(Tag)
+class TagType(relay.Node):
+    name: gql.auto
+    issues: List["IssueType"]
+
+
+@gql.django.input(Issue)
+class IssueInput:
+    name: gql.auto
+    milestone: gql.auto
+    priority: gql.auto
+    kind: gql.auto
+    tags: Optional[List[gql.NodeInput]]
+
+
+@gql.django.partial(Issue)
+class IssueInputPartial(gql.NodeInput, IssueInput):
+    tags: Optional[gql.ListInput[gql.NodeInput]]
 
 
 @gql.type
@@ -72,14 +95,17 @@ class Query:
     issue: Optional[IssueType] = relay.node(description="FOobar")
     milestone: Optional[MilestoneType] = relay.node()
     project: Optional[ProjectType] = relay.node()
+    tag: Optional[TagType] = relay.node()
 
     issue_list: List[IssueType] = gql.django.field()
     milestone_list: List[MilestoneType] = gql.django.field()
     project_list: List[ProjectType] = gql.django.field()
+    tag_list: List[TagType] = gql.django.field()
 
     issue_conn: relay.Connection[IssueType] = relay.connection()
     milestone_conn: relay.Connection[MilestoneType] = relay.connection()
     project_conn: relay.Connection[ProjectType] = relay.connection()
+    tag_conn: relay.Connection[TagType] = relay.connection()
 
     @relay.connection
     def project_conn_with_resolver(self, name: str) -> Iterable[ProjectType]:
@@ -105,6 +131,10 @@ class Query:
 @gql.type
 class Mutation:
     """All available mutations for this schema."""
+
+    create_issue: IssueType = gql.django.create_mutation(IssueInput)
+    update_issue: IssueType = gql.django.update_mutation(IssueInputPartial)
+    delete_issue: IssueType = gql.django.delete_mutation(gql.NodeInput)
 
     @gql.django.input_mutation
     def create_project(
