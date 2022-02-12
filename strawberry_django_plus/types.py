@@ -18,6 +18,7 @@ from django.db.models.fields import NOT_PROVIDED
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ForeignObjectRel
 import strawberry
+from strawberry.arguments import UNSET
 from strawberry.custom_scalar import ScalarWrapper
 from strawberry.file_uploads import Upload
 from strawberry.type import StrawberryType
@@ -136,23 +137,23 @@ class NodeInputPartial(NodeInput):
 
     """
 
-    id: Optional[relay.GlobalID] = strawberry.field(default=None)  # noqa:A003
+    id: Optional[relay.GlobalID] = UNSET  # noqa:A003
 
 
 @strawberry.input(description=("Add/remove/set the selected nodes."))
 class ListInput(Generic[K]):
     """Add/remove/set the selected nodes."""
 
-    set: Optional[List[K]] = strawberry.field(default=None)  # noqa:A003
-    add: Optional[List[K]] = strawberry.field(default=None)
-    remove: Optional[List[K]] = strawberry.field(default=None)
+    set: Optional[List[K]] = UNSET  # noqa:A003
+    add: Optional[List[K]] = UNSET
+    remove: Optional[List[K]] = UNSET
 
 
 @strawberry.input(description=("Add/remove/set the selected nodes, passing `data` through."))
 class ListThroughInput(ListInput[K], Generic[K, D]):
     """Add/remove/set the selected nodes."""
 
-    data: Optional[D] = strawberry.field(default=None)
+    data: Optional[D] = UNSET
 
 
 @strawberry.type
