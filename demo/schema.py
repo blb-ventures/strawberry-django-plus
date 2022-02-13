@@ -13,7 +13,13 @@ from strawberry_django_plus import gql
 from strawberry_django_plus.directives import SchemaDirectiveExtension
 from strawberry_django_plus.gql import relay
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
-from strawberry_django_plus.permissions import HasPerm, IsAuthenticated
+from strawberry_django_plus.permissions import (
+    HasObjPerm,
+    HasPerm,
+    IsAuthenticated,
+    IsStaff,
+    IsSuperuser,
+)
 
 from .models import Issue, Milestone, Project, Tag
 
@@ -38,8 +44,8 @@ class ProjectType(relay.Node):
     name: gql.auto
     status: gql.auto
     due_date: gql.auto
-    cost: gql.auto
     milestones: List["MilestoneType"]
+    cost: gql.auto = gql.django.field(directives=[IsAuthenticated()])
     # FIXME: Nested connections are currently not working
     # milestones_conn: "relay.Connection[MilestoneType]" = relay.connection()
 
@@ -92,7 +98,7 @@ class IssueInputPartial(gql.NodeInput, IssueInput):
 class Query:
     """All available queries for this schema."""
 
-    issue: Optional[IssueType] = relay.node(description="FOobar")
+    issue: Optional[IssueType] = relay.node(description="Foobar")
     milestone: Optional[MilestoneType] = relay.node()
     project: Optional[ProjectType] = relay.node()
     tag: Optional[TagType] = relay.node()
@@ -107,25 +113,45 @@ class Query:
     project_conn: relay.Connection[ProjectType] = relay.connection()
     tag_conn: relay.Connection[TagType] = relay.connection()
 
+    # Login required to resolve
+    issue_login_required: IssueType = relay.node(directives=[IsAuthenticated()])
+    issue_login_required_optional: Optional[IssueType] = relay.node(directives=[IsAuthenticated()])
+    # Staff required to resolve
+    issue_staff_required: IssueType = relay.node(directives=[IsStaff()])
+    issue_staff_required_optional: Optional[IssueType] = relay.node(directives=[IsStaff()])
+    # Superuser required to resolve
+    issue_superuser_required: IssueType = relay.node(directives=[IsSuperuser()])
+    issue_superuser_required_optional: Optional[IssueType] = relay.node(directives=[IsSuperuser()])
+    # User permission on "demo.view_issue" to resolve
+    issue_perm_required: IssueType = relay.node(
+        directives=[HasPerm("demo.view_issue")],
+    )
+    issue_perm_required_optional: Optional[IssueType] = relay.node(
+        directives=[HasPerm("demo.view_issue")],
+    )
+    issue_list_perm_required: List[IssueType] = gql.django.field(
+        directives=[HasPerm("demo.view_issue")],
+    )
+    issue_conn_perm_required: relay.Connection[IssueType] = relay.connection(
+        directives=[HasPerm("demo.view_issue")],
+    )
+    # User permission on the resolved object for "demo.view_issue"
+    issue_obj_perm_required: IssueType = relay.node(
+        directives=[HasObjPerm("demo.view_issue")],
+    )
+    issue_obj_perm_required_optional: Optional[IssueType] = relay.node(
+        directives=[HasObjPerm("demo.view_issue")],
+    )
+    issue_list_obj_perm_required: List[IssueType] = gql.django.field(
+        directives=[HasObjPerm("demo.view_issue")],
+    )
+    issue_conn_obj_perm_required: relay.Connection[IssueType] = relay.connection(
+        directives=[HasObjPerm("demo.view_issue")],
+    )
+
     @relay.connection
     def project_conn_with_resolver(self, name: str) -> Iterable[ProjectType]:
         return cast(Iterable[ProjectType], Project.objects.filter(name__contains=name))
-
-    @gql.django.field(directives=[IsAuthenticated()])
-    def login_required(self) -> str:
-        return "login required"
-
-    @gql.django.field(directives=[IsAuthenticated()])
-    def login_required_optional(self) -> Optional[str]:
-        return "login required optional"
-
-    @gql.django.field(directives=[HasPerm("foo.bar")])
-    def perm_required(self) -> str:
-        return "perm required"
-
-    @gql.django.field(directives=[HasPerm("foo.bar")])
-    def perm_required_optional(self) -> Optional[str]:
-        return "perm required optional"
 
 
 @gql.type

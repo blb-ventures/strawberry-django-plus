@@ -67,7 +67,7 @@ class AsyncTestClient(TestClient):
             extensions=data.get("extensions"),
         )
         if asserts_errors:
-            assert response.errors is None
+            assert response.errors is None, response.errors
 
         return response
 

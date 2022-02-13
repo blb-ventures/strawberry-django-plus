@@ -44,7 +44,10 @@ class ObjectPermissionChecker(_ObjectPermissionChecker):
         if user_or_group is not None and user_or_group in _cache:
             return _cache[user_or_group]
 
-        return super().__new__(cls, user_or_group=user_or_group)  # type:ignore
+        obj = _ObjectPermissionChecker(user_or_group=user_or_group)
+        _cache[user_or_group] = obj
+
+        return obj
 
 
 # Use our implementation that reuses the checker for the same user/group

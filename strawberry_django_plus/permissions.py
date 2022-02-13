@@ -488,7 +488,11 @@ class HasPermDirective(AuthDirective):
     obj_perm_checker: Private[
         Callable[[GraphQLResolveInfo, UserType], Callable[[PermDefinition, Any], bool]]
     ] = dataclasses.field(
-        default=lambda info, user: functools.partial(user.has_perm),
+        default=lambda info, user: lambda perm, obj: (
+            # Check global perms first, then object specific
+            user.has_perm(perm.perm)
+            or user.has_perm(perm.perm, obj=obj)
+        ),
     )
     with_anonymous: Private[bool] = dataclasses.field(default=True)
     with_superuser: Private[bool] = dataclasses.field(default=False)
@@ -632,7 +636,7 @@ class HasPermDirective(AuthDirective):
 
         f = any if self.any else all
         checker = self.obj_perm_checker(info, user)
-        has_perm = f(checker(p, root) for p in self.perms)
+        has_perm = f(checker(p, obj) for p in self.perms)
 
         cache[key] = has_perm
         return has_perm

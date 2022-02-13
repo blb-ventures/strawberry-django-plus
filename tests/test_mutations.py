@@ -14,13 +14,30 @@ def test_input_mutation(db, gql_client: GraphQLTestClient):
           ... on ProjectType {
             name
             cost
+            dueDate
           }
         }
       }
     """
     with assert_num_queries(1):
-        res = gql_client.query(query, {"input": {"name": "Some Project", "cost": "12.50"}})
-        assert res.data == {"createProject": {"name": "Some Project", "cost": "12.50"}}
+        res = gql_client.query(
+            query,
+            {
+                "input": {
+                    "name": "Some Project",
+                    "cost": "12.50",
+                    "dueDate": "2030-01-01",
+                }
+            },
+        )
+        assert res.data == {
+            "createProject": {
+                "name": "Some Project",
+                # This is set, but will not be displayed because the user is not authenticated
+                "cost": None,
+                "dueDate": "2030-01-01T00:00:00",
+            }
+        }
 
 
 @pytest.mark.django_db(transaction=True)
