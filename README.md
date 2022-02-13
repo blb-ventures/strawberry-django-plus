@@ -13,7 +13,7 @@ integration, enhancing its overall functionality.
 
 ## Features
 
-- All of supported features by `strawberry` and `strawberry-django`.
+- All supported features by `strawberry` and `strawberry-django`.
 - [Query optimizer extension](#query-optimizer-extension) that automatically optimizes querysets
   (using `only`/`select_related`/`prefetch_related`) to solve graphql `N+1` problems, with support
   for fragment spread, inline fragments, `@include`/`@skip` directives, prefetch merging, etc
@@ -23,9 +23,9 @@ integration, enhancing its overall functionality.
   [django authentication system](https://docs.djangoproject.com/en/4.0/topics/auth/default/),
   direct and per-object permission checking for backends that implement those (e.g.
   [django-guardian](https://django-guardian.readthedocs.io/en/stable])).
-- [Crud mutations for Django](#crud-mutations), with automatic errors validation integration.
+- [Mutations for Django](#django-mutations), with CRUD support and automatic errors validation.
 - [Relay support](#relay-support) for queries, connections and input mutations, all integrated with
-  django type directly.
+  django types directly.
 - [Django Debug Toolbar integration](#django-debug-toolbar-integration) with graphiql to
   display metrics like SQL queries
 - Improved sync/async resolver that priorizes the model's cache to avoid have to use
@@ -128,7 +128,7 @@ class Query:
     songs: List[SongType] = gql.django.field()
 ```
 
-Querying the artist field:
+This query for the artist field:
 
 ```gql
 {
@@ -147,8 +147,9 @@ Querying the artist field:
 }
 ```
 
+Will generate an optimized query like this:
+
 ```python
-# This will generate a query like:
 Artist.objects.all().only("id", "name").prefetch_related(
     Prefetch(
         "albums",
@@ -160,7 +161,7 @@ Artist.objects.all().only("id", "name").prefetch_related(
 )
 ```
 
-And querying the songs list:
+Querying a song and its related fields like this:
 
 ```gql
 {
@@ -182,8 +183,9 @@ And querying the songs list:
 }
 ```
 
+Will generate an optimized query like this:
+
 ```python
-# This will generate a query like:
 Song.objects.all().only(
     "id",
     "album",
@@ -264,7 +266,7 @@ In that example, a new enum called `Genre` will be created and be used for queri
 and mutations.
 
 If you want to name it differently, decorate the class with `@gql.enum` with your preferred
-name so that strawberry-django-plus will not try to register it again.
+name so that this lib will not try to register it again.
 
 ### Permissioned resolvers
 
@@ -277,19 +279,18 @@ For example:
 @strawberry.type
 class SomeType:
     login_required_field: RetType = strawberry.field(
+        # will check if the user is authenticated
         directives=[IsAuthenticated()],
     )
     perm_required_field: OtherType = strawberry.field(
+        # will check if the user has `"some_app.some_perm"` permission
         directives=[HasPerm("some_app.some_perm")],
     )
     obj_perm_required_field: OtherType = strawberry.field(
+        # will check the permission for the resolved value
         directives=[HasObjPerm("some_app.some_perm")],
     )
 ```
-
-- `login_required_field` will check if the user is authenticated
-- `perm_required_field` will check if the user has `"some_app.some_perm"` permission
-- `obj_perm_required_field` will check the permission for the resolved value
 
 Available options are:
 
@@ -313,7 +314,11 @@ There are some important notes regarding how the directives handle the return va
   - If the return type was `Optional`, it returns `None`
   - If the return type was a `List`, it returns an empty list
   - If the return type was a relay `Connection`, it returns an empty `Connection`
-  - Otherwise, it raises a `PermissionError` for that resolver
+  - If the field is a union with `types.OperationInfo` or `types.OperationMessage`, that type
+    is returned with a kind of `PERMISSION`, explaining why the user doesn't have permission
+    to resolve that field.
+  - Otherwise, it raises a `PermissionError` for that resolver, which will be available at
+    the result's `errors` field.
 
 Note that since `strawberry` doesn't support resolvers for schema directives, it is necessary
 to use this lib's custom extension that handles the resolution of those and any other custom
@@ -332,9 +337,70 @@ schema = strawberry.Schema(
 )
 ```
 
-### Crud mutations
+### Django mutations
 
-... (documentation coming soon)
+This lib provides 3 CRUD mutations for create/update/delete operations, and also a facility
+for creating custom mutations with automatic `ValidationError` support.
+
+## CRUD mutations
+
+- `gql.django.create_mutation`: Will create the model using the data from the given input,
+  returning a `types.OperationInfo` if it fails with all raised `ValidationError` data.
+- `gql.django.update_mutation`: Will update the model using the data from the given input,
+  returning a `types.OperationInfo` if it fails with all raised `ValidationError` data.
+- `gql.django.delete_mutation`: Will delete the model using the id from the given input,
+  returning a `types.OperationInfo` if it fails with all raised `ValidationError` data.
+
+A simple complete example would be:
+
+```python
+from strawberry_django_plus import gql
+
+@gql.django.type(SomeModel)
+class SomeModelType(gql.Node):
+    name: gql.auto
+
+@gql.django.input(SomeModelType)
+class SomeModelInput:
+    name: gql.auto
+
+
+@gql.django.partial(SomeModelType)
+class SomeModelInputPartial(gql.NodeInput):
+    name: gql.auto
+
+@gql.type
+class Mutation:
+    create_model: SomeModelType = gql.django.create_mutation(SomeModelInput)
+    update_model: SomeModelType = gql.django.update_mutation(SomeModelInputPartial)
+    delete_model: SomeModelType = gql.django.delete_mutation(gql.NodeInput)
+```
+
+## Custom model mutations
+
+It is possible to create custom model mutations with `gql.django.input_mutation`, which will
+automatically convert the arguments to a input type and mark the return value as a union
+between the type annotation and `types.OperationInfo`. The later will be returned if
+the resolver raises `ValidationError`.
+
+For example:
+
+```python
+from django.core.exceptions import ValidationError
+from strawberry_django_plus import gql
+
+@gql.type
+class Mutation:
+    @gql.django.input_mutation
+    def set_model_name(self, info, id: GlobalID, name: str) -> ModelType:
+        obj = id.resolve_node(info)
+        if obj.some_field == "some_value":
+            raise ValidationError("Cannot update obj with some_value")
+
+        obj.name = name
+        obj.save()
+        return obj
+```
 
 ### Relay Support
 
@@ -373,7 +439,7 @@ class Query:
         ...
 ```
 
-This will generate a schema like this:
+Will generate a schema like this:
 
 ```gql
 interface Node {
