@@ -66,6 +66,8 @@ input PermDefinition {
 
 union CreateIssuePayload = IssueType | OperationInfo
 
+union CreateMilestonePayload = MilestoneType | OperationInfo
+
 """Input data for `createProject` mutation"""
 input CreateProjectInput {
   name: String!
@@ -151,6 +153,16 @@ type IssueTypeEdge {
   node: IssueType!
 }
 
+input MilestoneInput {
+  name: String!
+  project: NodeInput!
+  issues: [MilestoneIssueInput!]
+}
+
+input MilestoneIssueInput {
+  name: String!
+}
+
 type MilestoneType implements Node {
   id: GlobalID!
   name: String!
@@ -189,6 +201,7 @@ type Mutation {
     """Input of an object that implements the `Node` interface."""
     input: NodeInput!
   ): DeleteIssuePayload!
+  createMilestone(input: MilestoneInput!): CreateMilestonePayload!
 
   """Create project documentation."""
   createProject(

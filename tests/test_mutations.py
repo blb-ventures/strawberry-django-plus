@@ -1,8 +1,8 @@
 import pytest
 
-from demo.models import Issue
+from demo.models import Issue, Milestone
 from strawberry_django_plus.relay import from_base64, to_base64
-from tests.faker import IssueFactory, MilestoneFactory, TagFactory
+from tests.faker import IssueFactory, MilestoneFactory, ProjectFactory, TagFactory
 from tests.utils import GraphQLTestClient, assert_num_queries
 
 
@@ -144,6 +144,80 @@ def test_input_create_mutation(db, gql_client: GraphQLTestClient):
     assert issue.kind == Issue.Kind.FEATURE
     assert issue.milestone == milestone
     assert set(issue.tags.all()) == set(tags)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_create_with_m2m_mutation(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateMilestone ($input: MilestoneInput!) {
+      createMilestone (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on MilestoneType {
+          id
+          name
+          project {
+            id
+            name
+          }
+          issues {
+            id
+            name
+          }
+        }
+      }
+    }
+    """
+    project = ProjectFactory.create()
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "name": "Some Milestone",
+                "project": {
+                    "id": to_base64("ProjectType", project.pk),
+                },
+                "issues": [
+                    {
+                        "name": "Milestone Issue 1",
+                    },
+                    {
+                        "name": "Milestone Issue 2",
+                    },
+                ],
+            }
+        },
+    )
+    assert res.data and isinstance(res.data["createMilestone"], dict)
+
+    typename, pk = from_base64(res.data["createMilestone"].pop("id"))
+    assert typename == "MilestoneType"
+
+    issues = res.data["createMilestone"].pop("issues")
+    assert {i["name"] for i in issues} == {"Milestone Issue 1", "Milestone Issue 2"}
+
+    assert res.data == {
+        "createMilestone": {
+            "__typename": "MilestoneType",
+            "name": "Some Milestone",
+            "project": {
+                "id": to_base64("ProjectType", project.pk),
+                "name": project.name,
+            },
+        }
+    }
+
+    milestone = Milestone.objects.get(pk=pk)
+    assert milestone.name == "Some Milestone"
+    assert milestone.project == project
+    assert {i.name for i in milestone.issues.all()} == {"Milestone Issue 1", "Milestone Issue 2"}
 
 
 @pytest.mark.django_db(transaction=True)

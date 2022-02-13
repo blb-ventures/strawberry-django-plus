@@ -92,6 +92,18 @@ class IssueInputPartial(gql.NodeInput, IssueInput):
     tags: Optional[gql.ListInput[gql.NodeInput]]
 
 
+@gql.django.input(Issue)
+class MilestoneIssueInput:
+    name: gql.auto
+
+
+@gql.django.input(Milestone)
+class MilestoneInput:
+    name: gql.auto
+    project: gql.auto
+    issues: Optional[List[MilestoneIssueInput]]
+
+
 @gql.type
 class Query:
     """All available queries for this schema."""
@@ -159,6 +171,8 @@ class Mutation:
     create_issue: IssueType = gql.django.create_mutation(IssueInput)
     update_issue: IssueType = gql.django.update_mutation(IssueInputPartial)
     delete_issue: IssueType = gql.django.delete_mutation(gql.NodeInput)
+
+    create_milestone: MilestoneType = gql.django.create_mutation(MilestoneInput)
 
     @gql.django.input_mutation
     def create_project(

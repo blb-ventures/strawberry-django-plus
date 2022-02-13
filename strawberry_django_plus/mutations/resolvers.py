@@ -58,6 +58,8 @@ def _parse_pk(
         return None, None
     elif isinstance(value, ParsedObject):
         return value.parse(model)
+    elif isinstance(value, dict):
+        return None, value
 
     return model._default_manager.get(pk=value), None
 
@@ -130,13 +132,15 @@ def parse_input(info: Info, data: Any):
     elif isinstance(data, (ManyToOneInput, ManyToManyInput, ListInput)):
         d = getattr(data, "data", None)
         if dataclasses.is_dataclass(d):
-            d = dataclasses.asdict(d)
+            d = {f.name: parse_input(info, getattr(data, f.name)) for f in dataclasses.fields(d)}
         return ParsedObjectList(
             add=cast(List[_InputListTypes], parse_input(info, data.add)),
             remove=cast(List[_InputListTypes], parse_input(info, data.remove)),
             set=cast(List[_InputListTypes], parse_input(info, data.set)),
             data=parse_input(info, d),
         )
+    elif dataclasses.is_dataclass(data):
+        return {f.name: parse_input(info, getattr(data, f.name)) for f in dataclasses.fields(data)}
 
     return data
 
@@ -342,7 +346,6 @@ def update_m2m(
         accessor_name = field.get_accessor_name()
         assert accessor_name
         manager = cast("RelatedManager", getattr(instance, accessor_name))
-        extras["bulk"] = False
 
     values = value.set if isinstance(value, ParsedObjectList) else value
     if isinstance(values, list):
@@ -359,7 +362,7 @@ def update_m2m(
                     update(info, obj, data)
                 parsed.append(obj)
             elif data:
-                parsed.append(data)
+                parsed.append(manager.create(**data))
 
         if parsed:
             manager.set(parsed, **extras)
@@ -375,17 +378,15 @@ def update_m2m(
                         update(info, obj, data)
                     parsed.append(obj)
                 elif data:
-                    parsed.append(data)
+                    parsed.append(manager.create(**data))
             manager.add(*parsed, **extras)
 
         if value.remove:
             parsed = []
             for v in value.remove:
                 obj, data = _parse_pk(v, manager.model)
-                if obj:
-                    if data is not None:
-                        update(info, obj, data)
-                    parsed.append(obj)
-                elif data:
-                    parsed.append(data)
+                assert obj
+                if data is not None:
+                    update(info, obj, data)
+                parsed.append(obj)
             manager.remove(*parsed)
