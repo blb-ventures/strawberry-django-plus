@@ -808,7 +808,10 @@ class ConnectionField(RelayField):
                 "like `Iterable[<NodeType>]`, `List[<NodeType>]`, etc"
             )
 
-        type_override = StrawberryAnnotation(get_args(resolved)[0], namespace=namespace).resolve()
+        type_override = StrawberryAnnotation(
+            Connection[get_args(resolved)[0]],  # type:ignore
+            namespace=namespace,
+        ).resolve()
 
         resolver = StrawberryResolver(resolver, type_override=type_override)
         return super().__call__(resolver)
@@ -829,7 +832,13 @@ class ConnectionField(RelayField):
             assert self.base_resolver
 
             resolver_args = {arg.python_name for arg in self.base_resolver.arguments}
-            resolver_kwargs = {k: v for k, v in kwargs.items() if k in resolver_args}
+            resolver_kwargs = {
+                # Consider both args not in default args and the ones specified by the resolver,
+                # in case they want to check "first"/"last"/"before"/"after"
+                k: v
+                for k, v in kwargs.items()
+                if k in resolver_args or k not in self.default_args
+            }
             # This will be passed to the field cconnection resolver
             kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
 

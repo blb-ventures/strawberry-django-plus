@@ -3,7 +3,7 @@ import pytest
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.relay import to_base64
 
-from .faker import IssueFactory, MilestoneFactory, ProjectFactory
+from .faker import IssueFactory, MilestoneFactory, ProjectFactory, TagFactory
 from .utils import GraphQLTestClient, assert_num_queries
 
 
@@ -309,3 +309,100 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        projectConnWithResolver (name: "Foo") {
+          totalCount
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    p1 = ProjectFactory.create(name="Foo 1")
+    p2 = ProjectFactory.create(name="2 Foo")
+    p3 = ProjectFactory.create(name="FooBar")
+    for i in range(10):
+        ProjectFactory.create(name=f"Project {i}")
+
+    with assert_num_queries(2):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectConnWithResolver": {
+            "totalCount": 3,
+            "edges": [
+                {"node": {"id": to_base64("ProjectType", p.id), "name": p.name}}
+                for p in [p1, p2, p3]
+            ],
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_connection_nested(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        tagList {
+          id
+          name
+          issues (first: 2) {
+            totalCount
+            edges {
+              node {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    t1 = TagFactory.create()
+    t2 = TagFactory.create()
+
+    t1_issues = IssueFactory.create_batch(10)
+    for issue in t1_issues:
+        t1.issues.add(issue)
+    t2_issues = IssueFactory.create_batch(10)
+    for issue in t2_issues:
+        t2.issues.add(issue)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "tagList": [
+            {
+                "id": to_base64("TagType", t1.id),
+                "name": t1.name,
+                "issues": {
+                    "totalCount": 10,
+                    "edges": [
+                        {"node": {"id": to_base64("IssueType", t.id), "name": t.name}}
+                        for t in t1_issues[:2]
+                    ],
+                },
+            },
+            {
+                "id": to_base64("TagType", t2.id),
+                "name": t2.name,
+                "issues": {
+                    "totalCount": 10,
+                    "edges": [
+                        {"node": {"id": to_base64("IssueType", t.id), "name": t.name}}
+                        for t in t2_issues[:2]
+                    ],
+                },
+            },
+        ]
+    }

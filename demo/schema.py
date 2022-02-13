@@ -46,8 +46,6 @@ class ProjectType(relay.Node):
     due_date: gql.auto
     milestones: List["MilestoneType"]
     cost: gql.auto = gql.django.field(directives=[IsAuthenticated()])
-    # FIXME: Nested connections are currently not working
-    # milestones_conn: "relay.Connection[MilestoneType]" = relay.connection()
 
 
 @gql.django.type(Milestone)
@@ -77,7 +75,7 @@ class IssueType(relay.Node):
 @gql.django.type(Tag)
 class TagType(relay.Node):
     name: gql.auto
-    issues: List["IssueType"]
+    issues: relay.Connection[IssueType]
 
 
 @gql.django.input(Issue)
@@ -150,7 +148,7 @@ class Query:
     )
 
     @relay.connection
-    def project_conn_with_resolver(self, name: str) -> Iterable[ProjectType]:
+    def project_conn_with_resolver(self, root: str, name: str) -> Iterable[ProjectType]:
         return cast(Iterable[ProjectType], Project.objects.filter(name__contains=name))
 
 

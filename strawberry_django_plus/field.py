@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_origin,
     overload,
 )
 
@@ -151,8 +152,33 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         if attr is dataclasses.MISSING:
             attr = UNSET
 
+        if type_annotation:
+            try:
+                type_origin = get_origin(type_annotation.annotation)
+                is_connection = issubclass(type_origin, relay.Connection) if type_origin else False
+            except Exception:
+                is_connection = False
+        else:
+            is_connection = False
+
         if isinstance(attr, cls) and not attr.origin_django_type:
             field = cast(Self, attr)
+        elif is_connection or isinstance(attr, relay.ConnectionField):
+            field = attr
+            if not isinstance(field, relay.Connection):
+                field = relay.connection()
+
+            field = cast(Self, field)
+
+            # FIXME: Improve this...
+            if not field.base_resolver:
+
+                def conn_resolver(root):
+                    return getattr(root, name).all()
+
+                field.base_resolver = StrawberryResolver(conn_resolver)
+                if type_annotation is not None:
+                    field.type_annotation = type_annotation
         elif isinstance(attr, dataclasses.Field):
             default = getattr(attr, "default", UNSET)
             if default is dataclasses.MISSING:
@@ -201,7 +227,9 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         # resolve the django_name and check if it is relation field. django_name
         # is used to access the field data in resolvers
         try:
-            model_field = get_model_field(django_type.model, field.django_name or name)
+            model_field = get_model_field(
+                django_type.model, getattr(field, "django_name", None) or name
+            )
         except FieldDoesNotExist:
             model_attr = getattr(django_type.model, name, None)
             if model_attr is not None and isinstance(model_attr, ModelProperty):
