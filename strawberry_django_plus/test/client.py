@@ -1,5 +1,3 @@
-# pragma:nocover
-
 import contextlib
 from typing import Any, Awaitable, Dict, cast
 

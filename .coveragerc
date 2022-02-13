@@ -1,6 +1,6 @@
 [run]
 source = strawberry_django_plus
-omit = .venv/**,tests/migrations/**
+omit = .venv/**,tests/migrations/**,manage.py,strawberry_django_plus/middlewares/debug_toolbar.py,strawberry_django_plus/test/client.py
 
 [report]
 precision = 2

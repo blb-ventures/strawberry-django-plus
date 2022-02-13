@@ -1,0 +1,488 @@
+"""
+Can only be resolved by authenticated users.
+
+When the condition fails, the following can happen (following this priority):
+1) If the return value can return an `OperationMessage`, it is returned as that type.
+2) If the field is mandatory (e.g. `String!`), this will result in an error.
+3) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
+4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
+5) If the field is a relay `Connection`, an empty connection will be returned.
+"""
+directive @isAuthenticated on FIELD_DEFINITION
+
+"""
+Can only be resolved by staff users.
+
+When the condition fails, the following can happen (following this priority):
+1) If the return value can return an `OperationMessage`, it is returned as that type.
+2) If the field is mandatory (e.g. `String!`), this will result in an error.
+3) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
+4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
+5) If the field is a relay `Connection`, an empty connection will be returned.
+"""
+directive @isStaff on FIELD_DEFINITION
+
+"""
+Can only be resolved by superuser users.
+
+When the condition fails, the following can happen (following this priority):
+1) If the return value can return an `OperationMessage`, it is returned as that type.
+2) If the field is mandatory (e.g. `String!`), this will result in an error.
+3) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
+4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
+5) If the field is a relay `Connection`, an empty connection will be returned.
+"""
+directive @isSuperuser on FIELD_DEFINITION
+
+"""
+Will check if the user has any/all permissions for the resolved value of this field before returning it.
+
+When the condition fails, the following can happen (following this priority):
+1) If the return value can return an `OperationMessage`, it is returned as that type.
+2) If the field is mandatory (e.g. `String!`), this will result in an error.
+3) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
+4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
+5) If the field is a relay `Connection`, an empty connection will be returned.
+"""
+directive @hasObjPerm(perms: [PermDefinition!]!, any: Boolean! = true) on FIELD_DEFINITION
+
+"""
+Will check if the user has any/all permissions to resolve this.
+
+When the condition fails, the following can happen (following this priority):
+1) If the return value can return an `OperationMessage`, it is returned as that type.
+2) If the field is mandatory (e.g. `String!`), this will result in an error.
+3) If the field is not mandatory and a list (e.g. `[String]`), an empty list will be returned.
+4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
+5) If the field is a relay `Connection`, an empty connection will be returned.
+"""
+directive @hasPerm(perms: [PermDefinition!]!, any: Boolean! = true) on FIELD_DEFINITION
+
+"""Permission definition for schema directives."""
+input PermDefinition {
+  resource: String
+  permission: String
+}
+
+union CreateIssuePayload = IssueType | OperationInfo
+
+"""Input data for `createProject` mutation"""
+input CreateProjectInput {
+  name: String!
+
+  """The project's cost"""
+  cost: Decimal!
+  status: Status! = ACTIVE
+  dueDate: DateTime = null
+}
+
+union CreateProjectPayload = ProjectType | OperationInfo
+
+"""Date (isoformat)"""
+scalar Date
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+union DeleteIssuePayload = IssueType | OperationInfo
+
+"""
+The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
+"""
+scalar GlobalID
+
+input IssueInput {
+  name: String!
+  milestone: NodeInput
+  priority: Int
+
+  """the kind of the issue"""
+  kind: String
+  tags: [NodeInput!]
+}
+
+input IssueInputPartial {
+  id: GlobalID!
+  name: String
+  milestone: NodeInput
+  priority: Int
+
+  """the kind of the issue"""
+  kind: String
+  tags: NodeListInput
+}
+
+type IssueType implements Node {
+  id: GlobalID!
+  name: String!
+  milestone: MilestoneType!
+  priority: Int!
+
+  """the kind of the issue"""
+  kind: String
+
+  """Field doc."""
+  nameWithPriority: String!
+  nameWithKind: String!
+  tags: [TagType!]!
+}
+
+"""A connection to a list of items."""
+type IssueTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [IssueTypeEdge!]!
+
+  """Total quantity of existing nodes"""
+  totalCount: Int!
+}
+
+"""An edge in a connection."""
+type IssueTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: IssueType!
+}
+
+type MilestoneType implements Node {
+  id: GlobalID!
+  name: String!
+  dueDate: Date
+  project: ProjectType!
+  issues: [IssueType!]!
+  asyncField(value: String!): String!
+}
+
+"""A connection to a list of items."""
+type MilestoneTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [MilestoneTypeEdge!]!
+
+  """Total quantity of existing nodes"""
+  totalCount: Int!
+}
+
+"""An edge in a connection."""
+type MilestoneTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: MilestoneType!
+}
+
+"""All available mutations for this schema."""
+type Mutation {
+  createIssue(input: IssueInput!): CreateIssuePayload!
+  updateIssue(input: IssueInputPartial!): UpdateIssuePayload!
+  deleteIssue(
+    """Input of an object that implements the `Node` interface."""
+    input: NodeInput!
+  ): DeleteIssuePayload!
+
+  """Create project documentation."""
+  createProject(
+    """Input data for `createProject` mutation"""
+    input: CreateProjectInput!
+  ): CreateProjectPayload!
+}
+
+"""An object with a Globally Unique ID"""
+interface Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+}
+
+"""Input of an object that implements the `Node` interface."""
+input NodeInput {
+  id: GlobalID!
+}
+
+"""Add/remove/set the selected nodes."""
+input NodeListInput {
+  set: [NodeInput!]
+  add: [NodeInput!]
+  remove: [NodeInput!]
+}
+
+"""Multiple messages returned by an operation."""
+type OperationInfo {
+  """List of messages returned by the operation."""
+  messages: [OperationMessage!]!
+}
+
+"""An error that happened while executing an operation."""
+type OperationMessage {
+  """The kind of this message."""
+  kind: OperationMessageKind!
+
+  """The error message."""
+  message: String!
+
+  """
+  The field that caused the error, or `null` if it isn't associated with any particular field.
+  """
+  field: String
+}
+
+"""The kind of the returned message."""
+enum OperationMessageKind {
+  INFO
+  WARNING
+  ERROR
+  PERMISSION
+  VALIDATION
+}
+
+"""Information to aid in pagination."""
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
+
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
+}
+
+type ProjectType implements Node {
+  id: GlobalID!
+
+  """The name of the project"""
+  name: String!
+
+  """This project's status"""
+  status: Status!
+  dueDate: Date
+  milestones: [MilestoneType!]!
+  cost: Decimal @isAuthenticated
+}
+
+"""A connection to a list of items."""
+type ProjectTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [ProjectTypeEdge!]!
+
+  """Total quantity of existing nodes"""
+  totalCount: Int!
+}
+
+"""An edge in a connection."""
+type ProjectTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: ProjectType!
+}
+
+"""All available queries for this schema."""
+type Query {
+  """Foobar"""
+  issue(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType
+  milestone(
+    """The ID of the object."""
+    id: GlobalID!
+  ): MilestoneType
+  project(
+    """The ID of the object."""
+    id: GlobalID!
+  ): ProjectType
+  tag(
+    """The ID of the object."""
+    id: GlobalID!
+  ): TagType
+  issueList: [IssueType!]!
+  milestoneList: [MilestoneType!]!
+  projectList: [ProjectType!]!
+  tagList: [TagType!]!
+  issueConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
+  milestoneConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): MilestoneTypeConnection!
+  projectConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): ProjectTypeConnection!
+  tagConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): TagTypeConnection!
+  issueLoginRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @isAuthenticated
+  issueLoginRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @isAuthenticated
+  issueStaffRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @isStaff
+  issueStaffRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @isStaff
+  issueSuperuserRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @isSuperuser
+  issueSuperuserRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @isSuperuser
+  issuePermRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  issuePermRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueListPermRequired: [IssueType!]! @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueConnPermRequired(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection! @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueObjPermRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueObjPermRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueListObjPermRequired: [IssueType!]! @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueConnObjPermRequired(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection! @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  projectConnWithResolver(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+    name: String!
+  ): ProjectType!
+}
+
+"""An enumeration."""
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+type TagType implements Node {
+  id: GlobalID!
+  name: String!
+  issues: [IssueType!]!
+}
+
+"""A connection to a list of items."""
+type TagTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [TagTypeEdge!]!
+
+  """Total quantity of existing nodes"""
+  totalCount: Int!
+}
+
+"""An edge in a connection."""
+type TagTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: TagType!
+}
+
+union UpdateIssuePayload = IssueType | OperationInfo

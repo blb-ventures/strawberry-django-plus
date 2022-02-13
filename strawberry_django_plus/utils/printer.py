@@ -176,7 +176,7 @@ def print_schema(schema: BaseSchema) -> str:
 
     directives = _directives.get(schema)
     if directives:
-        parts.insert(0, "\n\n".join(directives))
+        parts.insert(0, "\n\n".join(sorted(directives)))
 
     return "\n\n".join(parts)
 

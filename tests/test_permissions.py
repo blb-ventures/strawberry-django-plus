@@ -277,7 +277,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     with gql_client.login(user_with_perm):
@@ -321,7 +321,7 @@ def test_perm_required_optional(db, gql_client: GraphQLTestClient, kind: PermKin
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     with gql_client.login(user_with_perm):
@@ -365,7 +365,7 @@ def test_list_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     with gql_client.login(user_with_perm):
@@ -416,7 +416,7 @@ def test_conn_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     with gql_client.login(user_with_perm):
@@ -462,7 +462,7 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     for issue in [issue_no_perm, issue_with_perm]:
@@ -536,7 +536,7 @@ def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermK
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     for issue in [issue_no_perm, issue_with_perm]:
@@ -605,7 +605,7 @@ def test_obj_perm_required_optional(db, gql_client: GraphQLTestClient, kind: Per
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     for issue in [issue_no_perm, issue_with_perm]:
@@ -663,7 +663,7 @@ def test_list_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     res = gql_client.query(query)
@@ -723,7 +723,7 @@ def test_conn_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:
+    else:  # pragma:nocover
         raise AssertionError
 
     res = gql_client.query(query)
