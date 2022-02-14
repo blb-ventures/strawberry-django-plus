@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_args,
     get_origin,
     overload,
 )
@@ -47,7 +48,7 @@ from strawberry_django.fields.types import (
     resolve_model_field_name,
 )
 from strawberry_django.utils import is_similar_django_type, unwrap_type
-from typing_extensions import Self
+from typing_extensions import Annotated, Self
 
 from . import relay
 from .descriptors import ModelProperty
@@ -234,7 +235,10 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             model_attr = getattr(django_type.model, name, None)
             if model_attr is not None and isinstance(model_attr, ModelProperty):
                 if field.is_auto:
-                    field.type_annotation = StrawberryAnnotation(model_attr.type_annotation)
+                    annotation = model_attr.type_annotation
+                    if get_origin(annotation) is Annotated:
+                        annotation = get_args(annotation)[0]
+                    field.type_annotation = StrawberryAnnotation(annotation)
                     field.is_auto = is_auto(field.type_annotation)
 
                 if field.description is None:
