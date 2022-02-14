@@ -41,7 +41,7 @@ class UserType(relay.Node):
 
 @gql.django.type(Project)
 class ProjectType(relay.Node):
-    name: gql.auto
+    name: Annotated[gql.auto, {"some_data": "other_data"}]
     status: gql.auto
     due_date: gql.auto
     milestones: List["MilestoneType"]

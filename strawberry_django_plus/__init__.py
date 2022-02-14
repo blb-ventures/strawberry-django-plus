@@ -1,34 +1,44 @@
 import inspect
 import re
+from typing import get_args, get_origin
 
-from strawberry import auto as _auto
-from strawberry import object_type as _object_type
-from strawberry.enum import EnumDefinition as _EnumDefinition
-from strawberry.field import StrawberryField as _StrawberryField
-from strawberry.schema.name_converter import NameConverter as _NameConverter
-from strawberry.schema_directive import (
-    StrawberrySchemaDirective as _StrawberrySchemaDirective,
-)
-from strawberry.types.fields.resolver import StrawberryResolver as _StrawberryResolver
-from strawberry_django import types as _types
-from strawberry_django.fields import types as _ftypes
+import strawberry
+from strawberry import object_type
+from strawberry.annotation import StrawberryAnnotation
+from strawberry.enum import EnumDefinition
+from strawberry.field import StrawberryField
+from strawberry.schema.name_converter import NameConverter
+from strawberry.schema_directive import StrawberrySchemaDirective
+from strawberry.types.fields.resolver import StrawberryResolver
+from strawberry_django.fields import types
+from typing_extensions import Annotated
 
 # Just import this for the monkey patch
 from .utils.printer import print_schema  # noqa:F401
 
-# Monkey patch strawberry_django to use strawberry's auto
-_ftypes.auto = _auto
-_types.auto = _auto  # type:ignore
+# Monkey strawberry to use strawberry django's auto, which is a type
+strawberry.auto = types.auto
+__import__("strawberry.auto").auto = types.auto
 
 _cls_docs = {}
-_original_process_type = _object_type._process_type
-_original_process_type = _object_type._process_type
-_original_wrap_dataclass = _object_type._wrap_dataclass
-_original_field_init = _StrawberryField.__init__
-_original_field_call = _StrawberryField.__call__
-_original_enum_init = _EnumDefinition.__init__
-_original_schema_directive_init = _StrawberrySchemaDirective.__init__
-_original_from_generic = _NameConverter.from_generic
+_original_process_type = object_type._process_type
+_original_process_type = object_type._process_type
+_original_wrap_dataclass = object_type._wrap_dataclass
+_original_field_init = StrawberryField.__init__
+_original_field_call = StrawberryField.__call__
+_original_enum_init = EnumDefinition.__init__
+_original_schema_directive_init = StrawberrySchemaDirective.__init__
+_original_from_generic = NameConverter.from_generic
+
+
+def _is_auto(type_):
+    if isinstance(type_, StrawberryAnnotation):
+        type_ = type_.annotation
+
+    if get_origin(type_) is Annotated:
+        type_ = get_args(type_)[0]
+
+    return type_ is strawberry.auto
 
 
 def _get_doc(obj):
@@ -55,7 +65,7 @@ def _field_init(self, *args, **kwargs):
     if kwargs.get("description") is None:
         base_resolver = kwargs.get("base_resolver")
         if base_resolver is not None:
-            while isinstance(base_resolver, _StrawberryResolver):
+            while isinstance(base_resolver, StrawberryResolver):
                 base_resolver = base_resolver.wrapped_func
             kwargs["description"] = _get_doc(base_resolver)
     ret = _original_field_init(self, *args, **kwargs)
@@ -68,7 +78,7 @@ def _field_call(self, resolver):
     ret = _original_field_call(self, resolver)
     if self.description is None:
         resolver = self.base_resolver
-        while isinstance(resolver, _StrawberryResolver):
+        while isinstance(resolver, StrawberryResolver):
             resolver = resolver.wrapped_func
         self.description = _get_doc(resolver)
     return ret
@@ -100,10 +110,11 @@ def _from_generic(*args, **kwargs):
     return v
 
 
-_object_type._process_type = _process_type
-_object_type._wrap_dataclass = _wrap_dataclass
-_StrawberryField.__init__ = _field_init
-_StrawberryField.__call__ = _field_call
-_EnumDefinition.__init__ = _enum_init
-_StrawberrySchemaDirective.__init__ = _schema_directive_init
-_NameConverter.from_generic = _from_generic
+types.is_auto = _is_auto
+object_type._process_type = _process_type
+object_type._wrap_dataclass = _wrap_dataclass
+StrawberryField.__init__ = _field_init
+StrawberryField.__call__ = _field_call
+EnumDefinition.__init__ = _enum_init
+StrawberrySchemaDirective.__init__ = _schema_directive_init
+NameConverter.from_generic = _from_generic
