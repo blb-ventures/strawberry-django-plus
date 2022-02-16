@@ -7,6 +7,7 @@ import math
 import sys
 from typing import (
     Any,
+    Awaitable,
     Callable,
     ClassVar,
     Dict,
@@ -226,8 +227,18 @@ class GlobalID:
         info: Info,
         *,
         required: Literal[True] = ...,
-        ensure_type: Type[NodeType],
-    ) -> AwaitableOrValue[NodeType]:
+        ensure_type: Type[_T],
+    ) -> _T:
+        ...
+
+    @overload
+    def resolve_node(
+        self,
+        info: Info,
+        *,
+        required: Literal[True] = ...,
+        ensure_type: Awaitable[Type[_T]],
+    ) -> Awaitable[_T]:
         ...
 
     @overload
@@ -250,7 +261,7 @@ class GlobalID:
     ) -> AwaitableOrValue[Optional["Node"]]:
         ...
 
-    def resolve_node(self, info, *, required: bool = False, ensure_type: type = None):
+    def resolve_node(self, info, *, required=False, ensure_type=None) -> Any:
         """Resolve the type name and node id info to the node itself.
 
         Tip: When you know the expected type, calling `ensure_type` should help
@@ -284,6 +295,8 @@ class GlobalID:
         )
 
         if node is not None and ensure_type is not None:
+            if get_origin(ensure_type) is Awaitable:
+                ensure_type = get_args(ensure_type)[0]
             return aio.resolve(node, lambda n: n, info=info, ensure_type=ensure_type)
 
         return node
