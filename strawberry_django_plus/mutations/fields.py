@@ -214,7 +214,9 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         assert data is not None
 
         vdata = vars(data)
-        pk = vdata.pop("id")
+        pk = vdata.pop("id", UNSET)
+        if pk is UNSET:
+            pk = vdata.pop("pk")
         instance = get_with_perms(pk, info, required=True, model=self.model)
 
         return resolvers.update(info, instance, vdata)
@@ -241,6 +243,8 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 
         vdata = vars(data)
         pk = vdata.pop("id")
+        if pk is UNSET:
+            pk = vdata.pop("pk")
         instance = get_with_perms(pk, info, required=True, model=self.model)
 
         return resolvers.delete(info, instance, data=vdata)

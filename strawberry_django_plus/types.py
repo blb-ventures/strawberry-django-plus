@@ -96,16 +96,10 @@ def register(
 
 
 @strawberry.type(
-    description="Input of an object that implements the `Node` interface.",
+    description="Generic type for objects that implements the `Node` interface.",
 )
 class NodeType(relay.Node):
-    """Set the value to the selected node.
-
-    Notes:
-        This can be used as a base class for input types that receive an
-        `id` of type `GlobalID` when inheriting from it.
-
-    """
+    """Set the value to the selected node."""
 
     id: relay.GlobalID  # noqa:A003
 
