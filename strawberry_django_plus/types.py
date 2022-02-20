@@ -187,9 +187,6 @@ class OperationInfo:
 def resolve_model_field_type(
     field: Union[models.Field, ForeignObjectRel],
     django_type: "StrawberryDjangoType",
-    *,
-    is_input: bool = False,
-    is_partial: bool = False,
 ):
     """Resolve type for model field."""
     if has_choices_field and isinstance(field, (TextChoicesField, IntegerChoicesField)):
@@ -224,16 +221,20 @@ def resolve_model_field_type(
             if is_lookup:
                 retval = FilterLookup[retval]
 
+    is_input = django_type.is_input
+    is_partial = django_type.is_partial
+    is_filter = bool(django_type.is_filter)
+
     if getattr(field, "primary_key", False):
-        # Primary keys are always required
+        # Primary keys are always required, unless this is a filter
         optional = False
     elif isinstance(field, ManyToManyField):
         # Many to many is always a list on get, but optional otherwise
-        optional = is_input or is_partial
+        optional = is_input or is_partial or is_filter
     elif isinstance(field, ForeignObjectRel):
-        optional = is_input or is_partial or field.null
+        optional = is_input or is_partial or is_filter or field.null
     else:
-        if is_partial:
+        if is_partial or is_filter:
             optional = True
         elif is_input:
             optional = field.blank or field.default is not NOT_PROVIDED

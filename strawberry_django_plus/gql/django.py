@@ -7,24 +7,24 @@ from strawberry_django import (
     OneToManyInput,
     OneToOneInput,
     auth,
-    filter,
     filters,
     ordering,
 )
 
 from strawberry_django_plus import mutations, types
 from strawberry_django_plus.field import field
+from strawberry_django_plus.filters import filter
 from strawberry_django_plus.mutations.fields import create as create_mutation
 from strawberry_django_plus.mutations.fields import delete as delete_mutation
 from strawberry_django_plus.mutations.fields import input_mutation
 from strawberry_django_plus.mutations.fields import update as update_mutation
+from strawberry_django_plus.ordering import order
 from strawberry_django_plus.type import input, interface, partial, type
 
 __all__ = [
     # strawberry_django
     "auth",
     "filters",
-    "filter",
     "ordering",
     "DjangoFileType",
     "DjangoImageType",
@@ -45,4 +45,6 @@ __all__ = [
     "type",
     "types",
     "partial",
+    "filter",
+    "order",
 ]

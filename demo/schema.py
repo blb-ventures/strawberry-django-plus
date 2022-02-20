@@ -6,6 +6,7 @@ from typing import Iterable, List, Optional, Type, cast
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
+from django.db.models.query import QuerySet
 from strawberry.types.info import Info
 from typing_extensions import Annotated
 
@@ -48,7 +49,29 @@ class ProjectType(relay.Node):
     cost: gql.auto = gql.django.field(directives=[IsAuthenticated()])
 
 
-@gql.django.type(Milestone)
+@gql.django.filter(Milestone, lookups=True)
+class MilestoneFilter:
+    name: gql.auto
+    project: gql.auto
+    search: Optional[str]
+
+    def filter_search(self, queryset: QuerySet[Milestone]):
+        return queryset.filter(name__contains=self.search)
+
+
+@gql.django.ordering.order(Project)
+class ProjectOrder:
+    id: gql.auto  # noqa:A003
+    name: gql.auto
+
+
+@gql.django.ordering.order(Milestone)
+class MilestoneOrder:
+    name: gql.auto
+    project: ProjectOrder
+
+
+@gql.django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
 class MilestoneType(relay.Node):
     name: gql.auto
     due_date: gql.auto
@@ -114,7 +137,11 @@ class Query:
     tag: Optional[TagType] = relay.node()
 
     issue_list: List[IssueType] = gql.django.field()
-    milestone_list: List[MilestoneType] = gql.django.field()
+    milestone_list: List[MilestoneType] = gql.django.field(
+        order=MilestoneOrder,
+        filters=MilestoneFilter,
+        pagination=True,
+    )
     project_list: List[ProjectType] = gql.django.field()
     tag_list: List[TagType] = gql.django.field()
 
