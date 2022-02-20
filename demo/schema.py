@@ -131,10 +131,12 @@ class MilestoneInput:
 class Query:
     """All available queries for this schema."""
 
-    issue: Optional[IssueType] = relay.node(description="Foobar")
-    milestone: Optional[MilestoneType] = relay.node()
-    project: Optional[ProjectType] = relay.node()
-    tag: Optional[TagType] = relay.node()
+    issue: Optional[IssueType] = gql.django.node(description="Foobar")
+    milestone: Optional[MilestoneType] = gql.django.node()
+    milestone_mandatory: MilestoneType = gql.django.node()
+    milestones: List[MilestoneType] = gql.django.node()
+    project: Optional[ProjectType] = gql.django.node()
+    tag: Optional[TagType] = gql.django.node()
 
     issue_list: List[IssueType] = gql.django.field()
     milestone_list: List[MilestoneType] = gql.django.field(
@@ -147,48 +149,57 @@ class Query:
 
     issue_conn: relay.Connection[
         gql.LazyType["IssueType", "demo.schema"]  # type:ignore # noqa:F821
-    ] = relay.connection()
-    milestone_conn: relay.Connection[MilestoneType] = relay.connection()
-    project_conn: relay.Connection[ProjectType] = relay.connection()
-    tag_conn: relay.Connection[TagType] = relay.connection()
+    ] = gql.django.connection()
+    milestone_conn: relay.Connection[MilestoneType] = gql.django.connection()
+
+    @gql.django.connection
+    def milestone3_conn(self, info: Info, name: str) -> Iterable[MilestoneType]:
+        return cast(Iterable[MilestoneType], Milestone.objects.filter(name__contains=name))
+
+    project_conn: relay.Connection[ProjectType] = gql.django.connection()
+    tag_conn: relay.Connection[TagType] = gql.django.connection()
 
     # Login required to resolve
-    issue_login_required: IssueType = relay.node(directives=[IsAuthenticated()])
-    issue_login_required_optional: Optional[IssueType] = relay.node(directives=[IsAuthenticated()])
+    issue_login_required: IssueType = gql.django.node(directives=[IsAuthenticated()])
+    issue_login_required_optional: Optional[IssueType] = gql.django.node(
+        directives=[IsAuthenticated()]
+    )
     # Staff required to resolve
-    issue_staff_required: IssueType = relay.node(directives=[IsStaff()])
-    issue_staff_required_optional: Optional[IssueType] = relay.node(directives=[IsStaff()])
+    issue_staff_required: IssueType = gql.django.node(directives=[IsStaff()])
+    issue_staff_required_optional: Optional[IssueType] = gql.django.node(directives=[IsStaff()])
     # Superuser required to resolve
-    issue_superuser_required: IssueType = relay.node(directives=[IsSuperuser()])
-    issue_superuser_required_optional: Optional[IssueType] = relay.node(directives=[IsSuperuser()])
+    issue_superuser_required: IssueType = gql.django.node(directives=[IsSuperuser()])
+    issue_superuser_required_optional: Optional[IssueType] = gql.django.node(
+        directives=[IsSuperuser()]
+    )
     # User permission on "demo.view_issue" to resolve
-    issue_perm_required: IssueType = relay.node(
+    issue_perm_required: IssueType = gql.django.node(
         directives=[HasPerm("demo.view_issue")],
     )
-    issue_perm_required_optional: Optional[IssueType] = relay.node(
+    issue_perm_required_optional: Optional[IssueType] = gql.django.node(
         directives=[HasPerm("demo.view_issue")],
     )
     issue_list_perm_required: List[IssueType] = gql.django.field(
         directives=[HasPerm("demo.view_issue")],
     )
-    issue_conn_perm_required: relay.Connection[IssueType] = relay.connection(
+    issue_conn_perm_required: relay.Connection[IssueType] = gql.django.connection(
         directives=[HasPerm("demo.view_issue")],
     )
     # User permission on the resolved object for "demo.view_issue"
-    issue_obj_perm_required: IssueType = relay.node(
+    issue_obj_perm_required: IssueType = gql.django.node(
         directives=[HasObjPerm("demo.view_issue")],
     )
-    issue_obj_perm_required_optional: Optional[IssueType] = relay.node(
+    issue_obj_perm_required_optional: Optional[IssueType] = gql.django.node(
         directives=[HasObjPerm("demo.view_issue")],
     )
     issue_list_obj_perm_required: List[IssueType] = gql.django.field(
         directives=[HasObjPerm("demo.view_issue")],
     )
-    issue_conn_obj_perm_required: relay.Connection[IssueType] = relay.connection(
+    issue_conn_obj_perm_required: relay.Connection[IssueType] = gql.django.connection(
         directives=[HasObjPerm("demo.view_issue")],
     )
 
-    @relay.connection
+    @gql.django.connection
     def project_conn_with_resolver(self, root: str, name: str) -> Iterable[ProjectType]:
         return cast(Iterable[ProjectType], Project.objects.filter(name__contains=name))
 

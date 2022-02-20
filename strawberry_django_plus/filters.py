@@ -9,7 +9,7 @@ from strawberry_django import filters as _filters
 from strawberry_django import utils
 from strawberry_django.fields.field import field as _field
 
-from .field import field
+from . import field
 from .relay import GlobalID, connection, node
 from .type import input
 
@@ -58,7 +58,15 @@ _filters.build_filter_kwargs = _build_filter_kwargs
 
 @__dataclass_transform__(
     order_default=True,
-    field_descriptors=(StrawberryField, field, _field, node, connection),
+    field_descriptors=(
+        StrawberryField,
+        _field,
+        node,
+        connection,
+        field.field,
+        field.node,
+        field.connection,
+    ),
 )
 def filter(  # noqa:A001
     model: Type[Model],

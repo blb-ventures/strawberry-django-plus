@@ -31,10 +31,8 @@ from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Self, final
 
-from strawberry_django_plus import relay
-
 from .directives import SchemaDirectiveHelper, SchemaDirectiveResolver, schema_directive
-from .relay import Connection
+from .relay import Connection, GlobalID
 from .types import OperationInfo, OperationMessage
 from .utils import aio, resolvers
 from .utils.query import filter_for_user
@@ -164,7 +162,7 @@ def get_with_perms(
 
 @overload
 def get_with_perms(
-    pk: relay.GlobalID,
+    pk: GlobalID,
     info: Info,
     *,
     required: Literal[True],
@@ -175,7 +173,7 @@ def get_with_perms(
 
 @overload
 def get_with_perms(
-    pk: relay.GlobalID,
+    pk: GlobalID,
     info: Info,
     *,
     required: bool = ...,
@@ -185,7 +183,7 @@ def get_with_perms(
 
 
 def get_with_perms(pk, info, *, required=False, model=None):
-    if isinstance(pk, relay.GlobalID):
+    if isinstance(pk, GlobalID):
         instance = pk.resolve_node(info, required=required, ensure_type=model)
         if aio.is_awaitable(instance, info=info):
             instance = resolvers.resolve_sync(instance)

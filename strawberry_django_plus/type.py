@@ -36,11 +36,11 @@ from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations, is_similar_django_type
 from typing_extensions import Annotated
 
-from strawberry_django_plus.descriptors import ModelProperty
-from strawberry_django_plus.types import resolve_model_field_type
-
-from .field import StrawberryDjangoField, field
+from . import field
+from .descriptors import ModelProperty
+from .field import StrawberryDjangoField
 from .relay import Connection, ConnectionField, Node, connection, node
+from .types import resolve_model_field_type
 from .utils.resolvers import (
     resolve_connection,
     resolve_model_id,
@@ -53,6 +53,7 @@ __all = [
     "type",
     "interface",
     "input",
+    "partial",
 ]
 
 _T = TypeVar("_T")
@@ -139,7 +140,7 @@ def _from_django_type(
     field.python_name = name
     # store origin django type for further usage
     if name in origin.__dict__.get("__annotations__", {}):
-        field.origin_django_type = django_type  # type:ignore
+        field.origin_django_type = django_type
 
     # annotation of field is used as a class type
     if type_annotation is not None:
@@ -335,7 +336,15 @@ class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
 
 @__dataclass_transform__(
     order_default=True,
-    field_descriptors=(StrawberryField, field, _field, node, connection),
+    field_descriptors=(
+        StrawberryField,
+        _field,
+        node,
+        connection,
+        field.field,
+        field.node,
+        field.connection,
+    ),
 )
 def type(  # noqa:A001
     model: Type[Model],
@@ -384,7 +393,15 @@ def type(  # noqa:A001
 
 @__dataclass_transform__(
     order_default=True,
-    field_descriptors=(StrawberryField, field, _field, node, connection),
+    field_descriptors=(
+        StrawberryField,
+        _field,
+        node,
+        connection,
+        field.field,
+        field.node,
+        field.connection,
+    ),
 )
 def interface(
     model: Type[Model],
@@ -420,7 +437,15 @@ def interface(
 
 @__dataclass_transform__(
     order_default=True,
-    field_descriptors=(StrawberryField, field, _field, node, connection),
+    field_descriptors=(
+        StrawberryField,
+        _field,
+        node,
+        connection,
+        field.field,
+        field.node,
+        field.connection,
+    ),
 )
 def input(  # noqa:A001
     model: Type[Model],
@@ -460,7 +485,15 @@ def input(  # noqa:A001
 
 @__dataclass_transform__(
     order_default=True,
-    field_descriptors=(StrawberryField, field, _field, node, connection),
+    field_descriptors=(
+        StrawberryField,
+        _field,
+        node,
+        connection,
+        field.field,
+        field.node,
+        field.connection,
+    ),
 )
 def partial(  # noqa:A001
     model: Type[Model],

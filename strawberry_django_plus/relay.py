@@ -3,6 +3,7 @@
 import abc
 import base64
 import dataclasses
+import functools
 import math
 import sys
 from typing import (
@@ -40,6 +41,7 @@ from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
 from strawberry.schema_directive import StrawberrySchemaDirective
+from strawberry.type import StrawberryList, StrawberryOptional
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import TypeDefinition
@@ -720,7 +722,9 @@ class RelayField(StrawberryField):
     default_args: Dict[str, StrawberryArgument]
 
     def __init__(self, *args, **kwargs):
-        self.default_args = getattr(self.__class__, "default_args", {}).copy()
+        default_args = getattr(self.__class__, "default_args", {})
+        if isinstance(default_args, dict):
+            self.default_args = default_args.copy()
         base_resolver = kwargs.pop("base_resolver", None)
         super().__init__(*args, **kwargs)
         if base_resolver:
@@ -734,6 +738,18 @@ class RelayField(StrawberryField):
         }
         return list(args.values())
 
+    @functools.cached_property
+    def is_optional(self):
+        return isinstance(self.type, StrawberryOptional)
+
+    @functools.cached_property
+    def is_list(self):
+        type_ = self.type
+        if isinstance(type_, StrawberryOptional):
+            type_ = type_.of_type
+
+        return isinstance(type_, StrawberryList)
+
 
 class NodeField(RelayField):
     """Relay Node field.
@@ -742,19 +758,32 @@ class NodeField(RelayField):
 
     """
 
-    default_args: Dict[str, StrawberryArgument] = {
-        "id": StrawberryArgument(
-            python_name="id",
-            graphql_name=None,
-            type_annotation=StrawberryAnnotation(GlobalID),
-            description="The ID of the object.",
-        ),
-    }
+    @property
+    def default_args(self) -> Dict[str, StrawberryArgument]:
+        if self.base_resolver:
+            return {}
+
+        if self.is_list:
+            return {
+                "ids": StrawberryArgument(
+                    python_name="ids",
+                    graphql_name=None,
+                    type_annotation=StrawberryAnnotation(List[GlobalID]),
+                    description="The IDs of the objects.",
+                ),
+            }
+        else:
+            return {
+                "id": StrawberryArgument(
+                    python_name="id",
+                    graphql_name=None,
+                    type_annotation=StrawberryAnnotation(GlobalID),
+                    description="The ID of the object.",
+                ),
+            }
 
     def __call__(self, resolver):
-        # If a resolver is being set, remove default_args
-        self.default_args = {}
-        return super().__call__(resolver)
+        raise TypeError("NodeField cannot have a resolver, use a common field instead.")
 
     def get_result(
         self,
@@ -763,13 +792,46 @@ class NodeField(RelayField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
-        if self.base_resolver:
-            return self.base_resolver(*args, **kwargs)
+        if self.is_list:
+            return self.resolve_nodes(source, info, args, kwargs)
+        else:
+            return self.resolve_node(source, info, args, kwargs)
 
+    def resolve_node(
+        self,
+        source: Any,
+        info: Info,
+        args: List[Any],
+        kwargs: Dict[str, Any],
+    ) -> AwaitableOrValue[Optional[Node]]:
         gid = kwargs["id"]
         assert isinstance(gid, GlobalID)
+        return gid.resolve_type(info).resolve_node(
+            gid.node_id,
+            info=info,
+            required=not self.is_optional,
+        )
 
-        return gid.resolve_node(info)
+    def resolve_nodes(
+        self,
+        source: Any,
+        info: Info,
+        args: List[Any],
+        kwargs: Dict[str, Any],
+    ) -> AwaitableOrValue[Iterable[Node]]:
+        nodes_map: Dict[Type[Node], List[str]] = {}
+        for gid in kwargs["ids"]:
+            node_t = gid.resolve_type(info)
+            nodes_map.setdefault(node_t, []).append(gid.node_id)
+
+        if len(nodes_map) == 0:
+            return []
+        if len(nodes_map) > 1:
+            # FIXME: Maybe we want to support this in the future?
+            raise TypeError("More than one node type found...")
+
+        node_t, ids = next(iter(nodes_map.items()))
+        return node_t.resolve_nodes(info=info, node_ids=ids)
 
 
 class ConnectionField(RelayField):
@@ -863,9 +925,21 @@ class ConnectionField(RelayField):
 
             nodes = self.base_resolver(*args, **resolver_kwargs)
         else:
-            nodes = None
+            nodes = self.resolve_nodes(source, info, args, kwargs)
+
+        # This will be passed to the field cconnection resolver
+        kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
 
         return cast(Node, field_type).resolve_connection(info=info, nodes=nodes, **kwargs)
+
+    def resolve_nodes(
+        self,
+        source: Any,
+        info: Info,
+        args: List[Any],
+        kwargs: Dict[str, Any],
+    ) -> Optional[AwaitableOrValue[Iterable[Node]]]:
+        return None
 
 
 class InputMutationField(RelayField):
@@ -941,57 +1015,7 @@ class InputMutationField(RelayField):
         return self.base_resolver(*args, **kwargs, **vars(input_obj))
 
 
-@overload
 def node(
-    *,
-    resolver: Callable[[], _T],
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    init: Literal[False] = False,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-) -> _T:
-    ...
-
-
-@overload
-def node(
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-) -> Any:
-    ...
-
-
-@overload
-def node(
-    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
-    *,
-    name: Optional[str] = None,
-    is_subscription: bool = False,
-    description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
-    deprecation_reason: Optional[str] = None,
-    default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
-) -> ConnectionField:
-    ...
-
-
-def node(
-    resolver=None,
     *,
     name: Optional[str] = None,
     is_subscription: bool = False,
@@ -1027,7 +1051,7 @@ def node(
         ```
 
     """
-    f = NodeField(
+    return NodeField(
         python_name=None,
         graphql_name=name,
         type_annotation=None,
@@ -1039,9 +1063,6 @@ def node(
         default_factory=default_factory,
         directives=directives or (),
     )
-    if resolver is not None:
-        f = f(resolver)
-    return f
 
 
 @overload

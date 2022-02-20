@@ -13,6 +13,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_args,
     overload,
 )
 
@@ -25,18 +26,22 @@ from django.db.models.fields.related_descriptors import (
 )
 from django.db.models.query_utils import DeferredAttribute
 import strawberry
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, StrawberryArgument
+from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
+from strawberry.type import StrawberryContainer, StrawberryType
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
+from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
     StrawberryDjangoField as _StrawberryDjangoField,
 )
 from strawberry_django.fields.types import is_optional
-from strawberry_django.utils import unwrap_type
+from strawberry_django.utils import get_django_model, unwrap_type
 
 from . import relay
 from .descriptors import ModelProperty
@@ -50,7 +55,11 @@ if TYPE_CHECKING:
 
 __all__ = [
     "StrawberryDjangoField",
+    "StrawberryDjangoNodeField",
+    "StrawberryDjangoConnectionField",
     "field",
+    "node",
+    "connection",
 ]
 
 _T = TypeVar("_T")
@@ -76,6 +85,10 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
     @property
     def arguments(self) -> List[StrawberryArgument]:
+        if isinstance(self, relay.NodeField):
+            return []
+
+        args = super().arguments
         is_node = isinstance(unwrap_type(self.type), relay.Node)
         return [
             (
@@ -89,14 +102,50 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 and arg.type_annotation.annotation == strawberry.ID
                 else arg
             )
-            for arg in super().arguments
+            for arg in args
         ]
+
+    @property
+    def type(self) -> Union[StrawberryType, type]:  # noqa:A003
+        return super().type
+
+    @type.setter
+    def type(self, type_: Any) -> None:  # noqa:A003
+        if type_ is not None and self.origin_django_type is None:
+            resolved = type_
+            if isinstance(resolved, StrawberryAnnotation):
+                resolved = type_.resolve()
+            while isinstance(resolved, StrawberryContainer):
+                resolved = resolved.of_type
+
+            dj_type = getattr(resolved, "_django_type", None)
+            if dj_type is None:
+                contained = get_args(resolved)
+                if contained:
+                    dj_type = getattr(contained[0], "_django_type", None)
+
+            if dj_type is not None:
+                self.origin_django_type = dj_type
+                self.filters = dj_type.filters
+                self.order = dj_type.order
+                self.pagination = dj_type.pagination
+
+        self.type_annotation = type_
 
     @cached_property
     def model(self) -> Type[models.Model]:
-        model = self.django_model
+        type_ = unwrap_type(self.type)
+        model = get_django_model(type_)
         if model:
             return model
+
+        tdef = cast(Optional[TypeDefinition], getattr(type_, "_type_definition", None))
+        if tdef and tdef.concrete_of and issubclass(tdef.concrete_of.origin, relay.Connection):
+            n_type = tdef.type_var_map[relay.NodeType]  # type:ignore
+            if isinstance(n_type, LazyType):
+                n_type = n_type.resolve_type()
+
+            return cast(Type[models.Model], get_django_model(n_type))
 
         origin = self.origin_django_type or getattr(self.origin, "_django_type", None)
         model = origin and origin.model
@@ -181,7 +230,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         return self.safe_resolver(*args, **kwargs)
 
     @resolvers.async_safe
-    def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> List[_M]:
+    def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> QuerySet[_M]:
         if not self.base_resolver:
             nodes: Optional[List[relay.GlobalID]] = kwargs.get("ids")
             if isinstance(nodes, list):
@@ -189,7 +238,12 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                     assert {n.resolve_type(info) for n in nodes} == {unwrap_type(self.type)}
                 qs = qs.filter(pk__in=[n.node_id for n in nodes])
 
-        return list(self.get_queryset(filter_with_perms(qs, info), info, **kwargs))
+        qs = self.get_queryset(filter_with_perms(qs, info), info, **kwargs)
+        if not isinstance(self, relay.ConnectionField):
+            # This is what QuerySet does internally to fetch results.
+            # After this, iterating over the queryset should be async safe
+            qs._fetch_all()  # type:ignore
+        return qs
 
     @resolvers.async_safe
     def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> Optional[_M]:
@@ -206,6 +260,25 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 raise
 
         return None
+
+
+class StrawberryDjangoNodeField(relay.NodeField, StrawberryDjangoField):
+    ...
+
+
+class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoField):
+    def resolve_nodes(
+        self,
+        source: Any,
+        info: Info,
+        args: List[Any],
+        kwargs: Dict[str, Any],
+    ):
+        return resolvers.resolve_result(
+            self.model._default_manager.all(),
+            info=info,
+            qs_resolver=lambda qs: self.get_queryset_as_list(qs, info, **kwargs),
+        )
 
 
 @overload
@@ -335,5 +408,218 @@ def field(
         prefetch_related=prefetch_related,
     )
     if resolver:
+        f = f(resolver)
+    return f
+
+
+def node(
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init=None,
+) -> Any:
+    """Annotate a property to create a relay query field.
+
+    Examples:
+        Annotating something like this:
+
+        >>> @strawberry.type
+        >>> class X:
+        ...     some_node: SomeType = relay.node(description="ABC")
+
+        Will produce a query like this that returns `SomeType` given its id.
+
+        ```
+        query {
+            someNode (id: ID) {
+                id
+                ...
+            }
+        }
+        ```
+
+    """
+    return StrawberryDjangoNodeField(
+        python_name=None,
+        graphql_name=name,
+        type_annotation=None,
+        description=description,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
+        deprecation_reason=deprecation_reason,
+        default=default,
+        default_factory=default_factory,
+        directives=directives or (),
+        only=only,
+        select_related=select_related,
+        prefetch_related=prefetch_related,
+    )
+
+
+@overload
+def connection(
+    *,
+    resolver: Callable[[], _T],
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[False] = False,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    filters: Optional[type] = UNSET,
+    order: Optional[type] = UNSET,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+) -> _T:
+    ...
+
+
+@overload
+def connection(
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[True] = True,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    filters: Optional[type] = UNSET,
+    order: Optional[type] = UNSET,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+) -> Any:
+    ...
+
+
+@overload
+def connection(
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    filters: Optional[type] = UNSET,
+    order: Optional[type] = UNSET,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+) -> StrawberryDjangoConnectionField:
+    ...
+
+
+def connection(
+    resolver=None,
+    *,
+    name: Optional[str] = None,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    filters: Optional[type] = UNSET,
+    order: Optional[type] = UNSET,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init=None,
+) -> Any:
+    """Annotate a property or a method to create a relay connection field.
+
+    Relay connections_ are mostly used for pagination purposes. This decorator
+    helps creating a complete relay endpoint that provides default arguments
+    and has a default implementation for the connection slicing.
+
+    Note that when setting a resolver to this field, it is expected for this
+    resolver to return an iterable of the expected node type, not the connection
+    itself. That iterable will then be paginated accordingly. So, the main use
+    case for this is to provide a filtered iterable of nodes by using some custom
+    filter arguments.
+
+    Examples:
+        Annotating something like this:
+
+        >>> @strawberry.type
+        >>> class X:
+        ...     some_node: relay.Connection[SomeType] = relay.connection(description="ABC")
+        ...
+        ...     @relay.connection(description="ABC")
+        ...     def get_some_nodes(self, age: int) -> Iterable[SomeType]:
+        ...         ...
+
+        Will produce a query like this:
+
+        ```
+        query {
+            someNode (before: String, after: String, first: String, after: String, age: Int) {
+                totalCount
+                pageInfo {
+                    hasNextPage
+                    hasPreviousPage
+                    startCursor
+                    endCursor
+                }
+                edges {
+                    cursor
+                    node {
+                        id
+                        ...
+                    }
+                }
+            }
+        }
+        ```
+
+    .. _Relay connections:
+        https://relay.dev/graphql/connections.htm
+
+    """
+    f = StrawberryDjangoConnectionField(
+        python_name=None,
+        graphql_name=name,
+        type_annotation=None,
+        description=description,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
+        deprecation_reason=deprecation_reason,
+        default=default,
+        default_factory=default_factory,
+        directives=directives or (),
+        filters=filters,
+        order=order,
+        only=only,
+        select_related=select_related,
+        prefetch_related=prefetch_related,
+    )
+    if resolver is not None:
         f = f(resolver)
     return f

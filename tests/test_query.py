@@ -7,6 +7,136 @@ from .utils import GraphQLTestClient
 
 
 @pytest.mark.django_db(transaction=True)
+def test_node_single_optional(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          name
+          project {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    res = gql_client.query(query, {"id": to_base64("MilestoneType", milestone.pk)})
+    assert res.data == {
+        "milestone": {
+            "id": to_base64("MilestoneType", milestone.pk),
+            "name": milestone.name,
+            "project": {
+                "id": to_base64("ProjectType", milestone.project.pk),
+                "name": milestone.project.name,
+            },
+        }
+    }
+    #
+    # The id is correct, but the type is not
+    res = gql_client.query(query, {"id": to_base64("IssueType", milestone.pk)})
+    assert res.data == {"milestone": None}
+
+    res = gql_client.query(query, {"id": to_base64("MilestoneType", "9999")})
+    assert res.data == {"milestone": None}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_node_single_mandatory(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        milestoneMandatory(id: $id) {
+          id
+          name
+          project {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    res = gql_client.query(query, {"id": to_base64("MilestoneType", milestone.pk)})
+    assert res.data == {
+        "milestoneMandatory": {
+            "id": to_base64("MilestoneType", milestone.pk),
+            "name": milestone.name,
+            "project": {
+                "id": to_base64("ProjectType", milestone.project.pk),
+                "name": milestone.project.name,
+            },
+        }
+    }
+
+    # The id is correct, but the type is not
+    res = gql_client.query(
+        query,
+        {"id": to_base64("IssueType", milestone.pk)},
+        asserts_errors=False,
+    )
+    assert res.data is None
+    assert res.errors == [
+        {
+            "message": "Issue matching query does not exist.",
+            "locations": [{"line": 3, "column": 9}],
+            "path": ["milestoneMandatory"],
+        }
+    ]
+
+    res = gql_client.query(
+        query,
+        {"id": to_base64("MilestoneType", "9999")},
+        asserts_errors=False,
+    )
+    assert res.data is None
+    assert res.errors == [
+        {
+            "message": "Milestone matching query does not exist.",
+            "locations": [{"line": 3, "column": 9}],
+            "path": ["milestoneMandatory"],
+        }
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_node_multiple(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($ids: [GlobalID!]!) {
+        milestones(ids: $ids) {
+          id
+          name
+          project {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    milestones = MilestoneFactory.create_batch(4)
+    res = gql_client.query(query, {"ids": [to_base64("MilestoneType", m.pk) for m in milestones]})
+    assert res.data == {
+        "milestones": [
+            {
+                "id": to_base64("MilestoneType", m.pk),
+                "name": m.name,
+                "project": {
+                    "id": to_base64("ProjectType", m.project.pk),
+                    "name": m.project.name,
+                },
+            }
+            for m in milestones
+        ]
+    }
+
+    # The ids are correct, but the type is not
+    res = gql_client.query(query, {"ids": [to_base64("IssueType", m.pk) for m in milestones]})
+    assert res.data == {"milestones": []}
+
+
+@pytest.mark.django_db(transaction=True)
 def test_ordering(db, gql_client: GraphQLTestClient):
     query = """
       query TestQuery ($order: MilestoneOrder) {

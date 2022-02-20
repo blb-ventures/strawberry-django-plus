@@ -12,7 +12,7 @@ from strawberry_django import (
 )
 
 from strawberry_django_plus import mutations, types
-from strawberry_django_plus.field import field
+from strawberry_django_plus.field import connection, field, node
 from strawberry_django_plus.filters import filter
 from strawberry_django_plus.mutations.fields import create as create_mutation
 from strawberry_django_plus.mutations.fields import delete as delete_mutation
@@ -38,6 +38,8 @@ __all__ = [
     "delete_mutation",
     "update_mutation",
     "field",
+    "node",
+    "connection",
     "input",
     "input_mutation",
     "interface",
