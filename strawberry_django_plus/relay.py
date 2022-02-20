@@ -479,7 +479,7 @@ class Node(abc.ABC):
             An iterable of resolved nodes.
 
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma:nocover
 
     @overload
     @classmethod
@@ -531,7 +531,7 @@ class Node(abc.ABC):
             The resolved node or None if it was not found
 
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma:nocover
 
 
 @strawberry.type(description="Information to aid in pagination.")

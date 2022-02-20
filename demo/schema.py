@@ -36,7 +36,7 @@ class UserType(relay.Node):
     is_staff: gql.auto
 
     @gql.django.field(only=["first_name", "last_name"])
-    def full_name(self, root: UserModel, value: str) -> str:
+    def full_name(self, root: UserModel) -> str:
         return f"{root.first_name or ''} {root.last_name or ''}".strip()
 
 
@@ -59,16 +59,16 @@ class MilestoneFilter:
         return queryset.filter(name__contains=self.search)
 
 
-@gql.django.ordering.order(Project)
+@gql.django.order(Project)
 class ProjectOrder:
     id: gql.auto  # noqa:A003
     name: gql.auto
 
 
-@gql.django.ordering.order(Milestone)
+@gql.django.order(Milestone)
 class MilestoneOrder:
     name: gql.auto
-    project: ProjectOrder
+    project: Optional[ProjectOrder]
 
 
 @gql.django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
@@ -152,10 +152,6 @@ class Query:
     ] = gql.django.connection()
     milestone_conn: relay.Connection[MilestoneType] = gql.django.connection()
 
-    @gql.django.connection
-    def milestone3_conn(self, info: Info, name: str) -> Iterable[MilestoneType]:
-        return cast(Iterable[MilestoneType], Milestone.objects.filter(name__contains=name))
-
     project_conn: relay.Connection[ProjectType] = gql.django.connection()
     tag_conn: relay.Connection[TagType] = gql.django.connection()
 
@@ -198,6 +194,14 @@ class Query:
     issue_conn_obj_perm_required: relay.Connection[IssueType] = gql.django.connection(
         directives=[HasObjPerm("demo.view_issue")],
     )
+
+    @gql.django.field
+    def me(self, info: Info) -> Optional[UserType]:
+        user = info.context.request.user
+        if not user.is_authenticated:
+            return None
+
+        return cast(UserType, user)
 
     @gql.django.connection
     def project_conn_with_resolver(self, root: str, name: str) -> Iterable[ProjectType]:

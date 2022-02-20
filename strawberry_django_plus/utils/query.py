@@ -14,7 +14,7 @@ try:
     )
 
     has_guardian = True
-except ImportError:
+except ImportError:  # pragma:nocover
     has_guardian = False
 
 _M = TypeVar("_M", bound=Model)
@@ -83,7 +83,7 @@ def filter_for_user(
     try:
         meta = model._meta
         ctype = ContentType.objects._get_from_cache(meta)  # type:ignore
-    except KeyError:
+    except KeyError:  # pragma:nocover
         # If we are not running async, retrieve it
         if not is_async():
             ctype = ContentType.objects.get_for_model(model)
@@ -98,15 +98,15 @@ def filter_for_user(
 
     if len(app_labels) == 1 and ctype is not None:
         app_label = app_labels.pop()
-        if app_label != ctype.app_label:
+        if app_label != ctype.app_label:  # pragma:nocover
             raise ValueError(
                 f"Given perms must have same app label ({app_label!r} != {ctype.app_label!r})"
             )
-    elif len(app_labels) > 1:
+    elif len(app_labels) > 1:  # pragma:nocover
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")
 
     # Small optimization if the user's permissions are cached
-    if hasattr(user, "_perm_cache"):
+    if hasattr(user, "_perm_cache"):  # pragma:nocover
         f = any if any_perm else all
         user_perms: Set[str] = {
             p.codename for p in user._perm_cache  # type:ignore

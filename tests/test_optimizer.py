@@ -3,8 +3,47 @@ import pytest
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.relay import to_base64
 
-from .faker import IssueFactory, MilestoneFactory, ProjectFactory, TagFactory
+from .faker import (
+    IssueFactory,
+    MilestoneFactory,
+    ProjectFactory,
+    TagFactory,
+    UserFactory,
+)
 from .utils import GraphQLTestClient, assert_num_queries
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_query(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        me {
+          id
+          username
+          email
+          fullName
+        }
+      }
+    """
+
+    with assert_num_queries(0):
+        res = gql_client.query(query)
+    assert res.data == {
+        "me": None,
+    }
+
+    user = UserFactory.create(first_name="John", last_name="Snow")
+    with gql_client.login(user):
+        with assert_num_queries(2):
+            res = gql_client.query(query)
+        assert res.data == {
+            "me": {
+                "id": to_base64("UserType", user.pk),
+                "username": user.username,
+                "email": user.email,
+                "fullName": "John Snow",
+            }
+        }
 
 
 @pytest.mark.django_db(transaction=True)

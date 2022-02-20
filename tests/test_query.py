@@ -274,3 +274,55 @@ def test_filtering(db, gql_client: GraphQLTestClient):
     assert {r["id"] for r in res.data["milestoneList"]} == {
         to_base64("MilestoneType", m.id) for m in [milestone_3]
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_filtering_custom(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($filters: MilestoneFilter) {
+        milestoneList (
+          filters: $filters
+        ) {
+          id
+          name
+          project {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    p = ProjectFactory.create()
+    milestone_1 = MilestoneFactory.create(name="Foo", project=p)
+    milestone_2 = MilestoneFactory.create(name="Bar")
+    milestone_3 = MilestoneFactory.create(name="Zar", project=p)
+
+    res = gql_client.query(query)
+    assert res.data
+    assert isinstance(res.data["milestoneList"], list)
+    assert {r["id"] for r in res.data["milestoneList"]} == {
+        to_base64("MilestoneType", m.id) for m in [milestone_1, milestone_2, milestone_3]
+    }
+
+    res = gql_client.query(query, {"filters": {"search": "ar"}})
+    assert res.data
+    assert isinstance(res.data["milestoneList"], list)
+    assert {r["id"] for r in res.data["milestoneList"]} == {
+        to_base64("MilestoneType", m.id) for m in [milestone_2, milestone_3]
+    }
+
+    res = gql_client.query(
+        query,
+        {
+            "filters": {
+                "search": "ar",
+                "project": {"id": to_base64("ProjectType", p.id)},
+            }
+        },
+    )
+    assert res.data
+    assert isinstance(res.data["milestoneList"], list)
+    assert {r["id"] for r in res.data["milestoneList"]} == {
+        to_base64("MilestoneType", m.id) for m in [milestone_3]
+    }

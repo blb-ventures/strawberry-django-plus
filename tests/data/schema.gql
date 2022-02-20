@@ -480,20 +480,7 @@ type Query {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): IssueTypeConnection! @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
-  milestone3Conn(
-    """Returns the items in the list that come before the specified cursor."""
-    before: String = null
-
-    """Returns the items in the list that come after the specified cursor."""
-    after: String = null
-
-    """Returns the first n items from the list."""
-    first: Int = null
-
-    """Returns the items in the list that come after the specified cursor."""
-    last: Int = null
-    name: String!
-  ): MilestoneTypeConnection!
+  me: UserType
   projectConnWithResolver(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -576,3 +563,25 @@ type TagTypeEdge {
 }
 
 union UpdateIssuePayload = IssueType | OperationInfo
+
+type UserType implements Node {
+  id: GlobalID!
+
+  """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
+  username: String!
+  email: String!
+
+  """
+  Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+  """
+  isActive: Boolean!
+
+  """
+  Designates that this user has all permissions without explicitly assigning them.
+  """
+  isSuperuser: Boolean!
+
+  """Designates whether the user can log into this admin site."""
+  isStaff: Boolean!
+  fullName: String!
+}

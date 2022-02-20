@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Sequence, TypeVar, Union
+from typing import Any, Dict, Iterable, Sequence, TypeVar, Union
 
 from django.contrib.auth.models import AbstractUser, AnonymousUser
 from graphql.type.definition import GraphQLResolveInfo
@@ -8,6 +8,7 @@ from typing_extensions import TypeAlias
 
 _T = TypeVar("_T")
 
+DictTree: TypeAlias = Dict[str, "DictTree"]
 TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
 TypeOrIterable: TypeAlias = Union[_T, Iterable[_T]]
 UserType: TypeAlias = Union[AbstractUser, AnonymousUser]

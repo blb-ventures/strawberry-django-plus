@@ -37,12 +37,10 @@ from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
 from strawberry_django.fields.types import resolve_model_field_name
+from typing_extensions import assert_never
 
-from strawberry_django_plus.utils.pyutils import (
-    DictTree,
-    dicttree_intersect_diff,
-    dicttree_merge,
-)
+from .pyutils import dicttree_insersection_differs, dicttree_merge
+from .typing import DictTree
 
 if TYPE_CHECKING:
     from strawberry_django_plus.type import StrawberryDjangoType
@@ -50,7 +48,7 @@ if TYPE_CHECKING:
 try:
     # Try to use the smaller/faster cache decorator if available
     _cache = functools.cache  # type:ignore
-except AttributeError:
+except AttributeError:  # pragma:nocover
     _cache = functools.lru_cache
 
 _T = TypeVar("_T")
@@ -164,6 +162,8 @@ def get_possible_types(
         pass
     elif isinstance(gql_type, type):
         yield gql_type
+    else:
+        assert_never(gql_type)
 
 
 def get_possible_type_definitions(
@@ -356,7 +356,7 @@ class PrefetchInspector:
         # Merge extra
         s_extra = self.extra
         o_extra = other.extra
-        if not allow_unsafe_ops and dicttree_intersect_diff(s_extra, o_extra):
+        if not allow_unsafe_ops and dicttree_insersection_differs(s_extra, o_extra):
             raise ValueError("Tried to prefetch 2 queries with overlapping extras.")
         self.extra = {**s_extra, **o_extra}
 

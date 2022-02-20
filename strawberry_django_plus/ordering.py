@@ -1,14 +1,17 @@
 from typing import Callable, Optional, Sequence, Type, TypeVar
 
 from django.db.models.base import Model
+import strawberry
+from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
+from strawberry_django.fields.types import is_auto
+from strawberry_django.ordering import Ordering
 
 from . import field
 from .relay import connection, node
-from .type import input
 
 _T = TypeVar("_T")
 
@@ -32,10 +35,18 @@ def order(  # noqa:A001
     description: str = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Callable[[_T], _T]:
-    return input(
-        model,
-        name=name,
-        description=description,
-        directives=directives,
-        partial=True,
-    )
+    def wrapper(cls):
+        for fname, type_ in cls.__annotations__.items():
+            if is_auto(type_):
+                type_ = Ordering
+            cls.__annotations__[fname] = Optional[type_]
+            setattr(cls, fname, UNSET)
+
+        return strawberry.input(
+            cls,
+            name=name,
+            description=description,
+            directives=directives,
+        )
+
+    return wrapper
