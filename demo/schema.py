@@ -118,7 +118,9 @@ class Query:
     project_list: List[ProjectType] = gql.django.field()
     tag_list: List[TagType] = gql.django.field()
 
-    issue_conn: relay.Connection[IssueType] = relay.connection()
+    issue_conn: relay.Connection[
+        gql.LazyType["IssueType", "demo.schema"]  # type:ignore # noqa:F821
+    ] = relay.connection()
     milestone_conn: relay.Connection[MilestoneType] = relay.connection()
     project_conn: relay.Connection[ProjectType] = relay.connection()
     tag_conn: relay.Connection[TagType] = relay.connection()

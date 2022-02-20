@@ -36,6 +36,7 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, StrawberryArgument
 from strawberry.custom_scalar import ScalarDefinition
 from strawberry.field import StrawberryField
+from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
 from strawberry.schema_directive import StrawberrySchemaDirective
@@ -216,6 +217,8 @@ class GlobalID:
             type_def = info.schema.get_type_by_name(self.type_name)
             assert isinstance(type_def, TypeDefinition)
             origin = type_def.origin
+            if isinstance(origin, LazyType):
+                origin = origin.resolve_type()
             assert issubclass(origin, Node)
             self._nodes_cache[key] = origin
 
@@ -838,7 +841,10 @@ class ConnectionField(RelayField):
     ) -> AwaitableOrValue[Any]:
         type_def = info.return_type._type_definition  # type:ignore
         assert isinstance(type_def, TypeDefinition)
-        field_type = cast(Node, type_def.type_var_map[NodeType])
+
+        field_type = type_def.type_var_map[NodeType]
+        if isinstance(field_type, LazyType):
+            field_type = field_type.resolve_type()
 
         if self.base_resolver is not None:
             # If base_resolver is not self.conn_resolver, then it is defined to something
@@ -859,7 +865,7 @@ class ConnectionField(RelayField):
         else:
             nodes = None
 
-        return field_type.resolve_connection(info=info, nodes=nodes, **kwargs)
+        return cast(Node, field_type).resolve_connection(info=info, nodes=nodes, **kwargs)
 
 
 class InputMutationField(RelayField):

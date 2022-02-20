@@ -24,6 +24,7 @@ from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry.extensions.base_extension import Extension
+from strawberry.lazy_type import LazyType
 from strawberry.schema.schema import Schema
 from strawberry.types.execution import ExecutionContext
 from strawberry.types.info import Info
@@ -78,6 +79,9 @@ def _get_model_hints(
     # are actually inside edges -> node selection...
     if type_def.concrete_of and issubclass(type_def.concrete_of.origin, Connection):
         n_type = type_def.type_var_map[NodeType]
+        if isinstance(n_type, LazyType):
+            n_type = n_type.resolve_type()
+
         n_type_def = cast(TypeDefinition, n_type._type_definition)  # type:ignore
 
         for edges in get_selections(selection, typename=typename).values():
