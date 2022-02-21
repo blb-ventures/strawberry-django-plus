@@ -131,23 +131,40 @@ class NodeInputPartial(NodeInput):
 
     """
 
-    id: Optional[relay.GlobalID] = UNSET  # noqa:A003
+    # FIXME: Without this pyright will not let any class inheric from this and define
+    # a field that doesn't contain a default value...
+    if TYPE_CHECKING:
+        id: Optional[relay.GlobalID]  # noqa:A001
+    else:
+        id: Optional[relay.GlobalID] = UNSET  # noqa:A001
 
 
 @strawberry.input(description=("Add/remove/set the selected nodes."))
 class ListInput(Generic[K]):
     """Add/remove/set the selected nodes."""
 
-    set: Optional[List[K]] = UNSET  # noqa:A003
-    add: Optional[List[K]] = UNSET
-    remove: Optional[List[K]] = UNSET
+    # FIXME: Without this pyright will not let any class inheric from this and define
+    # a field that doesn't contain a default value...
+    if TYPE_CHECKING:
+        set: Optional[List[K]]  # noqa:A001
+        add: Optional[List[K]]
+        remove: Optional[List[K]]
+    else:
+        set: Optional[List[K]] = UNSET  # noqa:A001
+        add: Optional[List[K]] = UNSET
+        remove: Optional[List[K]] = UNSET
 
 
 @strawberry.input(description=("Add/remove/set the selected nodes, passing `data` through."))
 class ListThroughInput(ListInput[K], Generic[K, D]):
     """Add/remove/set the selected nodes."""
 
-    data: Optional[D] = UNSET
+    # FIXME: Without this pyright will not let any class inheric from this and define
+    # a field that doesn't contain a default value...
+    if TYPE_CHECKING:
+        data: Optional[D]
+    else:
+        data: Optional[D] = UNSET
 
 
 @strawberry.type
