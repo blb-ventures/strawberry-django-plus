@@ -40,7 +40,6 @@ from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
     StrawberryDjangoField as _StrawberryDjangoField,
 )
-from strawberry_django.fields.types import is_optional
 from strawberry_django.utils import get_django_model, unwrap_type
 
 from . import relay
@@ -93,9 +92,9 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         return [
             (
                 (
-                    argument("ids", List[relay.GlobalID], is_optional=is_optional)
+                    argument("ids", List[relay.GlobalID], is_optional=self.is_optional)
                     if self.is_list
-                    else argument("id", relay.GlobalID, is_optional=is_optional)
+                    else argument("id", relay.GlobalID, is_optional=self.is_optional)
                 )
                 if is_node
                 and arg.python_name == "pk"

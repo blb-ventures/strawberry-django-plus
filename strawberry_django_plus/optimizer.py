@@ -477,7 +477,7 @@ class DjangoOptimizerExtension(Extension):
         enable_only_optimization: bool = True,
         enable_select_related_optimization: bool = True,
         enable_prefetch_related_optimization: bool = True,
-        execution_context: ExecutionContext = None,
+        execution_context: Optional[ExecutionContext] = None,
     ):
         super().__init__(execution_context=execution_context)  # type:ignore
         self.config = OptimizerConfig(

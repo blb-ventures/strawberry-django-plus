@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Sequence, Type, TypeVar
+from typing import Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
 import strawberry
@@ -31,8 +31,8 @@ _T = TypeVar("_T")
 def order(  # noqa:A001
     model: Type[Model],
     *,
-    name: str = None,
-    description: str = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Callable[[_T], _T]:
     def wrapper(cls):
@@ -44,8 +44,8 @@ def order(  # noqa:A001
 
         return strawberry.input(
             cls,
-            name=name,
-            description=description,
+            name=cast(str, name),
+            description=cast(str, description),
             directives=directives,
         )
 

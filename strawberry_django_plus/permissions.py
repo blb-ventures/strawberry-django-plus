@@ -189,6 +189,7 @@ def get_with_perms(pk, info, *, required=False, model=None):
             instance = resolvers.resolve_sync(instance)
         instance = cast(models.Model, instance)
     else:
+        assert model
         instance = model._default_manager.get(pk=pk)
 
     if instance is None:

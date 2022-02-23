@@ -1,5 +1,5 @@
 import contextlib
-from typing import Any, Awaitable, Dict, cast
+from typing import Any, Awaitable, Dict, Optional, cast
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth.models import AbstractUser
@@ -9,7 +9,7 @@ from strawberry.test.client import Response
 
 
 class TestClient(BaseGraphQLTestClient):
-    def __init__(self, path: str, client: Client = None):
+    def __init__(self, path: str, client: Optional[Client] = None):
         self.path = path
         super().__init__(client or Client())
 
@@ -20,8 +20,8 @@ class TestClient(BaseGraphQLTestClient):
     def request(
         self,
         body: Dict[str, object],
-        headers: Dict[str, object] = None,
-        files: Dict[str, object] = None,
+        headers: Optional[Dict[str, object]] = None,
+        files: Optional[Dict[str, object]] = None,
     ):
         kwargs: Dict[str, object] = {"data": body}
         if files:
@@ -49,10 +49,10 @@ class AsyncTestClient(TestClient):
     async def query(
         self,
         query: str,
-        variables: Dict[str, Any] = None,
-        headers: Dict[str, object] = None,
+        variables: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, object]] = None,
         asserts_errors: bool = True,
-        files: Dict[str, object] = None,
+        files: Optional[Dict[str, object]] = None,
     ) -> Response:
         body = self._build_body(query, variables, files)
 

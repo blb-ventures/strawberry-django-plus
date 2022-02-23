@@ -28,7 +28,7 @@ def _filter(
     lookup: str = "",
     model: Type[Model],
     any_perm: bool = True,
-    ctype: ContentType = None,
+    ctype: Optional[ContentType] = None,
 ) -> _Q:
     lookup = lookup and f"{lookup}__"
     ctype_attr = f"{lookup}content_type"

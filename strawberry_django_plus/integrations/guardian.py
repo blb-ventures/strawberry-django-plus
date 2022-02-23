@@ -1,6 +1,6 @@
 import contextlib
 import dataclasses
-from typing import Union, cast
+from typing import Optional, Union, cast
 import weakref
 
 from django.contrib.auth import get_user_model
@@ -40,7 +40,7 @@ def get_user_or_anonymous(user: UserType) -> UserType:
 
 
 class ObjectPermissionChecker(_ObjectPermissionChecker):
-    def __new__(cls, user_or_group: Union[UserType, Group] = None):
+    def __new__(cls, user_or_group: Optional[Union[UserType, Group]] = None):
         if user_or_group is not None and user_or_group in _cache:
             return _cache[user_or_group]
 

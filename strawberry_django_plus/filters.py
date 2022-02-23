@@ -71,8 +71,8 @@ _filters.build_filter_kwargs = _build_filter_kwargs
 def filter(  # noqa:A001
     model: Type[Model],
     *,
-    name: str = None,
-    description: str = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     lookups: bool = False,
 ) -> Callable[[_T], _T]:

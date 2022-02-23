@@ -172,7 +172,7 @@ def _from_django_type(
         field.django_name = resolve_model_field_name(
             model_field,
             is_input=django_type.is_input,
-            is_filter=django_type.is_filter,
+            is_filter=bool(django_type.is_filter),
         )
 
         # change relation field type to auto if field is inherited from another
@@ -349,11 +349,11 @@ class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
 def type(  # noqa:A001
     model: Type[Model],
     *,
-    name: str = None,
+    name: Optional[str] = None,
     is_input: bool = False,
     is_interface: bool = False,
     is_filter: Union[Literal["lookups"], bool] = False,
-    description: str = None,
+    description: Optional[str] = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     extend: bool = False,
     filters: Optional[type] = UNSET,
@@ -406,8 +406,8 @@ def type(  # noqa:A001
 def interface(
     model: Type[Model],
     *,
-    name: str = None,
-    description: str = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL interface.
@@ -450,8 +450,8 @@ def interface(
 def input(  # noqa:A001
     model: Type[Model],
     *,
-    name: str = None,
-    description: str = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     is_filter: Union[Literal["lookups"], bool] = False,
     partial: bool = False,
@@ -498,8 +498,8 @@ def input(  # noqa:A001
 def partial(  # noqa:A001
     model: Type[Model],
     *,
-    name: str = None,
-    description: str = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.

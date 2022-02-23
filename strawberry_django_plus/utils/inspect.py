@@ -7,10 +7,10 @@ from typing import (
     Dict,
     FrozenSet,
     Generator,
+    Iterable,
     List,
     Literal,
     Optional,
-    Sequence,
     Type,
     TypeVar,
     Union,
@@ -263,7 +263,7 @@ class PrefetchInspector:
         return frozenset(self.query.deferred_loading[0])
 
     @only.setter
-    def only(self, value=Optional[Sequence[str]]):
+    def only(self, value: Optional[Iterable[str]]):
         value = frozenset(v for v in (value or []) if v is not None)
         self.query.deferred_loading = (value, len(value) == 0)
 
@@ -274,7 +274,7 @@ class PrefetchInspector:
         return frozenset(self.query.deferred_loading[0])
 
     @defer.setter
-    def defer(self, value=Optional[Sequence[str]]):
+    def defer(self, value: Optional[Iterable[str]]):
         value = frozenset(v for v in (value or []) if v is not None)
         self.query.deferred_loading = (value, True)
 
@@ -285,7 +285,7 @@ class PrefetchInspector:
         return self.query.select_related
 
     @select_related.setter
-    def select_related(self, value=Optional[DictTree]):
+    def select_related(self, value: Optional[DictTree]):
         self.query.select_related = value or {}
 
     @property
@@ -293,7 +293,7 @@ class PrefetchInspector:
         return list(self.qs._prefetch_related_lookups)  # type:ignore
 
     @prefetch_related.setter
-    def prefetch_related(self, value=Optional[Sequence[Union[Prefetch, str]]]):
+    def prefetch_related(self, value: Optional[Iterable[Union[Prefetch, str]]]):
         self.query.select_related = tuple(value or [])  # type:ignore
 
     @property
@@ -301,7 +301,7 @@ class PrefetchInspector:
         return self.query.annotations
 
     @annotations.setter
-    def annotations(self, value=Optional[Dict[str, Expression]]):
+    def annotations(self, value: Optional[Dict[str, Expression]]):
         self.query.annotations = value or {}  # type:ignore
 
     @property
@@ -309,7 +309,7 @@ class PrefetchInspector:
         return self.query.extra
 
     @extra.setter
-    def extra(self, value=Optional[DictTree]):
+    def extra(self, value: Optional[DictTree]):
         self.query.extra = value or {}  # type:ignore
 
     @property
@@ -317,7 +317,7 @@ class PrefetchInspector:
         return self.query.where  # type:ignore
 
     @where.setter
-    def where(self, value=Optional[WhereNode]):
+    def where(self, value: Optional[WhereNode]):
         self.query.where = value or WhereNode()  # type:ignore
 
     def merge(self, other: "PrefetchInspector", allow_unsafe_ops=False):

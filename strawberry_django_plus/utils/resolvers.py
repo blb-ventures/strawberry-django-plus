@@ -362,7 +362,7 @@ def resolve_model_node(
     ...
 
 
-def resolve_model_node(source, node_id, *, info: Info = None, required=False):
+def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required=False):
     """Resolve model nodes, ensuring it is retrieved in a sync context.
 
     Args:
