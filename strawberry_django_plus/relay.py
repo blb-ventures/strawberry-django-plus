@@ -343,7 +343,14 @@ class Node(abc.ABC):
     @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
     def id(cls, root: "Node", info: Info) -> GlobalID:  # noqa:A003
-        node_id = cls.resolve_id(root, info=info)
+        # FIXME: We want to support both integration objects that doesn't define a resolve_id
+        # and also the ones that does override it. Is there a better way of handling this?
+        if isinstance(root, Node):
+            resolve_id = root.__class__.resolve_id
+        else:
+            resolve_id = cls.resolve_id
+
+        node_id = resolve_id(root, info=info)
         type_name = info.path.typename
         assert type_name
 
