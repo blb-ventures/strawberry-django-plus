@@ -248,6 +248,9 @@ def optimize(
     if isinstance(qs, BaseManager):
         qs = cast(QuerySet[_M], qs.all())
 
+    # Small optimization to avoid optimizing queries twice
+    if getattr(qs, "_gql_optimized", False):
+        return qs
     # If the queryset already has cached results, just return it
     if qs._result_cache is not None:  # type:ignore
         return qs
@@ -288,7 +291,9 @@ def optimize(
     if not store:
         return qs
 
-    return store.apply(qs, config=config)
+    qs = store.apply(qs, config=config)
+    qs._gql_optimized = True  # type:ignore
+    return qs
 
 
 @dataclasses.dataclass

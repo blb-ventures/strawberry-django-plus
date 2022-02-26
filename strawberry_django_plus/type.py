@@ -139,8 +139,7 @@ def _from_django_type(
 
     field.python_name = name
     # store origin django type for further usage
-    if name in origin.__dict__.get("__annotations__", {}):
-        field.origin_django_type = django_type
+    field.origin_django_type = django_type
 
     # annotation of field is used as a class type
     if type_annotation is not None:
