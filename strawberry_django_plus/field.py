@@ -106,7 +106,14 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
     @property
     def type(self) -> Union[StrawberryType, type]:  # noqa:A003
-        return super().type
+        if hasattr(self, "_cached_type"):
+            return self._cached_type
+
+        type_ = super().type
+        if isinstance(type_, type):
+            self._cached_type = type_  # type:ignore
+
+        return type_
 
     @type.setter
     def type(self, type_: Any) -> None:  # noqa:A003
