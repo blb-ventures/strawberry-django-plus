@@ -124,7 +124,7 @@ def schema_directive(
     locations: List[Location],
     description: Optional[str] = None,
     name: Optional[str] = None,
-):
+) -> Callable[[Type[_T]], SchemaDirective[_T]]:
     def _wrap(cls: Type[_T]) -> SchemaDirective[_T]:
         if isinstance(cls, StrawberrySchemaDirective):
             cls = cls.wrap
