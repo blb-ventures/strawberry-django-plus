@@ -218,7 +218,15 @@ def update(info, instance, data, *, full_clean=True):
     obj_models = [obj.__class__ for obj in instances]
     assert len(set(obj_models)) == 1
     fields = get_model_fields(obj_models[0])
-    files: List[Tuple[models.FileField, Union[Upload, Literal[False]]]] = []
+    files: List[
+        Tuple[
+            models.FileField,
+            Union[
+                Upload,  # type:ignore
+                Literal[False],
+            ],
+        ]
+    ] = []
     m2m: List[Tuple[Union[ManyToManyField, ForeignObjectRel], Any]] = []
 
     if dataclasses.is_dataclass(data):

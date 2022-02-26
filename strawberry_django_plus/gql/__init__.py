@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from strawberry import (
     ID,
     BasePermission,
@@ -20,6 +22,7 @@ from strawberry import (
     type,
     union,
 )
+import strawberry_django
 
 from strawberry_django_plus import relay
 from strawberry_django_plus.descriptors import model_cached_property, model_property
@@ -42,6 +45,9 @@ from strawberry_django_plus.types import (
 from strawberry_django_plus.utils import aio, resolvers
 
 from . import django
+
+if TYPE_CHECKING:
+    auto = strawberry_django.auto  # noqa:F811
 
 __all__ = [
     # strawberry
