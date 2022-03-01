@@ -244,7 +244,7 @@ Django = ">=2.2"
 
 [[package]]
 name = "django-types"
-version = "0.13.0"
+version = "0.14.0"
 description = "Type stubs for Django"
 category = "dev"
 optional = false
@@ -901,7 +901,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "64af511381397cd015597ad09cea914ae8ad2011e67425a7b51b7daa59310c27"
+content-hash = "6d7329ca77e5f4ec874a4d6485649d3644e65ce43485a06cfeee06ba9002ae5d"
 
 [metadata.files]
 appnope = [
@@ -1068,8 +1068,8 @@ django-guardian = [
     {file = "django_guardian-2.4.0-py3-none-any.whl", hash = "sha256:440ca61358427e575323648b25f8384739e54c38b3d655c81d75e0cd0d61b697"},
 ]
 django-types = [
-    {file = "django-types-0.13.0.tar.gz", hash = "sha256:dec21362247a1c8ade20a1ceb960f8441bcea6d62bd7bd6010a130bbff1a7b19"},
-    {file = "django_types-0.13.0-py3-none-any.whl", hash = "sha256:f6200009188d8d17279f97e3a780906d75e8473d8ab74b1d7a1717fcbed375c2"},
+    {file = "django-types-0.14.0.tar.gz", hash = "sha256:c4091bc5dbf46cb6f5d33629bac7d2e41f1dff9cd27c760e142dc32a2c4e207e"},
+    {file = "django_types-0.14.0-py3-none-any.whl", hash = "sha256:07ca54f8c08eecccb23bbcd3ab8d68ab19c591d6402ac34e6724c57ebf4f0eb8"},
 ]
 executing = [
     {file = "executing-0.8.3-py2.py3-none-any.whl", hash = "sha256:d1eef132db1b83649a3905ca6dd8897f71ac6f8cac79a7e58a1a09cf137546c9"},

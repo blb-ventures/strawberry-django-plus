@@ -314,11 +314,11 @@ class PrefetchInspector:
 
     @property
     def where(self) -> WhereNode:
-        return self.query.where  # type:ignore
+        return self.query.where
 
     @where.setter
     def where(self, value: Optional[WhereNode]):
-        self.query.where = value or WhereNode()  # type:ignore
+        self.query.where = value or WhereNode()
 
     def merge(self, other: "PrefetchInspector", allow_unsafe_ops=False):
         if not allow_unsafe_ops and self.where != other.where:
@@ -367,7 +367,7 @@ class PrefetchInspector:
                     prefetch_related[p] = p
                 continue
 
-            path = p.prefetch_to  # type:ignore
+            path = p.prefetch_to
             existing = prefetch_related.get(path)
             if not existing or isinstance(existing, str):
                 prefetch_related[path] = p
