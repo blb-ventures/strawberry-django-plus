@@ -188,7 +188,12 @@ def _get_model_hints(
 
                     model_cache.setdefault(remote_model, []).append((level, f_store))
 
-                    f_qs = f_store.apply(remote_model.objects.all(), config=config)
+                    # We need to use _base_manager here instead of _default_manager because we
+                    # are getting related objects, and not querying it directly
+                    f_qs = f_store.apply(
+                        remote_model._base_manager.all(),  # type:ignore
+                        config=config,
+                    )
                     f_prefetch = Prefetch(path, queryset=f_qs)
                     f_prefetch._optimizer_sentinel = _sentinel  # type:ignore
                     store.prefetch_related.append(f_prefetch)
