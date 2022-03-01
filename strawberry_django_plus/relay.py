@@ -316,6 +316,7 @@ DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
     parse_literal=lambda v: GlobalID.from_id(GraphQLID.parse_literal(v)),
     parse_value=GlobalID.from_id,
     serialize=str,
+    specified_by_url="https://relay.dev/graphql/objectidentification.htm",
 )
 
 
