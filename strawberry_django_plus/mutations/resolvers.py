@@ -103,7 +103,7 @@ def parse_input(info: Info, data: relay.GlobalID) -> relay.Node:
 
 
 @overload
-def parse_input(info: Info, data: _T) -> _T:
+def parse_input(info: Info, data: Any) -> Any:
     ...
 
 
@@ -221,10 +221,7 @@ def update(info, instance, data, *, full_clean=True):
     files: List[
         Tuple[
             models.FileField,
-            Union[
-                Upload,  # type:ignore
-                Literal[False],
-            ],
+            Union[Upload, Literal[False]],
         ]
     ] = []
     m2m: List[Tuple[Union[ManyToManyField, ForeignObjectRel], Any]] = []

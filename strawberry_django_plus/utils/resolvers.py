@@ -149,7 +149,7 @@ def resolve_qs(
 def resolve_qs(
     qs: AwaitableOrValue[Union[BaseManager[_M], QuerySet[_M]]],
     *,
-    resolver: Optional[Callable[[QuerySet[_M]], AwaitableOrValue[_R]]] = ...,
+    resolver: Optional[Callable[[QuerySet[_M]], AwaitableOrValue[_R]]],
     info: Optional[Info] = ...,
 ) -> AwaitableOrValue[_R]:
     ...
@@ -218,7 +218,8 @@ resolve_qs_get_one = cast(
 def resolve_result(
     res: AwaitableOrValue[Union[BaseManager[_M], QuerySet[_M]]],
     *,
-    info: Optional[Info] = None,
+    qs_resolver: None = ...,
+    info: Optional[Info] = ...,
 ) -> AwaitableOrValue[QuerySet[_M]]:
     ...
 
@@ -227,8 +228,8 @@ def resolve_result(
 def resolve_result(
     res: AwaitableOrValue[Union[BaseManager[_M], QuerySet[_M]]],
     *,
-    info: Optional[Info] = None,
-    qs_resolver: Callable[[Union[BaseManager[_M], QuerySet[_M]]], AwaitableOrValue[_T]] = ...,
+    info: Optional[Info] = ...,
+    qs_resolver: Callable[[Union[BaseManager[_M], QuerySet[_M]]], AwaitableOrValue[_T]],
 ) -> AwaitableOrValue[_T]:
     ...
 
@@ -237,7 +238,8 @@ def resolve_result(
 def resolve_result(
     res: AwaitableOrValue[Callable[[], _T]],
     *,
-    info: Optional[Info] = None,
+    qs_resolver: None = ...,
+    info: Optional[Info] = ...,
 ) -> AwaitableOrValue[_T]:
     ...
 
@@ -246,10 +248,8 @@ def resolve_result(
 def resolve_result(
     res: AwaitableOrValue[_T],
     *,
-    info: Optional[Info] = None,
-    qs_resolver: Optional[
-        Callable[[Union[BaseManager[Any], QuerySet[Any]]], AwaitableOrValue[Any]]
-    ] = None,
+    info: Optional[Info] = ...,
+    qs_resolver: Callable[[Union[BaseManager[Any], QuerySet[Any]]], AwaitableOrValue[Any]],
 ) -> AwaitableOrValue[_T]:
     ...
 

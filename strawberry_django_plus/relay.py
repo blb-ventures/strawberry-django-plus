@@ -492,11 +492,11 @@ class Node(abc.ABC):
     @overload
     @classmethod
     @abc.abstractmethod
-    def resolve_node(
+    def resolve_node(  # type:ignore
         cls: Type[NodeType],
         node_id: str,
         *,
-        info: Optional[Info] = None,
+        info: Optional[Info] = ...,
         required: Literal[True],
     ) -> AwaitableOrValue[NodeType]:
         ...
@@ -508,7 +508,7 @@ class Node(abc.ABC):
         cls: Type[NodeType],
         node_id: str,
         *,
-        info: Optional[Info] = None,
+        info: Optional[Info] = ...,
         required: bool = ...,
     ) -> AwaitableOrValue[Optional[NodeType]]:
         ...
