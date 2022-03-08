@@ -191,9 +191,9 @@ def _from_django_type(
             if isinstance(model_field, GenericRel):
                 description = None
             elif isinstance(model_field, (ManyToOneRel, ManyToManyRel)):
-                description = model_field.help_text
-            else:
                 description = model_field.field.help_text
+            else:
+                description = model_field.help_text
             if description:
                 field.description = str(description)
 
