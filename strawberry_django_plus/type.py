@@ -14,8 +14,8 @@ from typing import (
     get_origin,
 )
 
-from django.core.exceptions import FieldDoesNotExist
 from django.contrib.contenttypes.fields import GenericRel
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
@@ -193,9 +193,7 @@ def _from_django_type(
             elif isinstance(model_field, (ManyToOneRel, ManyToManyRel)):
                 description = model_field.help_text
             else:
-                description = (
-                    model_field.field.help_text
-                )
+                description = model_field.field.help_text
             if description:
                 field.description = str(description)
 
