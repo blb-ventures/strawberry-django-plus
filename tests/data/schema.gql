@@ -239,6 +239,11 @@ input NodeListInput {
   remove: [NodeInput!]
 }
 
+input OffsetPaginationInput {
+  offset: Int! = 0
+  limit: Int! = -1
+}
+
 """Multiple messages returned by an operation."""
 type OperationInfo {
   """List of messages returned by the operation."""
@@ -355,7 +360,7 @@ type Query {
     id: GlobalID!
   ): TagType
   issueList: [IssueType!]!
-  milestoneList(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
+  milestoneList(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
   projectList: [ProjectType!]!
   tagList: [TagType!]!
   issueConn(

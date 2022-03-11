@@ -39,8 +39,8 @@ from typing_extensions import Annotated
 
 from . import field
 from .descriptors import ModelProperty
-from .field import StrawberryDjangoField
-from .relay import Connection, ConnectionField, Node, connection, node
+from .field import StrawberryDjangoField, connection, node
+from .relay import Connection, ConnectionField, Node
 from .types import resolve_model_field_type
 from .utils.resolvers import (
     resolve_connection,
