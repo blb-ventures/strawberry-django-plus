@@ -15,6 +15,7 @@ from typing import (
 
 from django.db import models
 from django.db.models import Prefetch
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.reverse_related import (
     ManyToManyRel,
     ManyToOneRel,
@@ -145,7 +146,7 @@ def _get_model_hints(
                 # or else this might causa a refetch from the database
                 if isinstance(model_field, OneToOneRel):
                     remote_field = model_field.remote_field
-                    store.only.append(f"{path}__{resolve_model_field_name(remote_field)}")
+                    store.only.append(f"{path}{LOOKUP_SEP}{resolve_model_field_name(remote_field)}")
 
                 for f_type_def in get_possible_type_definitions(field.type):
                     f_model = model_field.related_model
@@ -159,7 +160,7 @@ def _get_model_hints(
                         level=level + 1,
                     )
                     model_cache.setdefault(f_model, []).append((level, f_store))
-                    store |= f_store.with_prefix(f"{path}__")
+                    store |= f_store.with_prefix(path)
             elif isinstance(model_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel)):
                 f_types = list(get_possible_type_definitions(field.type))
                 if len(f_types) > 1:
@@ -381,7 +382,7 @@ class OptimizerStore:
         prefetch_related = []
         for p in self.prefetch_related:
             if isinstance(p, str):
-                prefetch_related.append(f"{prefix}{p}")
+                prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
             elif isinstance(p, Prefetch):
                 p.add_prefix(prefix)
                 prefetch_related.append(p)
@@ -389,8 +390,8 @@ class OptimizerStore:
                 raise AssertionError(f"Unexpected prefetch type {repr(p)}")
 
         return self.__class__(
-            only=[f"{prefix}{i}" for i in self.only],
-            select_related=[f"{prefix}{i}" for i in self.select_related],
+            only=[f"{prefix}{LOOKUP_SEP}{i}" for i in self.only],
+            select_related=[f"{prefix}{LOOKUP_SEP}{i}" for i in self.select_related],
             prefetch_related=prefetch_related,
         )
 
