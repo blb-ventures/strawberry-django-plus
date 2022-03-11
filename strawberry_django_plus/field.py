@@ -216,9 +216,9 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 result = resolvers.getattr_async_safe(source, attname)
 
         if self.is_list:
-            qs_resolver = lambda qs: self.get_queryset_as_list(qs, info, **kwargs)
+            qs_resolver = lambda qs: self.get_queryset_as_list(qs, info, kwargs)
         else:
-            qs_resolver = lambda qs: self.get_queryset_one(qs, info, **kwargs)
+            qs_resolver = lambda qs: self.get_queryset_one(qs, info, kwargs)
 
         return resolvers.resolve_result(result, info=info, qs_resolver=qs_resolver)
 
@@ -232,7 +232,16 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         return self.safe_resolver(*args, **kwargs)
 
     @resolvers.async_safe
-    def get_queryset_as_list(self, qs: QuerySet[_M], info: Info, **kwargs) -> QuerySet[_M]:
+    def get_queryset_as_list(
+        self,
+        qs: QuerySet[_M],
+        info: Info,
+        kwargs: Dict[str, Any],
+    ) -> QuerySet[_M]:
+        # Remove info from kwargs since we will pass it positionaly to get_queryset
+        if "info" in kwargs:
+            del kwargs["info"]
+
         if not self.base_resolver:
             nodes: Optional[List[relay.GlobalID]] = kwargs.get("ids")
             if isinstance(nodes, list):
@@ -248,7 +257,16 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         return qs
 
     @resolvers.async_safe
-    def get_queryset_one(self, qs: QuerySet[_M], info: Info, **kwargs) -> Optional[_M]:
+    def get_queryset_one(
+        self,
+        qs: QuerySet[_M],
+        info: Info,
+        kwargs: Dict[str, Any],
+    ) -> Optional[_M]:
+        # Remove info from kwargs since we will pass it positionaly to get_queryset
+        if "info" in kwargs:
+            del kwargs["info"]
+
         try:
             qs = self.get_queryset(qs, info, **kwargs)
             if not self.base_resolver:
@@ -279,7 +297,7 @@ class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoFie
         return resolvers.resolve_result(
             self.model._default_manager.all(),
             info=info,
-            qs_resolver=lambda qs: self.get_queryset_as_list(qs, info, **kwargs),
+            qs_resolver=lambda qs: self.get_queryset_as_list(qs, info, kwargs),
         )
 
 
