@@ -231,7 +231,7 @@ def resolve_model_field_type(
                 ManyToOneInput: ListInput[NodeInput],
                 ManyToManyInput: ListInput[NodeInputPartial],
             }.get(
-                retval,  # type:ignore
+                retval,
                 retval,
             )
 

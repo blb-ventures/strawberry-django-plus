@@ -118,7 +118,7 @@ def parse_input(info: Info, data: Any):
             node = resolve_sync(node)
         return node
     elif isinstance(data, NodeInput):
-        pk = parse_input(info, getattr(data, "id", UNSET))
+        pk = cast(Any, parse_input(info, getattr(data, "id", UNSET)))
         data = parse_input(info, dataclasses.asdict(data))
         data.pop("id", None)
         return ParsedObject(
