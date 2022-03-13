@@ -275,7 +275,7 @@ doc = ["sphinx", "sphinx-rtd-theme", "sphinxcontrib-spelling"]
 
 [[package]]
 name = "faker"
-version = "13.3.0"
+version = "13.3.1"
 description = "Faker is a Python package that generates fake data for you."
 category = "dev"
 optional = false
@@ -791,7 +791,7 @@ tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.101.0"
+version = "0.102.2"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -1068,8 +1068,8 @@ factory-boy = [
     {file = "factory_boy-3.2.1.tar.gz", hash = "sha256:a98d277b0c047c75eb6e4ab8508a7f81fb03d2cb21986f627913546ef7a2a55e"},
 ]
 faker = [
-    {file = "Faker-13.3.0-py3-none-any.whl", hash = "sha256:7e878365aaf2f6a3f88a689c5f8209b8b93f45e3e9c991272552553006856637"},
-    {file = "Faker-13.3.0.tar.gz", hash = "sha256:618b140c77475786dbe3a5409ad53521cb76746ab7a5c77b99c663f3ef1b1bc2"},
+    {file = "Faker-13.3.1-py3-none-any.whl", hash = "sha256:c88c8b5ee9376a242deca8fe829f9a3215ffa43c31da6f66d9594531fb344453"},
+    {file = "Faker-13.3.1.tar.gz", hash = "sha256:fa060e331ffffb57cfa4c07f95d54911e339984ed72596ba6a9e7b6fa569d799"},
 ]
 flake8 = [
     {file = "flake8-4.0.1-py2.py3-none-any.whl", hash = "sha256:479b1304f72536a55948cb40a32dce8bb0ffe3501e26eaf292c7e60eb5e0428d"},
@@ -1243,8 +1243,8 @@ stack-data = [
     {file = "stack_data-0.2.0.tar.gz", hash = "sha256:45692d41bd633a9503a5195552df22b583caf16f0b27c4e58c98d88c8b648e12"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.101.0.tar.gz", hash = "sha256:dfc90318f2221dd9cbea38e355a0993528bb45af94d309acecab485b97a4cf79"},
-    {file = "strawberry_graphql-0.101.0-py3-none-any.whl", hash = "sha256:67e54f9457ba66d2e0f71b8ecc39d3c642699f56dc63f2223a6a602abfbae4f4"},
+    {file = "strawberry-graphql-0.102.2.tar.gz", hash = "sha256:f8134f481759e2a6a5fd76c58a6b597bef667302ed855a2836437efad36aae93"},
+    {file = "strawberry_graphql-0.102.2-py3-none-any.whl", hash = "sha256:e410fc048eb3be1b8d4d9a29cbfc823386ba84e126f85d7dee62be610b73abae"},
 ]
 strawberry-graphql-django = [
     {file = "strawberry-graphql-django-0.2.5.tar.gz", hash = "sha256:483d97c24ce440a1e3cb92ec3e1fdc0cf534d9afa79600396b0a27a5d9d97793"},
