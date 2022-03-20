@@ -117,6 +117,7 @@ def _from_django_type(
         if type_annotation is None:
             type_annotation = StrawberryAnnotation(attr.type)
 
+        store = getattr(attr, "store", None)
         field = StrawberryDjangoField(
             django_name=getattr(attr, "django_name", attr.name),
             graphql_name=getattr(attr, "graphql_name", None),
@@ -130,6 +131,12 @@ def _from_django_type(
             deprecation_reason=getattr(attr, "deprecation_reason", None),
             directives=getattr(attr, "directives", ()),
             type_annotation=type_annotation,
+            filters=getattr(attr, "filters", UNSET),
+            order=getattr(attr, "order", UNSET),
+            only=store and store.only,
+            select_related=store and store.select_related,
+            prefetch_related=store and store.prefetch_related,
+            disable_optimization=getattr(attr, "disable_optimization", False),
         )
     elif isinstance(attr, StrawberryResolver):
         field = StrawberryDjangoField(base_resolver=attr)

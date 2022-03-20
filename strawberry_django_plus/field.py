@@ -75,6 +75,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     store: OptimizerStore
 
     def __init__(self, *args, **kwargs):
+        self.disable_optimization = kwargs.pop("disable_optimization", False)
         self.store = OptimizerStore.with_hints(
             only=kwargs.pop("only", None),
             select_related=kwargs.pop("select_related", None),
@@ -321,6 +322,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> _T:
     ...
 
@@ -344,6 +346,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> Any:
     ...
 
@@ -367,6 +370,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> StrawberryDjangoField:
     ...
 
@@ -389,6 +393,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -426,6 +431,7 @@ def field(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        disable_optimization=disable_optimization,
     )
     if resolver:
         f = f(resolver)
@@ -445,6 +451,7 @@ def node(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -485,6 +492,7 @@ def node(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        disable_optimization=disable_optimization,
     )
 
 
@@ -506,6 +514,7 @@ def connection(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> _T:
     ...
 
@@ -527,6 +536,7 @@ def connection(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> Any:
     ...
 
@@ -548,6 +558,7 @@ def connection(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> StrawberryDjangoConnectionField:
     ...
 
@@ -568,6 +579,7 @@ def connection(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -639,6 +651,7 @@ def connection(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        disable_optimization=disable_optimization,
     )
     if resolver is not None:
         f = f(resolver)

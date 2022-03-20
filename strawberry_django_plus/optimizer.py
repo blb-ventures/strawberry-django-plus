@@ -121,6 +121,10 @@ def _get_model_hints(
         if not field:
             continue
 
+        # Do not optimize the field if the user asked not to
+        if getattr(field, "disable_optimization", False):
+            continue
+
         # Add annotations from the field if they exist
         field_store = getattr(field, "store", None)
         if field_store is not None:
