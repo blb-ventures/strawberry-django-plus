@@ -4,6 +4,7 @@ import abc
 import base64
 import dataclasses
 import functools
+import inspect
 import math
 import sys
 from typing import (
@@ -18,6 +19,7 @@ from typing import (
     Literal,
     Optional,
     Sequence,
+    Set,
     Sized,
     Tuple,
     Type,
@@ -902,6 +904,17 @@ class ConnectionField(RelayField):
         resolver = StrawberryResolver(resolver, type_override=type_override)
         return super().__call__(resolver)
 
+    @functools.cached_property
+    def resolver_args(self) -> Set[str]:
+        resolver = self.base_resolver
+        if not resolver:
+            return set()
+
+        if isinstance(resolver, StrawberryResolver):
+            resolver = resolver.wrapped_func
+
+        return set(inspect.signature(resolver).parameters.keys())
+
     def get_result(
         self,
         source: Any,
@@ -920,21 +933,19 @@ class ConnectionField(RelayField):
             # If base_resolver is not self.conn_resolver, then it is defined to something
             assert self.base_resolver
 
-            resolver_args = {arg.python_name for arg in self.base_resolver.arguments}
+            resolver_args = self.resolver_args
             resolver_kwargs = {
                 # Consider both args not in default args and the ones specified by the resolver,
                 # in case they want to check "first"/"last"/"before"/"after"
                 k: v
                 for k, v in kwargs.items()
-                if k in resolver_args or k not in self.default_args
+                if k in resolver_args
             }
-            # This will be passed to the field cconnection resolver
-            kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
-
             nodes = self.base_resolver(*args, **resolver_kwargs)
         else:
-            nodes = self.resolve_nodes(source, info, args, kwargs)
+            nodes = None
 
+        nodes = self.resolve_nodes(source, info, args, kwargs, nodes=nodes)
         # This will be passed to the field cconnection resolver
         kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
 
@@ -946,8 +957,10 @@ class ConnectionField(RelayField):
         info: Info,
         args: List[Any],
         kwargs: Dict[str, Any],
+        *,
+        nodes: Optional[Iterable[Node]] = None,
     ) -> Optional[AwaitableOrValue[Iterable[Node]]]:
-        return None
+        return nodes
 
 
 class InputMutationField(RelayField):

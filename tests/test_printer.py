@@ -11,8 +11,8 @@ def test_printer():
     if not os.path.exists(output):  # pragma:nocover
         with open(output, "w") as f:
             f.write(schema_output + "\n")
-    else:
-        with open(output) as f:
-            expected = f.read().strip("\n").strip(" ")
 
-        assert schema_output == expected
+    with open(output) as f:
+        expected = f.read().strip("\n").strip(" ")
+
+    assert schema_output == expected

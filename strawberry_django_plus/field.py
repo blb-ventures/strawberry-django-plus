@@ -5,6 +5,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -288,15 +289,33 @@ class StrawberryDjangoNodeField(relay.NodeField, StrawberryDjangoField):
 
 
 class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoField):
+    @property
+    def arguments(self) -> List[StrawberryArgument]:
+        # FIXME: The order/filters/etc arguments will only be added if there's no base_resolver
+        # defined, but for Connections the resolver will resolve the iterable and not the field
+        # return value itself. How to handle this in a better way?
+        base_resolver = self._base_resolver
+        self._base_resolver = None
+        args = super().arguments
+        if base_resolver is not None:
+            args += base_resolver.arguments
+        self._base_resolver = base_resolver
+        return args
+
     def resolve_nodes(
         self,
         source: Any,
         info: Info,
         args: List[Any],
         kwargs: Dict[str, Any],
+        *,
+        nodes: Optional[Iterable[Any]] = None,
     ):
+        if nodes is None:
+            nodes = self.model._default_manager.all()
+
         return resolvers.resolve_result(
-            self.model._default_manager.all(),
+            nodes,
             info=info,
             qs_resolver=lambda qs: self.get_queryset_as_list(qs, info, kwargs),
         )
