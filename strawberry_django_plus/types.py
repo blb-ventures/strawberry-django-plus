@@ -11,6 +11,7 @@ from typing import (
     TypeVar,
     Union,
     get_args,
+    get_origin,
 )
 
 from django.db import models
@@ -217,10 +218,12 @@ def resolve_model_field_type(
         retval = _resolve_model_field(field, django_type)
 
         if config.FIELDS_USE_GLOBAL_ID:
-            is_lookup = False
-            if isinstance(retval, FilterLookup):
+            origin = get_origin(retval)
+            if origin and issubclass(origin, FilterLookup):
                 is_lookup = True
                 retval = get_args(retval)[0]
+            else:
+                is_lookup = False
 
             retval = {
                 strawberry.ID: relay.GlobalID,
@@ -244,7 +247,7 @@ def resolve_model_field_type(
 
     if getattr(field, "primary_key", False):
         # Primary keys are always required, unless this is a filter
-        optional = False
+        optional = is_filter
     elif isinstance(field, ManyToManyField):
         # Many to many is always a list on get, but optional otherwise
         optional = is_input or is_partial or is_filter

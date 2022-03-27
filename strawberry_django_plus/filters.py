@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Sequence, Type, TypeVar, cast
+from typing import Any, Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
 from strawberry.arguments import is_unset
@@ -16,6 +16,15 @@ from .type import input
 _T = TypeVar("_T")
 
 
+def _normalize_value(value: Any):
+    if isinstance(value, list):
+        return [_normalize_value(v) for v in value]
+    elif isinstance(value, GlobalID):
+        return value.node_id
+
+    return value
+
+
 def _build_filter_kwargs(filters):
     filter_kwargs = {}
     filter_methods = []
@@ -23,10 +32,10 @@ def _build_filter_kwargs(filters):
 
     for f in utils.fields(filters):
         field_name = f.name
-        field_value = getattr(filters, field_name)
-        if isinstance(field_value, GlobalID):
-            field_value = field_value.node_id
-        elif is_unset(field_value):
+        field_value = _normalize_value(getattr(filters, field_name))
+
+        # Unset means we are not filtering this. None is still acceptable
+        if is_unset(field_value):
             continue
 
         if field_name in _filters.lookup_name_conversion_map:
