@@ -480,12 +480,12 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
             }
         ]
 
-    for user in [user, user_with_perm]:
+    for u in [user, user_with_perm]:
         # Superusers will have access to everything...
         if kind == "superuser":
             continue
 
-        with gql_client.login(user):
+        with gql_client.login(u):
             res = gql_client.query(
                 query,
                 {"id": to_base64("IssueType", issue_no_perm.pk)},
@@ -615,12 +615,12 @@ def test_obj_perm_required_optional(db, gql_client: GraphQLTestClient, kind: Per
         )
         assert res.data == {"issueObjPermRequiredOptional": None}
 
-    for user in [user, user_with_perm]:
+    for u in [user, user_with_perm]:
         # Superusers will have access to everything...
         if kind == "superuser":
             continue
 
-        with gql_client.login(user):
+        with gql_client.login(u):
             res = gql_client.query(
                 query,
                 {"id": to_base64("IssueType", issue_no_perm.pk)},
