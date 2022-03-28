@@ -38,9 +38,7 @@ def _build_filter_kwargs(filters):
         if is_unset(field_value):
             continue
 
-        if field_name in _filters.lookup_name_conversion_map:
-            field_name = _filters.lookup_name_conversion_map[field_name]
-
+        field_name = _filters.lookup_name_conversion_map.get(field_name, field_name)
         filter_method = getattr(filters, f"filter_{field_name}", None)
         if filter_method:
             filter_methods.append(filter_method)
