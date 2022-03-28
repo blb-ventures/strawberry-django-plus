@@ -1,24 +1,22 @@
 import inspect
 import re
-from typing import get_args, get_origin
 
-import strawberry
 from strawberry import object_type
-from strawberry.annotation import StrawberryAnnotation
+from strawberry.auto import StrawberryAuto, auto
 from strawberry.enum import EnumDefinition
 from strawberry.field import StrawberryField
 from strawberry.schema.name_converter import NameConverter
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry_django.fields import types
-from typing_extensions import Annotated
+from strawberry_django.fields import types as ftypes
 
 # Just import this for the monkey patch
 from .utils.printer import print_schema  # noqa:F401
 
-# Monkey strawberry to use strawberry django's auto, which is a type
-strawberry.auto = types.auto
-__import__("strawberry.auto").auto = types.auto
+# Monkey patch strawberry_django to use strawberry's auto
+types.auto = auto
+ftypes.auto = auto
 
 _cls_docs = {}
 _original_process_type = object_type._process_type
@@ -29,16 +27,6 @@ _original_field_call = StrawberryField.__call__
 _original_enum_init = EnumDefinition.__init__
 _original_schema_directive_init = StrawberrySchemaDirective.__init__
 _original_from_generic = NameConverter.from_generic
-
-
-def _is_auto(type_):
-    if isinstance(type_, StrawberryAnnotation):
-        type_ = type_.annotation
-
-    if get_origin(type_) is Annotated:
-        type_ = get_args(type_)[0]
-
-    return type_ is strawberry.auto
 
 
 def _get_doc(obj):
@@ -110,7 +98,7 @@ def _from_generic(*args, **kwargs):
     return v
 
 
-types.is_auto = _is_auto
+types.is_auto = lambda type_: isinstance(type_, StrawberryAuto)
 object_type._process_type = _process_type
 object_type._wrap_dataclass = _wrap_dataclass
 StrawberryField.__init__ = _field_init
