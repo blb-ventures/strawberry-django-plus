@@ -225,7 +225,7 @@ class Song(models.Model):
     name = models.CharField()
 
     @gql.model_property(only=["name", "album__name"], select_related=["album"])
-    def name_with_album(self) -> List[str]:
+    def name_with_album(self) -> str:
         return f"{self.album.name}: {self.name}"
 
 @gql.django.type(Song)
