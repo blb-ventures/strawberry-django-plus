@@ -302,7 +302,8 @@ class GlobalID:
         )
 
         if node is not None and ensure_type is not None:
-            if get_origin(ensure_type) is Awaitable:
+            origin = get_origin(ensure_type)
+            if origin and issubclass(origin, Awaitable):
                 ensure_type = get_args(ensure_type)[0]
             return aio.resolve(node, lambda n: n, info=info, ensure_type=ensure_type)
 
