@@ -489,7 +489,7 @@ type Query {
 
 It is expected that types implementing the `Node` interface define some methods, like
 `resolve_nodes` and `resolve_node`. Take a look at
-[the documentation](.strawberry_django_plus.relay.py) for more information.
+[the documentation](/strawberry_django_plus/relay.py) for more information.
 
 Also note that Django fields created with `@gql.django.type` automatically implements
 all of the required methods when the type inherits from `Node`.
