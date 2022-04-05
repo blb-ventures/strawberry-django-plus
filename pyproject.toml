@@ -95,6 +95,7 @@ reportMissingSuperCall = "warning"
 strictListInference = "error"
 strictDictionaryInference = "error"
 strictSetInference = "error"
+reportUnusedExpression = "warning"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "demo.settings"
