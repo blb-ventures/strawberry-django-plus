@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from typing import Any, Dict, Iterable, Mapping, cast
+from typing import Any, Dict, cast
 import weakref
 
 from graphql.language.directive_locations import DirectiveLocation
@@ -38,9 +38,9 @@ _extra_types = weakref.WeakKeyDictionary()
 def _normalize_dataclasses(value: Any) -> Any:
     if dataclasses.is_dataclass(value):
         return dataclasses.asdict(value)
-    if isinstance(value, Iterable):
+    if isinstance(value, (list, tuple)):
         return [_normalize_dataclasses(v) for v in value]
-    if isinstance(value, Mapping):
+    if isinstance(value, dict):
         return {k: _normalize_dataclasses(v) for k, v in value.items()}
 
     return value
