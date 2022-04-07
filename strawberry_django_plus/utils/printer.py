@@ -165,6 +165,7 @@ def print_schema(schema: BaseSchema) -> str:
     graphql_core_schema = schema._schema  # type: ignore
     parts = [_original_print_schema(schema)]
 
+    extra_parts = []
     for type_ in _extra_types.get(schema, []):
         try:
             type_ = schema.schema_converter.from_type(type_)  # type:ignore
@@ -172,13 +173,14 @@ def print_schema(schema: BaseSchema) -> str:
             continue
 
         if type_.name not in graphql_core_schema.type_map:
-            parts.insert(0, printer._print_type(type_, schema))
+            extra_parts.append(printer._print_type(type_, schema))
 
+    extra_parts = sorted(extra_parts)
     directives = _directives.get(schema)
     if directives:
-        parts.insert(0, "\n\n".join(sorted(directives)))
+        extra_parts.insert(0, "\n\n".join(sorted(directives)))
 
-    return "\n\n".join(parts)
+    return "\n\n".join(extra_parts + parts)
 
 
 printer.print_schema_directive = _print_schema_directive
