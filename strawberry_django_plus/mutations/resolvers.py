@@ -352,6 +352,33 @@ def update_m2m(
         assert accessor_name
         manager = cast("RelatedManager", getattr(instance, accessor_name))
 
+    def parse_data(value: Any, manager: "RelatedManager", *, assert_obj: bool = False):
+        obj, data = _parse_pk(value, manager.model)
+        if assert_obj:
+            assert obj
+
+        if obj and data is not None:
+            update(info, obj, data)
+        elif data:
+            for k, v in list(data.items()):
+                if not isinstance(v, ParsedObject):
+                    continue
+
+                if not isinstance(v.pk, Model):
+                    raise ValueError(
+                        "Currently many to many relations can only create related objects for "
+                        "the first depth"
+                    )
+
+                if v.data:
+                    update(info, v.pk, v.data)
+
+                data[k] = v.pk
+
+            obj = manager.create(**data)
+
+        return obj
+
     values = value.set if isinstance(value, ParsedObjectList) else value
     if isinstance(values, list):
         if isinstance(value, ParsedObjectList) and getattr(value, "add", None):
@@ -361,13 +388,7 @@ def update_m2m(
 
         parsed = []
         for v in values:
-            obj, data = _parse_pk(v, manager.model)
-            if obj:
-                if data is not None:
-                    update(info, obj, data)
-                parsed.append(obj)
-            elif data:
-                parsed.append(manager.create(**data))
+            parsed.append(parse_data(v, manager))
 
         if parsed:
             manager.set(parsed, **extras)
@@ -377,21 +398,11 @@ def update_m2m(
         if value.add:
             parsed = []
             for v in value.add:
-                obj, data = _parse_pk(v, manager.model)
-                if obj:
-                    if data is not None:
-                        update(info, obj, data)
-                    parsed.append(obj)
-                elif data:
-                    parsed.append(manager.create(**data))
+                parsed.append(parse_data(v, manager))
             manager.add(*parsed, **extras)
 
         if value.remove:
             parsed = []
             for v in value.remove:
-                obj, data = _parse_pk(v, manager.model)
-                assert obj
-                if data is not None:
-                    update(info, obj, data)
-                parsed.append(obj)
+                parsed.append(parse_data(v, manager, assert_obj=True))
             manager.remove(*parsed)
