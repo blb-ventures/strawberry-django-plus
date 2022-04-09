@@ -278,24 +278,17 @@ def optimize(
         return qs
 
     for type_def in get_possible_type_definitions(strawberry_type):
-        selection = next(
-            (
-                s
-                for s in convert_selections(info, info.field_nodes)
-                if not isinstance(s, InlineFragment) and s.name == field_name
-            ),
-            None,
-        )
-        if not selection:
-            continue
+        for selection in convert_selections(info, info.field_nodes):
+            if isinstance(selection, InlineFragment) and selection.name == field_name:
+                continue
 
-        store |= _get_model_hints(
-            qs.model,
-            schema,
-            type_def,
-            selection,
-            config=config,
-        )
+            store |= _get_model_hints(
+                qs.model,
+                schema,
+                type_def,
+                selection,
+                config=config,
+            )
 
     # Nothing found do optimize, just skip this...
     if not store:
