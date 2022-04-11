@@ -70,7 +70,7 @@ class ParsedObject:
     data: Optional[Dict[str, Any]] = None
 
     def parse(self, model: Type[_M]) -> Tuple[Optional[_M], Optional[Dict[str, Any]]]:
-        if self.pk is None:
+        if self.pk is None or is_unset(self.pk):
             return None, self.data
         elif isinstance(self.pk, models.Model):
             assert isinstance(self.pk, model)
@@ -119,11 +119,14 @@ def parse_input(info: Info, data: Any):
         return node
     elif isinstance(data, NodeInput):
         pk = cast(Any, parse_input(info, getattr(data, "id", UNSET)))
-        data = parse_input(info, dataclasses.asdict(data))
-        data.pop("id", None)
+        parsed = {}
+        for field in dataclasses.fields(data):
+            if field.name == "id":
+                continue
+            parsed[field.name] = parse_input(info, getattr(data, field.name))
         return ParsedObject(
             pk=pk,
-            data=data if len(data) else None,
+            data=parsed if len(parsed) else None,
         )
     elif isinstance(data, (OneToOneInput, OneToManyInput)):
         return ParsedObject(
@@ -139,6 +142,8 @@ def parse_input(info: Info, data: Any):
             set=cast(List[_InputListTypes], parse_input(info, data.set)),
             data=parse_input(info, d),
         )
+    elif isinstance(data, ParsedObject):
+        return data.pk
     elif dataclasses.is_dataclass(data):
         return {f.name: parse_input(info, getattr(data, f.name)) for f in dataclasses.fields(data)}
 
@@ -318,7 +323,7 @@ def update_field(info: Info, instance: Model, field: models.Field, value: Any):
 
     field.save_form_data(instance, value)
     # If data was passed to the foreign key, update it recursively
-    if data:
+    if data and value:
         update(info, value, data)
 
 
