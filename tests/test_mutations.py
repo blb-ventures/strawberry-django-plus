@@ -2,7 +2,13 @@ import pytest
 
 from demo.models import Issue, Milestone
 from strawberry_django_plus.relay import from_base64, to_base64
-from tests.faker import IssueFactory, MilestoneFactory, ProjectFactory, TagFactory
+from tests.faker import (
+    IssueFactory,
+    MilestoneFactory,
+    ProjectFactory,
+    TagFactory,
+    UserFactory,
+)
 from tests.utils import GraphQLTestClient, assert_num_queries
 
 
@@ -309,6 +315,129 @@ def test_input_update_mutation(db, gql_client: GraphQLTestClient):
     assert issue.kind == Issue.Kind.FEATURE
     assert issue.milestone == milestone
     assert set(issue.tags.all()) == set(expected_tags)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+          name
+          milestone {
+            id
+            name
+          }
+          priority
+          kind
+          tags {
+            id
+            name
+          }
+          issueAssignees {
+            owner
+            user {
+              fullName
+            }
+          }
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create(
+        name="Old name",
+        milestone=MilestoneFactory.create(),
+        priority=0,
+        kind=Issue.Kind.BUG,
+    )
+    tags = TagFactory.create_batch(4)
+    issue.tags.set(tags)
+    milestone = MilestoneFactory.create()
+
+    user_1 = UserFactory.create()
+    user_2 = UserFactory.create()
+    user_3 = UserFactory.create()
+
+    assignee = issue.issue_assignees.create(
+        user=user_3,
+        owner=False,
+    )
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("IssueType", issue.pk),
+                "name": "New name",
+                "milestone": {"id": to_base64("MilestoneType", milestone.pk)},
+                "priority": 5,
+                "kind": Issue.Kind.FEATURE.value,
+                "tags": {
+                    "set": [
+                        {"id": None, "name": "Foobar"},
+                        {"name": "Foobin"},
+                    ],
+                },
+                "issueAssignees": {
+                    "set": [
+                        {
+                            "user": {"id": to_base64("UserType", user_1.pk)},
+                        },
+                        {
+                            "user": {"id": to_base64("UserType", user_2.pk)},
+                            "owner": True,
+                        },
+                        {
+                            "id": to_base64("AssigneeType", assignee.pk),
+                            "owner": True,
+                        },
+                    ],
+                },
+            }
+        },
+    )
+    assert res.data and isinstance(res.data["updateIssue"], dict)
+
+    tags = res.data["updateIssue"].pop("tags")
+    assert len(tags) == 2
+    assert {t["name"] for t in tags} == {"Foobar", "Foobin"}
+
+    assert {
+        (r["user"]["fullName"], r["owner"]) for r in res.data["updateIssue"].pop("issueAssignees")
+    } == {
+        (user_1.get_full_name(), False),
+        (user_2.get_full_name(), True),
+        (user_3.get_full_name(), True),
+    }
+
+    assert res.data == {
+        "updateIssue": {
+            "__typename": "IssueType",
+            "id": to_base64("IssueType", issue.pk),
+            "name": "New name",
+            "milestone": {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "name": milestone.name,
+            },
+            "priority": 5,
+            "kind": "f",
+        }
+    }
+
+    issue.refresh_from_db()
+    assert issue.name == "New name"
+    assert issue.priority == 5
+    assert issue.kind == Issue.Kind.FEATURE
+    assert issue.milestone == milestone
 
 
 @pytest.mark.django_db(transaction=True)

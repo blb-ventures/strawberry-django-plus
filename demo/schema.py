@@ -22,7 +22,7 @@ from strawberry_django_plus.permissions import (
     IsSuperuser,
 )
 
-from .models import Issue, Milestone, Project, Tag
+from .models import Assignee, Issue, Milestone, Project, Tag
 
 UserModel = cast(Type[AbstractUser], get_user_model())
 
@@ -93,12 +93,18 @@ class IssueType(relay.Node):
     name_with_priority: gql.auto
     name_with_kind: str = gql.django.field(only=["kind", "name"])
     tags: List["TagType"]
+    issue_assignees: List["AssigneeType"]
 
 
 @gql.django.type(Tag)
 class TagType(relay.Node):
     name: gql.auto
     issues: relay.Connection[IssueType]
+
+
+@gql.django.partial(Tag)
+class TagInputPartial(gql.NodeInputPartial):
+    name: gql.auto
 
 
 @gql.django.input(Issue)
@@ -110,9 +116,22 @@ class IssueInput:
     tags: Optional[List[gql.NodeInput]]
 
 
+@gql.django.type(Assignee)
+class AssigneeType(relay.Node):
+    user: UserType
+    owner: gql.auto
+
+
+@gql.django.partial(Assignee)
+class AssigneeInputPartial(gql.NodeInputPartial):
+    user: gql.auto
+    owner: gql.auto
+
+
 @gql.django.partial(Issue)
 class IssueInputPartial(gql.NodeInput, IssueInput):
-    tags: Optional[gql.ListInput[gql.NodeInput]]
+    tags: Optional[gql.ListInput[TagInputPartial]]
+    issue_assignees: Optional[gql.ListInput[AssigneeInputPartial]]
 
 
 @gql.django.input(Issue)

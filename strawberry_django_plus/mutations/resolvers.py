@@ -70,7 +70,7 @@ class ParsedObject:
     data: Optional[Dict[str, Any]] = None
 
     def parse(self, model: Type[_M]) -> Tuple[Optional[_M], Optional[Dict[str, Any]]]:
-        if self.pk is None:
+        if self.pk is None or is_unset(self.pk):
             return None, self.data
         elif isinstance(self.pk, models.Model):
             assert isinstance(self.pk, model)
@@ -119,11 +119,14 @@ def parse_input(info: Info, data: Any):
         return node
     elif isinstance(data, NodeInput):
         pk = cast(Any, parse_input(info, getattr(data, "id", UNSET)))
-        data = parse_input(info, dataclasses.asdict(data))
-        data.pop("id", None)
+        parsed = {}
+        for field in dataclasses.fields(data):
+            if field.name == "id":
+                continue
+            parsed[field.name] = parse_input(info, getattr(data, field.name))
         return ParsedObject(
             pk=pk,
-            data=data if len(data) else None,
+            data=parsed if len(parsed) else None,
         )
     elif isinstance(data, (OneToOneInput, OneToManyInput)):
         return ParsedObject(
@@ -229,7 +232,7 @@ def update(info, instance, data, *, full_clean=True):
     if dataclasses.is_dataclass(data):
         data = vars(data)
 
-    for name, value in parse_input(info, data).items():
+    for name, value in data.items():
         field = fields.get(name)
         if field is None:
             continue
@@ -318,7 +321,7 @@ def update_field(info: Info, instance: Model, field: models.Field, value: Any):
 
     field.save_form_data(instance, value)
     # If data was passed to the foreign key, update it recursively
-    if data:
+    if data and value:
         update(info, value, data)
 
 
@@ -357,25 +360,26 @@ def update_m2m(
         if assert_obj:
             assert obj
 
-        if obj and data is not None:
-            update(info, obj, data)
-        elif data:
-            for k, v in list(data.items()):
-                if not isinstance(v, ParsedObject):
+        parsed_data = {}
+        if data:
+            for k, v in data.items():
+                if is_unset(v):
                     continue
 
-                if not isinstance(v.pk, Model):
-                    raise ValueError(
-                        "Currently many to many relations can only create related objects for "
-                        "the first depth"
-                    )
+                if isinstance(v, ParsedObject):
+                    if v.pk is None:
+                        create(info, manager.model(), v.data or {})
+                    elif isinstance(v.pk, models.Model) and v.data:
+                        update(info, v.pk, v.data)
 
-                if v.data:
-                    update(info, v.pk, v.data)
+                    parsed_data[k] = v.pk
+                else:
+                    parsed_data[k] = v
 
-                data[k] = v.pk
-
-            obj = manager.create(**data)
+        if data and obj:
+            update(info, obj, parsed_data)
+        elif data:
+            obj = manager.create(**parsed_data)
 
         return obj
 

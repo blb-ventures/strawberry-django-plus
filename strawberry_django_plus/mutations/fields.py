@@ -191,7 +191,7 @@ class DjangoCreateMutationField(DjangoInputMutationField):
         kwargs: Dict[str, Any],
     ) -> Any:
         assert data is not None
-        return resolvers.create(info, self.model, vars(data))
+        return resolvers.create(info, self.model, resolvers.parse_input(info, vars(data)))
 
 
 class DjangoUpdateMutationField(DjangoInputMutationField):
@@ -219,7 +219,7 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
             pk = vdata.pop("pk")
         instance = get_with_perms(pk, info, required=True, model=self.model)
 
-        return resolvers.update(info, instance, vdata)
+        return resolvers.update(info, instance, resolvers.parse_input(info, vdata))
 
 
 class DjangoDeleteMutationField(DjangoInputMutationField):
@@ -247,7 +247,7 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
             pk = vdata.pop("pk")
         instance = get_with_perms(pk, info, required=True, model=self.model)
 
-        return resolvers.delete(info, instance, data=vdata)
+        return resolvers.delete(info, instance, data=resolvers.parse_input(info, vdata))
 
 
 @overload

@@ -279,7 +279,7 @@ def optimize(
 
     for type_def in get_possible_type_definitions(strawberry_type):
         for selection in convert_selections(info, info.field_nodes):
-            if isinstance(selection, InlineFragment) and selection.name == field_name:
+            if isinstance(selection, InlineFragment) or selection.name != field_name:
                 continue
 
             store |= _get_model_hints(
