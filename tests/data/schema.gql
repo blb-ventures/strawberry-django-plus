@@ -64,6 +64,25 @@ input PermDefinition {
   permission: String
 }
 
+input AssigneeInputPartial {
+  id: GlobalID
+  user: NodeInput
+  owner: Boolean
+}
+
+"""Add/remove/set the selected nodes."""
+input AssigneePartialListInput {
+  set: [AssigneeInputPartial!]
+  add: [AssigneeInputPartial!]
+  remove: [AssigneeInputPartial!]
+}
+
+type AssigneeType implements Node {
+  id: GlobalID!
+  user: UserType!
+  owner: Boolean!
+}
+
 union CreateIssuePayload = IssueType | OperationInfo
 
 union CreateMilestonePayload = MilestoneType | OperationInfo
@@ -114,7 +133,8 @@ input IssueInputPartial {
 
   """the kind of the issue"""
   kind: String
-  tags: NodeListInput
+  tags: TagPartialListInput
+  issueAssignees: AssigneePartialListInput
 }
 
 type IssueType implements Node {
@@ -130,6 +150,7 @@ type IssueType implements Node {
   nameWithPriority: String!
   nameWithKind: String!
   tags: [TagType!]!
+  issueAssignees: [AssigneeType!]!
 }
 
 """A connection to a list of items."""
@@ -230,13 +251,6 @@ interface Node {
 """Input of an object that implements the `Node` interface."""
 input NodeInput {
   id: GlobalID!
-}
-
-"""Add/remove/set the selected nodes."""
-input NodeListInput {
-  set: [NodeInput!]
-  add: [NodeInput!]
-  remove: [NodeInput!]
 }
 
 input OffsetPaginationInput {
@@ -526,6 +540,18 @@ input StrFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
+}
+
+input TagInputPartial {
+  id: GlobalID
+  name: String
+}
+
+"""Add/remove/set the selected nodes."""
+input TagPartialListInput {
+  set: [TagInputPartial!]
+  add: [TagInputPartial!]
+  remove: [TagInputPartial!]
 }
 
 type TagType implements Node {

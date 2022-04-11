@@ -142,8 +142,6 @@ def parse_input(info: Info, data: Any):
             set=cast(List[_InputListTypes], parse_input(info, data.set)),
             data=parse_input(info, d),
         )
-    elif isinstance(data, ParsedObject):
-        return data.pk
     elif dataclasses.is_dataclass(data):
         return {f.name: parse_input(info, getattr(data, f.name)) for f in dataclasses.fields(data)}
 
@@ -234,7 +232,7 @@ def update(info, instance, data, *, full_clean=True):
     if dataclasses.is_dataclass(data):
         data = vars(data)
 
-    for name, value in parse_input(info, data).items():
+    for name, value in data.items():
         field = fields.get(name)
         if field is None:
             continue
@@ -362,25 +360,26 @@ def update_m2m(
         if assert_obj:
             assert obj
 
-        if obj and data is not None:
-            update(info, obj, data)
-        elif data:
-            for k, v in list(data.items()):
-                if not isinstance(v, ParsedObject):
+        parsed_data = {}
+        if data:
+            for k, v in data.items():
+                if is_unset(v):
                     continue
 
-                if not isinstance(v.pk, Model):
-                    raise ValueError(
-                        "Currently many to many relations can only create related objects for "
-                        "the first depth"
-                    )
+                if isinstance(v, ParsedObject):
+                    if v.pk is None:
+                        create(info, manager.model(), v.data or {})
+                    elif isinstance(v.pk, models.Model) and v.data:
+                        update(info, v.pk, v.data)
 
-                if v.data:
-                    update(info, v.pk, v.data)
+                    parsed_data[k] = v.pk
+                else:
+                    parsed_data[k] = v
 
-                data[k] = v.pk
-
-            obj = manager.create(**data)
+        if data and obj:
+            update(info, obj, parsed_data)
+        elif data:
+            obj = manager.create(**parsed_data)
 
         return obj
 
