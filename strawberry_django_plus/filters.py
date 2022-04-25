@@ -1,7 +1,7 @@
 from typing import Any, Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
-from strawberry.arguments import is_unset
+from strawberry import UNSET
 from strawberry.field import StrawberryField
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.utils.typing import __dataclass_transform__
@@ -35,7 +35,7 @@ def _build_filter_kwargs(filters):
         field_value = _normalize_value(getattr(filters, field_name))
 
         # Unset means we are not filtering this. None is still acceptable
-        if is_unset(field_value):
+        if field_value is UNSET:
             continue
 
         field_name = _filters.lookup_name_conversion_map.get(field_name, field_name)

@@ -22,7 +22,7 @@ from graphql.utilities.print_schema import (
 )
 from strawberry import Schema, printer
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument, is_unset
+from strawberry.arguments import UNSET, StrawberryArgument
 from strawberry.field import StrawberryField
 from strawberry.private import is_private
 from strawberry.schema.base import BaseSchema
@@ -52,7 +52,7 @@ def _print_schema_directive_arg(
     arg: GraphQLArgument,
 ):
     value = getattr(directive.instance, name, UNSET)
-    if is_unset(value):
+    if value is UNSET:
         return ""
 
     ast = ast_from_value(_normalize_dataclasses(value), arg.type)

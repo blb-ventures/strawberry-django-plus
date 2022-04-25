@@ -25,7 +25,7 @@ from django.db.models.fields.reverse_related import (
     OneToOneRel,
 )
 import strawberry
-from strawberry.arguments import UNSET, is_unset
+from strawberry.arguments import UNSET
 from strawberry.file_uploads.scalars import Upload
 from strawberry.types.info import Info
 from strawberry_django.fields.types import (
@@ -70,7 +70,7 @@ class ParsedObject:
     data: Optional[Dict[str, Any]] = None
 
     def parse(self, model: Type[_M]) -> Tuple[Optional[_M], Optional[Dict[str, Any]]]:
-        if self.pk is None or is_unset(self.pk):
+        if self.pk is None or self.pk is UNSET:
             return None, self.data
         elif isinstance(self.pk, models.Model):
             assert isinstance(self.pk, model)
@@ -234,10 +234,8 @@ def update(info, instance, data, *, full_clean=True):
 
     for name, value in data.items():
         field = fields.get(name)
-        if field is None:
-            continue
 
-        if is_unset(value):
+        if field is None or value is UNSET:
             continue
         elif isinstance(field, models.FileField):
             if value is None:
@@ -312,7 +310,7 @@ def delete(info, instance, *, data=None):
 
 
 def update_field(info: Info, instance: Model, field: models.Field, value: Any):
-    if is_unset(value):
+    if value is UNSET:
         return
 
     data = None
@@ -331,7 +329,7 @@ def update_m2m(
     field: Union[ManyToManyField, ForeignObjectRel],
     value: Any,
 ):
-    if is_unset(value):
+    if value is UNSET:
         return
 
     if isinstance(field, OneToOneRel):
@@ -363,7 +361,7 @@ def update_m2m(
         parsed_data = {}
         if data:
             for k, v in data.items():
-                if is_unset(v):
+                if v is UNSET:
                     continue
 
                 if isinstance(v, ParsedObject):

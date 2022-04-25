@@ -85,7 +85,8 @@ async def resolve_async(
     """
     ret = resolver(await value)
     while is_awaitable(ret, info=info):
-        ret = await ret
+        ret = await cast(Awaitable, ret)
+
     if ensure_type is not None and not isinstance(ret, ensure_type):
         raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
 

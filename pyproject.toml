@@ -29,7 +29,7 @@ packages = [{ include = "strawberry_django_plus" }]
 [tool.poetry.dependencies]
 python = "^3.8"
 django = ">= 3.2"
-strawberry-graphql = ">= 0.104.0"
+strawberry-graphql = ">= 0.109.0"
 strawberry-graphql-django = ">= 0.2.5"
 typing-extensions = ">= 4.1.0"
 

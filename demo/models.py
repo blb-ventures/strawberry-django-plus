@@ -115,8 +115,7 @@ class Issue(models.Model):
     )
     assignees = models.ManyToManyField["User", "Assignee"](
         "Assignee",
-        related_name="issues",
-        related_query_name="issue",
+        related_name="+",
     )
 
     @property

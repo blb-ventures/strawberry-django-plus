@@ -19,13 +19,12 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
-from strawberry import auto
+from strawberry import UNSET, auto
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, is_unset
 from strawberry.field import StrawberryField
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.unset import _Unset
+from strawberry.unset import UnsetType
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import (
@@ -71,7 +70,7 @@ def _from_django_type(
     origin = django_type.origin
 
     attr = getattr(origin, name, UNSET)
-    if is_unset(attr):
+    if attr is UNSET:
         attr = getattr(StrawberryDjangoField, "__dataclass_fields__", {}).get(name, UNSET)
     if attr is dataclasses.MISSING:
         attr = UNSET
@@ -205,7 +204,7 @@ def _from_django_type(
                 field.description = str(description)
 
     # FIXME: How to properly workaround this for mutations?
-    if django_type.is_input and is_unset(field.default_value):
+    if django_type.is_input and field.default_value is UNSET:
         field.default = UNSET
 
     return field
@@ -337,9 +336,9 @@ class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
     is_input: bool
     is_partial: bool
     is_filter: Union[Literal["lookups"], bool]
-    order: Optional[Union[type, _Unset]]
-    filters: Optional[Union[type, _Unset]]
-    pagination: Optional[Union[bool, _Unset]]
+    order: Optional[Union[type, UnsetType]]
+    filters: Optional[Union[type, UnsetType]]
+    pagination: Optional[Union[bool, UnsetType]]
 
 
 @__dataclass_transform__(

@@ -28,7 +28,7 @@ from django.db.models.fields.related_descriptors import (
 from django.db.models.query_utils import DeferredAttribute
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument, is_unset
+from strawberry.arguments import UNSET, StrawberryArgument
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.schema_directive import StrawberrySchemaDirective
@@ -127,11 +127,11 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
             if dj_type is not None:
                 self.origin_django_type = dj_type
-                if is_unset(self.filters) or self.filters is None:
+                if self.filters is UNSET or self.filters is None:
                     self.filters = dj_type.filters
-                if is_unset(self.order) or self.order is None:
+                if self.order is UNSET or self.order is None:
                     self.order = dj_type.order
-                if is_unset(self.pagination) or self.pagination is None:
+                if self.pagination is UNSET or self.pagination is None:
                     self.pagination = dj_type.pagination
 
         self.type_annotation = type_
