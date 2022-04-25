@@ -21,11 +21,10 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, is_unset
 from strawberry.field import StrawberryField
 from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.unset import _Unset
+from strawberry.unset import Unset, UnsetType
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import (
@@ -70,11 +69,11 @@ def _from_django_type(
 ) -> StrawberryDjangoField:
     origin = django_type.origin
 
-    attr = getattr(origin, name, UNSET)
-    if is_unset(attr):
-        attr = getattr(StrawberryDjangoField, "__dataclass_fields__", {}).get(name, UNSET)
+    attr = getattr(origin, name, Unset)
+    if attr is Unset:
+        attr = getattr(StrawberryDjangoField, "__dataclass_fields__", {}).get(name, Unset)
     if attr is dataclasses.MISSING:
-        attr = UNSET
+        attr = Unset
 
     if type_annotation:
         try:
@@ -104,13 +103,13 @@ def _from_django_type(
             if type_annotation is not None:
                 field.type_annotation = type_annotation
     elif isinstance(attr, dataclasses.Field):
-        default = getattr(attr, "default", UNSET)
+        default = getattr(attr, "default", Unset)
         if default is dataclasses.MISSING:
-            default = UNSET
+            default = Unset
 
-        default_factory = getattr(attr, "default_factory", UNSET)
+        default_factory = getattr(attr, "default_factory", Unset)
         if default_factory is dataclasses.MISSING:
-            default_factory = UNSET
+            default_factory = Unset
 
         if type_annotation is None:
             type_annotation = getattr(attr, "type_annotation", None)
@@ -131,8 +130,8 @@ def _from_django_type(
             deprecation_reason=getattr(attr, "deprecation_reason", None),
             directives=getattr(attr, "directives", ()),
             type_annotation=type_annotation,
-            filters=getattr(attr, "filters", UNSET),
-            order=getattr(attr, "order", UNSET),
+            filters=getattr(attr, "filters", Unset),
+            order=getattr(attr, "order", Unset),
             only=store and store.only,
             select_related=store and store.select_related,
             prefetch_related=store and store.prefetch_related,
@@ -205,8 +204,8 @@ def _from_django_type(
                 field.description = str(description)
 
     # FIXME: How to properly workaround this for mutations?
-    if django_type.is_input and is_unset(field.default_value):
-        field.default = UNSET
+    if django_type.is_input and field.default_value is Unset:
+        field.default = Unset
 
     return field
 
@@ -252,9 +251,9 @@ def _process_type(
     cls: _O,
     model: Type[Model],
     *,
-    filters: Optional[type] = UNSET,
-    order: Optional[type] = UNSET,
-    pagination: Optional[bool] = UNSET,
+    filters: Optional[type] = Unset,
+    order: Optional[type] = Unset,
+    pagination: Optional[bool] = Unset,
     **kwargs,
 ) -> _O:
     original_annotations = cls.__dict__.get("__annotations__", {})
@@ -337,9 +336,9 @@ class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
     is_input: bool
     is_partial: bool
     is_filter: Union[Literal["lookups"], bool]
-    order: Optional[Union[type, _Unset]]
-    filters: Optional[Union[type, _Unset]]
-    pagination: Optional[Union[bool, _Unset]]
+    order: Optional[Union[type, UnsetType]]
+    filters: Optional[Union[type, UnsetType]]
+    pagination: Optional[Union[bool, UnsetType]]
 
 
 @__dataclass_transform__(
@@ -364,9 +363,9 @@ def type(  # noqa:A001
     description: Optional[str] = None,
     directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
     extend: bool = False,
-    filters: Optional[type] = UNSET,
-    pagination: Optional[bool] = UNSET,
-    order: Optional[type] = UNSET,
+    filters: Optional[type] = Unset,
+    pagination: Optional[bool] = Unset,
+    order: Optional[type] = Unset,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
 
