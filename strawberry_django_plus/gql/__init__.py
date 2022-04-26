@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from strawberry import (
     ID,
+    UNSET,
     BasePermission,
     LazyType,
     Private,
@@ -53,6 +54,7 @@ __all__ = [
     # strawberry
     "BasePermission",
     "ID",
+    "UNSET",
     "LazyType",
     "Private",
     "Schema",
