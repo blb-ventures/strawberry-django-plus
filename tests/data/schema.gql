@@ -66,8 +66,7 @@ input PermDefinition {
 
 input AssigneeInputPartial {
   id: GlobalID
-  user: NodeInput
-  owner: Boolean
+  throughDefaults: AssigneeThroughInputPartial
 }
 
 """Add/remove/set the selected nodes."""
@@ -75,6 +74,10 @@ input AssigneePartialListInput {
   set: [AssigneeInputPartial!]
   add: [AssigneeInputPartial!]
   remove: [AssigneeInputPartial!]
+}
+
+input AssigneeThroughInputPartial {
+  owner: Boolean
 }
 
 type AssigneeType implements Node {
@@ -115,6 +118,19 @@ The `ID` scalar type represents a unique identifier, often used to refetch an ob
 """
 scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
 
+input IssueAssigneeInputPartial {
+  id: GlobalID
+  user: NodeInput
+  owner: Boolean
+}
+
+"""Add/remove/set the selected nodes."""
+input IssueAssigneePartialListInput {
+  set: [IssueAssigneeInputPartial!]
+  add: [IssueAssigneeInputPartial!]
+  remove: [IssueAssigneeInputPartial!]
+}
+
 input IssueInput {
   name: String!
   milestone: NodeInput
@@ -134,7 +150,8 @@ input IssueInputPartial {
   """the kind of the issue"""
   kind: String
   tags: TagPartialListInput
-  issueAssignees: AssigneePartialListInput
+  assignees: AssigneePartialListInput
+  issueAssignees: IssueAssigneePartialListInput
 }
 
 type IssueType implements Node {

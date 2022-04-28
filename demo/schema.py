@@ -123,15 +123,26 @@ class AssigneeType(relay.Node):
 
 
 @gql.django.partial(Assignee)
-class AssigneeInputPartial(gql.NodeInputPartial):
+class IssueAssigneeInputPartial(gql.NodeInputPartial):
     user: gql.auto
     owner: gql.auto
+
+
+@gql.input
+class AssigneeThroughInputPartial:
+    owner: Optional[bool] = gql.UNSET
+
+
+@gql.django.partial(UserModel)
+class AssigneeInputPartial(gql.NodeInputPartial):
+    through_defaults: Optional[AssigneeThroughInputPartial] = gql.UNSET
 
 
 @gql.django.partial(Issue)
 class IssueInputPartial(gql.NodeInput, IssueInput):
     tags: Optional[gql.ListInput[TagInputPartial]]
-    issue_assignees: Optional[gql.ListInput[AssigneeInputPartial]]
+    assignees: Optional[gql.ListInput[AssigneeInputPartial]]
+    issue_assignees: Optional[gql.ListInput[IssueAssigneeInputPartial]]
 
 
 @gql.django.input(Issue)

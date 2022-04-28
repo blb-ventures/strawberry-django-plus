@@ -114,7 +114,8 @@ class Issue(models.Model):
         related_query_name="issue",
     )
     assignees = models.ManyToManyField["User", "Assignee"](
-        "Assignee",
+        User,
+        through="Assignee",
         related_name="+",
     )
 

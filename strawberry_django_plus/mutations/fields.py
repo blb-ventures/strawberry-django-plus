@@ -33,6 +33,7 @@ from strawberry.utils.str_converters import to_camel_case
 
 from strawberry_django_plus import relay
 from strawberry_django_plus.field import StrawberryDjangoField
+from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.permissions import get_with_perms
 from strawberry_django_plus.types import NodeInput, OperationInfo, OperationMessage
 from strawberry_django_plus.utils import aio
@@ -217,9 +218,14 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         pk = vdata.pop("id", UNSET)
         if pk is UNSET:
             pk = vdata.pop("pk")
-        instance = get_with_perms(pk, info, required=True, model=self.model)
 
-        return resolvers.update(info, instance, resolvers.parse_input(info, vdata))
+        # Do not optimize anything while retrieving the object to update
+        token = DjangoOptimizerExtension.enabled.set(False)
+        try:
+            instance = get_with_perms(pk, info, required=True, model=self.model)
+            return resolvers.update(info, instance, resolvers.parse_input(info, vdata))
+        finally:
+            DjangoOptimizerExtension.enabled.reset(token)
 
 
 class DjangoDeleteMutationField(DjangoInputMutationField):
@@ -245,9 +251,14 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
         pk = vdata.pop("id")
         if pk is UNSET:
             pk = vdata.pop("pk")
-        instance = get_with_perms(pk, info, required=True, model=self.model)
 
-        return resolvers.delete(info, instance, data=resolvers.parse_input(info, vdata))
+        # Do not optimize anything while retrieving the object to delete
+        token = DjangoOptimizerExtension.enabled.set(False)
+        try:
+            instance = get_with_perms(pk, info, required=True, model=self.model)
+            return resolvers.delete(info, instance, data=resolvers.parse_input(info, vdata))
+        finally:
+            DjangoOptimizerExtension.enabled.reset(token)
 
 
 @overload

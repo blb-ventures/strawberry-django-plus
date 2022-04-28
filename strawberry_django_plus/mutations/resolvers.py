@@ -43,7 +43,7 @@ from strawberry_django_plus.utils.inspect import get_model_fields
 from strawberry_django_plus.utils.resolvers import resolve_sync
 
 if TYPE_CHECKING:
-    from django.db.models.manager import RelatedManager
+    from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -84,7 +84,6 @@ class ParsedObjectList:
     add: Optional[List[_InputListTypes]] = None
     remove: Optional[List[_InputListTypes]] = None
     set: Optional[List[_InputListTypes]] = None  # noqa:A003
-    data: Optional[Dict[str, Any]] = None
 
 
 @overload
@@ -140,7 +139,6 @@ def parse_input(info: Info, data: Any):
             add=cast(List[_InputListTypes], parse_input(info, data.add)),
             remove=cast(List[_InputListTypes], parse_input(info, data.remove)),
             set=cast(List[_InputListTypes], parse_input(info, data.set)),
-            data=parse_input(info, d),
         )
     elif dataclasses.is_dataclass(data):
         return {f.name: parse_input(info, getattr(data, f.name)) for f in dataclasses.fields(data)}
@@ -343,20 +341,16 @@ def update_m2m(
             update(info, value, data)
         return
 
-    extras = {}
     if isinstance(field, ManyToManyField):
         manager = cast("RelatedManager", getattr(instance, field.attname))
-        extras["through_defaults"] = value.data if isinstance(value, ParsedObjectList) else None
     else:
         assert isinstance(field, (ManyToManyRel, ManyToOneRel))
         accessor_name = field.get_accessor_name()
         assert accessor_name
         manager = cast("RelatedManager", getattr(instance, accessor_name))
 
-    def parse_data(value: Any, manager: "RelatedManager", *, assert_obj: bool = False):
+    def parse_data(value: Any):
         obj, data = _parse_pk(value, manager.model)
-        if assert_obj:
-            assert obj
 
         parsed_data = {}
         if data:
@@ -366,20 +360,20 @@ def update_m2m(
 
                 if isinstance(v, ParsedObject):
                     if v.pk is None:
-                        create(info, manager.model(), v.data or {})
+                        v = create(info, manager.model(), v.data or {})
                     elif isinstance(v.pk, models.Model) and v.data:
-                        update(info, v.pk, v.data)
+                        v = update(info, v.pk, v.data)
+                    else:
+                        v = v.pk
 
-                    parsed_data[k] = v.pk
-                else:
+                if k == "through_defaults" or not obj or getattr(obj, k) != v:
                     parsed_data[k] = v
 
-        if data and obj:
-            update(info, obj, parsed_data)
-        elif data:
-            obj = manager.create(**parsed_data)
+        return obj, parsed_data
 
-        return obj
+    to_add = []
+    to_remove = []
+    need_remove_cache = False
 
     values = value.set if isinstance(value, ParsedObjectList) else value
     if isinstance(values, list):
@@ -388,23 +382,73 @@ def update_m2m(
         if isinstance(value, ParsedObjectList) and getattr(value, "remove", None):
             raise ValueError("'remove' cannot be used together with 'set'")
 
-        parsed = []
+        existing = set(manager.all())
+        need_remove_cache = need_remove_cache or bool(values)
         for v in values:
-            parsed.append(parse_data(v, manager))
+            obj, data = parse_data(v)
 
-        if parsed:
-            manager.set(parsed, **extras)
-        else:
-            manager.clear()
+            if obj:
+                if data:
+                    if obj in existing and hasattr(manager, "through"):
+                        through_defaults = data.pop("through_defaults", {})
+                        if through_defaults:
+                            manager = cast("ManyToManyRelatedManager", manager)
+                            intermediate_model = manager.through
+                            im = intermediate_model._base_manager.get(  # type:ignore
+                                **{
+                                    manager.source_field_name: instance,  # type:ignore
+                                    manager.target_field_name: obj,  # type:ignore
+                                }
+                            )
+
+                            for k, v in through_defaults.items():
+                                setattr(im, k, v)
+                            im.save()
+
+                        if data:
+                            for k, v in data.items():
+                                setattr(obj, k, v)
+                            obj.save()
+                    elif obj in existing:
+                        for k, v in data.items():
+                            setattr(obj, k, v)
+                        obj.save()
+                    else:
+                        manager.add(obj, **data)
+                else:
+                    if obj not in existing:
+                        to_add.append(obj)
+
+                existing.discard(obj)
+            else:
+                manager.create(**data)
+
+        for remaining in existing:
+            to_remove.append(remaining)
     else:
-        if value.add:
-            parsed = []
-            for v in value.add:
-                parsed.append(parse_data(v, manager))
-            manager.add(*parsed, **extras)
+        need_remove_cache = need_remove_cache or bool(value.add)
+        for v in value.add or []:
+            obj, data = parse_data(v)
+            if obj and data:
+                manager.add(obj, **data)
+            elif obj:
+                # Do this later in a bulk
+                to_add.append(obj)
+            elif data:
+                manager.create(**data)
+            else:
+                raise AssertionError
 
-        if value.remove:
-            parsed = []
-            for v in value.remove:
-                parsed.append(parse_data(v, manager, assert_obj=True))
-            manager.remove(*parsed)
+        need_remove_cache = need_remove_cache or bool(value.remove)
+        for v in value.remove or []:
+            obj, data = parse_data(v)
+            assert not data
+            to_remove.append(obj)
+
+    if to_add:
+        manager.add(*to_add)
+    if to_remove:
+        manager.remove(*to_remove)
+
+    if need_remove_cache:
+        manager._remove_prefetched_objects()  # type:ignore

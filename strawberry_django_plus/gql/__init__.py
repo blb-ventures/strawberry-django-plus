@@ -36,7 +36,6 @@ from strawberry_django_plus.relay import (
 )
 from strawberry_django_plus.types import (
     ListInput,
-    ListThroughInput,
     NodeInput,
     NodeInputPartial,
     NodeType,
@@ -86,7 +85,6 @@ __all__ = [
     "NodeInput",
     "NodeInputPartial",
     "ListInput",
-    "ListThroughInput",
     "OperationInfo",
     "OperationMessage",
     "model_cached_property",

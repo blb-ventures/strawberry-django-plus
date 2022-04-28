@@ -530,4 +530,7 @@ class DjangoOptimizerExtension(Extension):
         *,
         store: Optional["OptimizerStore"] = None,
     ) -> QuerySet[_M]:
+        if not self.enabled.get():
+            return qs
+
         return optimize(qs, info, config=self.config, store=store)
