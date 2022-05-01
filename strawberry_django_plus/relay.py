@@ -495,7 +495,7 @@ class Node(abc.ABC):
     @overload
     @classmethod
     @abc.abstractmethod
-    def resolve_node(  # type:ignore
+    def resolve_node(
         cls: Type[NodeType],
         node_id: str,
         *,

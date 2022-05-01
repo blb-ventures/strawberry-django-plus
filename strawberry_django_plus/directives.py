@@ -127,7 +127,7 @@ def schema_directive(
 ) -> Callable[[Type[_T]], SchemaDirective[_T]]:
     def _wrap(cls: Type[_T]) -> SchemaDirective[_T]:
         if isinstance(cls, StrawberrySchemaDirective):
-            cls = cls.wrap
+            cls = cls.wrap  # type:ignore
 
         return SchemaDirective(
             python_name=cls.__name__,

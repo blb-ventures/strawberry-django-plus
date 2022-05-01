@@ -538,7 +538,6 @@ def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient
     assert len(tags) == 2
     assert {t["name"] for t in tags} == {"Foobar", "Foobin"}
 
-    print("aaaa", user_1, user_2, user_3)
     assert {
         (r["user"]["username"], r["owner"]) for r in res.data["updateIssue"].pop("issueAssignees")
     } == {
