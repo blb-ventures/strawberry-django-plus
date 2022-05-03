@@ -914,7 +914,7 @@ class ConnectionField(RelayField):
         if isinstance(resolver, StrawberryResolver):
             resolver = resolver.wrapped_func
 
-        return set(inspect.signature(resolver).parameters.keys())
+        return set(inspect.signature(cast(Callable, resolver)).parameters.keys())
 
     def get_result(
         self,
