@@ -1,7 +1,6 @@
 # Based on https://github.com/flavors/django-graphiql-debug-toolbar
 
 import collections
-import contextvars
 import json
 from typing import Optional
 import weakref
@@ -9,9 +8,7 @@ import weakref
 from debug_toolbar.middleware import DebugToolbarMiddleware as _DebugToolbarMiddleware
 from debug_toolbar.middleware import _HTML_TYPES
 from debug_toolbar.middleware import show_toolbar
-from debug_toolbar.panels.sql import panel, tracking
 from debug_toolbar.panels.templates import TemplatesPanel
-from debug_toolbar.panels.templates import panel as tpanel
 from debug_toolbar.toolbar import DebugToolbar
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http.request import HttpRequest
@@ -22,7 +19,6 @@ from strawberry.django.views import BaseView
 
 _store_cache = weakref.WeakKeyDictionary()
 _original_store = DebugToolbar.store
-_recording = contextvars.ContextVar("debug-toolbar-recording", default=True)
 
 
 def _store(toolbar: DebugToolbar):
@@ -63,60 +59,10 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
 
 
 DebugToolbar.store = _store  # type:ignore
+
 # FIXME: This is breaking async views when it tries to render the user
 # without being in an async safe context. How to properly handle this?
 TemplatesPanel._store_template_info = lambda *args, **kwargs: None
-
-
-def _wrap_cursor(connection, panel):
-    c = type(connection)
-    if hasattr(c, "_djdt_cursor"):
-        return None
-
-    c._djdt_cursor = c.cursor
-    c._djdt_chunked_cursor = c.chunked_cursor
-
-    def cursor(*args, **kwargs):
-        if _recording.get():
-            wrapper = tracking.NormalCursorWrapper
-        else:
-            wrapper = tracking.ExceptionCursorWrapper
-        return wrapper(c._djdt_cursor(*args, **kwargs), args[0], panel)
-
-    def chunked_cursor(*args, **kwargs):
-        cursor = c._djdt_chunked_cursor(*args, **kwargs)
-        if not isinstance(cursor, tracking.BaseCursorWrapper):
-            if _recording.get():
-                wrapper = tracking.NormalCursorWrapper
-            else:
-                wrapper = tracking.ExceptionCursorWrapper
-            return wrapper(cursor, args[0], panel)
-        return cursor
-
-    c.cursor = cursor
-    c.chunked_cursor = chunked_cursor
-
-    return cursor
-
-
-def _unwrap_cursor(connection):
-    c = type(connection)
-    if not hasattr(c, "_djdt_cursor"):
-        return
-
-    c.cursor = c._djdt_cursor
-    c.chunked_cursor = c._djdt_chunked_cursor
-    del c._djdt_cursor
-    del c._djdt_chunked_cursor
-
-
-# Patch wrap_cursor/unwrap_cursor so that they work with async views
-# Are there any drawbacks to this?
-tracking.wrap_cursor = _wrap_cursor
-tracking.unwrap_cursor = _unwrap_cursor
-panel.wrap_cursor = _wrap_cursor
-panel.unwrap_cursor = _unwrap_cursor
-tpanel.recording = _recording
 
 
 class DebugToolbarMiddleware(_DebugToolbarMiddleware):

@@ -212,7 +212,7 @@ python-versions = ">=3.8,<4.0"
 name = "django-debug-toolbar"
 version = "3.4.0"
 description = "A configurable set of panels that display various debug information about the current request/response."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -889,7 +889,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "eac6f677849d98f5e837a0a7c7e182bef7127ff68f15fd3354abf7b55cedbd1d"
+content-hash = "ae8e07f6d195e92fdd6f5937517eddacc398c0cea333b6e4144f3d690f009eee"
 
 [metadata.files]
 appnope = [
