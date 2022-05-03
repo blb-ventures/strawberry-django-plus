@@ -330,6 +330,10 @@ def resolve_model_nodes(
         source = cast(Type[_M], django_type.model)
 
     qs = source._default_manager.all()
+
+    if hasattr(django_type.origin, "get_queryset"):
+        qs = django_type.origin.get_queryset(qs, info)
+
     if node_ids is not None:
         qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
 
@@ -393,6 +397,9 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
         node_id = node_id.node_id
 
     qs = source._default_manager.filter(pk=node_id)
+
+    if hasattr(django_type.origin, "get_queryset"):
+        qs = django_type.origin.get_queryset(qs, info)
 
     if required:
         ret = resolve_result(qs, info=info, qs_resolver=resolve_qs_get_one)
@@ -474,6 +481,9 @@ def resolve_connection(
 
         nodes = source._default_manager.all()
         assert isinstance(nodes, QuerySet)
+
+        if hasattr(django_type.origin, "get_queryset"):
+            nodes = django_type.origin.get_queryset(nodes, info)
 
     if is_awaitable(nodes, info=info):
         return resolve_async(

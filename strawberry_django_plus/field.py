@@ -313,6 +313,9 @@ class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoFie
         if nodes is None:
             nodes = self.model._default_manager.all()
 
+            if self.origin_django_type and hasattr(self.origin_django_type.origin, "get_queryset"):
+                nodes = self.origin_django_type.origin.get_queryset(nodes, info)
+
         return resolvers.resolve_result(
             nodes,
             info=info,

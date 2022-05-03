@@ -2,7 +2,7 @@ import pytest
 
 from strawberry_django_plus.relay import to_base64
 
-from .faker import MilestoneFactory, ProjectFactory
+from .faker import MilestoneFactory, ProjectFactory, UserFactory
 from .utils import GraphQLTestClient
 
 
@@ -325,4 +325,93 @@ def test_filtering_custom(db, gql_client: GraphQLTestClient):
     assert isinstance(res.data["milestoneList"], list)
     assert {r["id"] for r in res.data["milestoneList"]} == {
         to_base64("MilestoneType", m.id) for m in [milestone_3]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_node_queryset(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        staff(id: $id) {
+          id
+          username
+          isStaff
+        }
+      }
+    """
+
+    user = UserFactory.create(is_staff=False)
+    res = gql_client.query(query, {"id": to_base64("StaffType", user.pk)})
+    assert res.data == {"staff": None}
+
+    staff = UserFactory.create(is_staff=True)
+    res = gql_client.query(query, {"id": to_base64("StaffType", staff.pk)})
+    assert res.data == {
+        "staff": {
+            "id": to_base64("StaffType", staff.pk),
+            "username": staff.username,
+            "isStaff": True,
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_node_multiple_queryset(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($ids: [GlobalID!]!) {
+        staffList(ids: $ids) {
+          id
+          username
+          isStaff
+        }
+      }
+    """
+
+    user = UserFactory.create(is_staff=False)
+    staff = UserFactory.create(is_staff=True)
+    res = gql_client.query(
+        query, {"ids": [to_base64("StaffType", user.pk), to_base64("StaffType", staff.pk)]}
+    )
+    assert res.data == {
+        "staffList": [
+            {
+                "id": to_base64("StaffType", staff.pk),
+                "username": staff.username,
+                "isStaff": True,
+            }
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_connection_queryset(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        staffConn {
+          edges {
+            node {
+              id
+              username
+              isStaff
+            }
+          }
+        }
+      }
+    """
+
+    UserFactory.create(is_staff=False)
+    staff = UserFactory.create(is_staff=True)
+    res = gql_client.query(query)
+    assert res.data == {
+        "staffConn": {
+            "edges": [
+                {
+                    "node": {
+                        "id": to_base64("StaffType", staff.pk),
+                        "username": staff.username,
+                        "isStaff": True,
+                    }
+                }
+            ]
+        }
     }
