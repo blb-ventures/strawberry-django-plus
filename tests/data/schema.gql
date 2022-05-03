@@ -44,7 +44,7 @@ When the condition fails, the following can happen (following this priority):
 4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
 5) If the field is a relay `Connection`, an empty connection will be returned.
 """
-directive @hasObjPerm(perms: [PermDefinition!]!, any: Boolean! = true) on FIELD_DEFINITION
+directive @hasObjPerm(permissions: [PermDefinition!]!, any: Boolean! = true) on FIELD_DEFINITION
 
 """
 Will check if the user has any/all permissions to resolve this.
@@ -56,7 +56,7 @@ When the condition fails, the following can happen (following this priority):
 4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
 5) If the field is a relay `Connection`, an empty connection will be returned.
 """
-directive @hasPerm(perms: [PermDefinition!]!, any: Boolean! = true) on FIELD_DEFINITION
+directive @hasPerm(permissions: [PermDefinition!]!, any: Boolean! = true) on FIELD_DEFINITION
 
 """Permission definition for schema directives."""
 input PermDefinition {
@@ -475,12 +475,12 @@ type Query {
   issuePermRequired(
     """The ID of the object."""
     id: GlobalID!
-  ): IssueType! @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  ): IssueType! @hasPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
   issuePermRequiredOptional(
     """The ID of the object."""
     id: GlobalID!
-  ): IssueType @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
-  issueListPermRequired: [IssueType!]! @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  ): IssueType @hasPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueListPermRequired: [IssueType!]! @hasPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
   issueConnPermRequired(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -493,16 +493,16 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): IssueTypeConnection! @hasPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  ): IssueTypeConnection! @hasPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
   issueObjPermRequired(
     """The ID of the object."""
     id: GlobalID!
-  ): IssueType! @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  ): IssueType! @hasObjPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
   issueObjPermRequiredOptional(
     """The ID of the object."""
     id: GlobalID!
-  ): IssueType @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
-  issueListObjPermRequired: [IssueType!]! @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  ): IssueType @hasObjPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
+  issueListObjPermRequired: [IssueType!]! @hasObjPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
   issueConnObjPermRequired(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -515,7 +515,7 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): IssueTypeConnection! @hasObjPerm(perms: [{resource: "demo", permission: "view_issue"}], any: true)
+  ): IssueTypeConnection! @hasObjPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
   me: UserType
   projectConnWithResolver(
     """Returns the items in the list that come before the specified cursor."""

@@ -1046,7 +1046,7 @@ def node(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1099,7 +1099,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> _T:
     ...
 
@@ -1115,7 +1115,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> Any:
     ...
 
@@ -1131,7 +1131,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> ConnectionField:
     ...
 
@@ -1146,7 +1146,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1231,7 +1231,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> _T:
     ...
 
@@ -1247,7 +1247,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> Any:
     ...
 
@@ -1263,7 +1263,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> InputMutationField:
     ...
 
@@ -1278,7 +1278,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.

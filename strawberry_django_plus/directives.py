@@ -2,18 +2,14 @@ from collections import defaultdict
 import dataclasses
 import functools
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
     DefaultDict,
     Dict,
-    Generic,
     List,
     Optional,
     Tuple,
-    Type,
-    TypeVar,
     Union,
     cast,
 )
@@ -33,10 +29,9 @@ from strawberry.extensions.base_extension import Extension
 from strawberry.field import StrawberryField
 from strawberry.private import Private
 from strawberry.schema.schema import Schema
-from strawberry.schema_directive import Location, StrawberrySchemaDirective
 from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import Self, TypeAlias
+from typing_extensions import TypeAlias
 
 from .utils.inspect import get_possible_type_definitions
 
@@ -46,61 +41,33 @@ try:
 except AttributeError:
     _cache = functools.lru_cache
 
-_T = TypeVar("_T", bound="SchemaDirectiveResolver")
 Origin: TypeAlias = Union[TypeDefinition, StrawberryField]
 
-_origin_cache: DefaultDict[Origin, List["SchemaDirectiveResolver"]] = defaultdict(list)
-
-
-# FIXME: This is here to help with typing
-@dataclasses.dataclass
-class SchemaDirective(Generic[_T], StrawberrySchemaDirective):
-    wrap: Type[_T]
-    instance: Optional[_T] = dataclasses.field(init=False)
-
-    if TYPE_CHECKING:
-
-        def __call__(self, *args, **kwargs) -> Self:
-            ...
+_origin_cache: DefaultDict[Origin, List["SchemaDirectiveWithResolver"]] = defaultdict(list)
 
 
 @dataclasses.dataclass
 @functools.total_ordering
-class SchemaDirectiveResolver:
+class SchemaDirectiveWithResolver:
     """Base schema directive resolver definition."""
 
-    has_resolver: ClassVar[bool] = False
     priority: ClassVar[int] = 0
-
     origin: Private[Optional[Origin]] = dataclasses.field(init=False)
 
     def __post_init__(self):
         self.origin = None
 
-    def __lt__(self, other: "SchemaDirectiveResolver"):
+    def __lt__(self, other: "SchemaDirectiveWithResolver"):
         return self.priority < other.priority
 
-    def __le__(self, other: "SchemaDirectiveResolver"):
+    def __le__(self, other: "SchemaDirectiveWithResolver"):
         return self.priority <= other.priority
 
-    def __gt__(self, other: "SchemaDirectiveResolver"):
+    def __gt__(self, other: "SchemaDirectiveWithResolver"):
         return self.priority > other.priority
 
-    def __ge__(self, other: "SchemaDirectiveResolver"):
+    def __ge__(self, other: "SchemaDirectiveWithResolver"):
         return self.priority >= other.priority
-
-    @classmethod
-    @_cache
-    def for_origin(cls, origin: Origin) -> List[Self]:
-        directives = [d for d in _origin_cache[origin] if isinstance(d, cls)]
-        if isinstance(origin, StrawberryField):
-            for type_def in get_possible_type_definitions(origin.type):
-                for d in _origin_cache[type_def]:
-                    if isinstance(d, cls) and d not in directives:
-                        directives.append(d)
-
-        directives.sort(reverse=True)
-        return directives
 
     def register(self, origin: Origin):
         assert self.origin is None
@@ -119,27 +86,6 @@ class SchemaDirectiveResolver:
         raise NotImplementedError
 
 
-def schema_directive(
-    *,
-    locations: List[Location],
-    description: Optional[str] = None,
-    name: Optional[str] = None,
-) -> Callable[[Type[_T]], SchemaDirective[_T]]:
-    def _wrap(cls: Type[_T]) -> SchemaDirective[_T]:
-        if isinstance(cls, StrawberrySchemaDirective):
-            cls = cls.wrap  # type:ignore
-
-        return SchemaDirective(
-            python_name=cls.__name__,
-            wrap=dataclasses.dataclass(cls),
-            graphql_name=name,
-            locations=locations,
-            description=description,
-        )
-
-    return _wrap
-
-
 @dataclasses.dataclass
 class SchemaDirectiveHelperReturnType:
     ret_type: Union[GraphQLObjectType, GraphQLInterfaceType, GraphQLScalarType, GraphQLEnumType]
@@ -148,7 +94,7 @@ class SchemaDirectiveHelperReturnType:
 
 @dataclasses.dataclass
 class SchemaDirectiveHelper:
-    directives: List[SchemaDirectiveResolver]
+    directives: List[SchemaDirectiveWithResolver]
     ret_possibilities: List[SchemaDirectiveHelperReturnType]
     optional: bool
     is_list: bool
@@ -237,7 +183,7 @@ class SchemaDirectiveExtension(Extension):
         # Keep directives sorted by order of priority and avoid duplicates
         directives = []
         for d in reversed(found_directives):
-            if d.has_resolver and d not in directives:
+            if isinstance(d, SchemaDirectiveWithResolver) and d not in directives:
                 directives.append(d)
 
         helper = SchemaDirectiveHelper(

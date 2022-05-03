@@ -3,7 +3,6 @@ from typing import Any, Callable, Optional, Sequence, Type, TypeVar, cast
 from django.db.models.base import Model
 from strawberry import UNSET
 from strawberry.field import StrawberryField
-from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django import filters as _filters
 from strawberry_django import utils
@@ -80,7 +79,7 @@ def filter(  # noqa:A001
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
     lookups: bool = False,
 ) -> Callable[[_T], _T]:
     return input(

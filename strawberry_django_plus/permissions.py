@@ -31,7 +31,7 @@ from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Self, final
 
-from .directives import SchemaDirectiveHelper, SchemaDirectiveResolver, schema_directive
+from .directives import SchemaDirectiveHelper, SchemaDirectiveWithResolver
 from .relay import Connection, GlobalID
 from .types import OperationInfo, OperationMessage
 from .utils import aio, resolvers
@@ -129,7 +129,7 @@ def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
         qs = filter_for_user(
             qs,
             cast(UserType, user),
-            [p.perm for p in check.perms],
+            [p.perm for p in check.permissions],
             any_perm=check.any,
             with_superuser=check.with_superuser,
         )
@@ -203,14 +203,14 @@ def get_with_perms(pk, info, *, required=False, model=None):
     for check in checks:
         f = any if check.any else all
         checker = check.obj_perm_checker(info, cast(UserType, user))
-        if not f(checker(p, instance) for p in check.perms):
+        if not f(checker(p, instance) for p in check.permissions):
             raise PermissionDenied(check.message)
 
     return instance
 
 
 @dataclasses.dataclass
-class AuthDirective(SchemaDirectiveResolver):
+class AuthDirective(SchemaDirectiveWithResolver):
     """Base auth directive definition."""
 
     has_resolver: ClassVar = True
@@ -366,7 +366,7 @@ class ConditionDirective(AuthDirective):
         raise NotImplementedError
 
 
-@schema_directive(
+@strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc("Can only be resolved by authenticated users."),
 )
@@ -380,7 +380,7 @@ class IsAuthenticated(ConditionDirective):
         return user.is_authenticated and user.is_active
 
 
-@schema_directive(
+@strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc("Can only be resolved by staff users."),
 )
@@ -394,7 +394,7 @@ class IsStaff(ConditionDirective):
         return user.is_authenticated and user.is_staff
 
 
-@schema_directive(
+@strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc("Can only be resolved by superuser users."),
 )
@@ -464,9 +464,12 @@ class HasPermDirective(AuthDirective):
 
     target: ClassVar[Optional[PermTarget]]
 
-    perms: List[PermDefinition] = strawberry.field(
+    # FIXME: This is to allow passing a str or list[str] to perms, but still print
+    perms: strawberry.Private[Union[List[str], str]]
+
+    permissions: List[PermDefinition] = strawberry.field(
         description="Required perms to access this resource.",
-        default_factory=None,
+        default_factory=list,
     )
     any: bool = strawberry.field(  # noqa:A003
         description="If any or all perms listed are required.",
@@ -509,7 +512,7 @@ class HasPermDirective(AuthDirective):
             raise TypeError(f"At least one perm is required for {self!r}")
 
         assert all(isinstance(p, PermDefinition) for p in perms)
-        self.perms = perms
+        self.permissions = perms
 
     def __init_subclass__(cls) -> None:
         for attr in ["__hash__", "__eq__"]:
@@ -613,7 +616,7 @@ class HasPermDirective(AuthDirective):
 
         f = any if self.any else all
         checker = self.perm_checker(info, user)
-        has_perm = f(checker(p) for p in self.perms)
+        has_perm = f(checker(p) for p in self.permissions)
         cache[self] = has_perm
 
         return has_perm
@@ -635,7 +638,7 @@ class HasPermDirective(AuthDirective):
 
         f = any if self.any else all
         checker = self.obj_perm_checker(info, user)
-        has_perm = f(checker(p, obj) for p in self.perms)
+        has_perm = f(checker(p, obj) for p in self.permissions)
 
         cache[key] = has_perm
         return has_perm
@@ -682,7 +685,7 @@ class HasPermDirective(AuthDirective):
             if key in cache:
                 return cache[key]
 
-            has_perm = f(checker(p, obj) for p in self.perms)
+            has_perm = f(checker(p, obj) for p in self.permissions)
             cache[key] = has_perm
 
             return has_perm
@@ -691,7 +694,7 @@ class HasPermDirective(AuthDirective):
         return self.resolve_retval(helper, root, info, objs, True)
 
 
-@schema_directive(
+@strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc("Will check if the user has any/all permissions to resolve this."),
 )
@@ -733,7 +736,7 @@ class HasPerm(HasPermDirective):
     target: ClassVar = None
 
 
-@schema_directive(
+@strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc(
         "Will check if the user has any/all permissions for the parent "
@@ -784,7 +787,7 @@ class HasRootPerm(HasPermDirective):
     target: ClassVar = PermTarget.ROOT
 
 
-@schema_directive(
+@strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc(
         "Will check if the user has any/all permissions for the resolved "

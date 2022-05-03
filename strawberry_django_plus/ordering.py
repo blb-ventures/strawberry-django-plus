@@ -4,7 +4,6 @@ from django.db.models.base import Model
 import strawberry
 from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
-from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import is_auto
@@ -33,7 +32,7 @@ def order(  # noqa:A001
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> Callable[[_T], _T]:
     def wrapper(cls):
         for fname, type_ in cls.__annotations__.items():
@@ -46,7 +45,7 @@ def order(  # noqa:A001
             cls,
             name=cast(str, name),
             description=cast(str, description),
-            directives=directives,
+            directives=directives,  # type:ignore
         )
 
     return wrapper

@@ -6,7 +6,6 @@ from strawberry.auto import StrawberryAuto, auto
 from strawberry.enum import EnumDefinition
 from strawberry.field import StrawberryField
 from strawberry.schema.name_converter import NameConverter
-from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry_django.fields import types
 from strawberry_django.fields import types as ftypes
@@ -25,7 +24,6 @@ _original_wrap_dataclass = object_type._wrap_dataclass
 _original_field_init = StrawberryField.__init__
 _original_field_call = StrawberryField.__call__
 _original_enum_init = EnumDefinition.__init__
-_original_schema_directive_init = StrawberrySchemaDirective.__init__
 _original_from_generic = NameConverter.from_generic
 
 
@@ -36,11 +34,16 @@ def _get_doc(obj):
 
 
 def _process_type(cls, *args, **kwargs):
+    from strawberry_django_plus.directives import SchemaDirectiveWithResolver
+
     if kwargs.get("description") is None:
         kwargs["description"] = _cls_docs.get(cls)
     ret = _original_process_type(cls, *args, **kwargs)
+
     for d in ret._type_definition.directives:
-        d.instance.register(ret._type_definition)
+        if isinstance(d, SchemaDirectiveWithResolver):
+            d.register(ret._type_definition)
+
     return ret
 
 
@@ -50,15 +53,21 @@ def _wrap_dataclass(cls):
 
 
 def _field_init(self, *args, **kwargs):
+    from strawberry_django_plus.directives import SchemaDirectiveWithResolver
+
     if kwargs.get("description") is None:
         base_resolver = kwargs.get("base_resolver")
         if base_resolver is not None:
             while isinstance(base_resolver, StrawberryResolver):
                 base_resolver = base_resolver.wrapped_func
             kwargs["description"] = _get_doc(base_resolver)
+
     ret = _original_field_init(self, *args, **kwargs)
+
     for d in self.directives:
-        d.instance.register(self)
+        if isinstance(d, SchemaDirectiveWithResolver):
+            d.register(self)
+
     return ret
 
 
@@ -79,13 +88,6 @@ def _enum_init(*args, **kwargs):
     return _original_enum_init(*args, **kwargs)
 
 
-def _schema_directive_init(self, *args, **kwargs):
-    if kwargs.get("description") is None:
-        cls = kwargs.get("wrap")
-        kwargs["description"] = _get_doc(cls)
-    return _original_schema_directive_init(self, *args, **kwargs)
-
-
 def _from_generic(*args, **kwargs):
     from .settings import config
 
@@ -104,5 +106,4 @@ object_type._wrap_dataclass = _wrap_dataclass
 StrawberryField.__init__ = _field_init
 StrawberryField.__call__ = _field_call
 EnumDefinition.__init__ = _enum_init
-StrawberrySchemaDirective.__init__ = _schema_directive_init
 NameConverter.from_generic = _from_generic

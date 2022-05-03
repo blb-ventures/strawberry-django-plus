@@ -22,7 +22,6 @@ import strawberry
 from strawberry import UNSET, auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import StrawberryField
-from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
 from strawberry.utils.typing import __dataclass_transform__
@@ -361,7 +360,7 @@ def type(  # noqa:A001
     is_interface: bool = False,
     is_filter: Union[Literal["lookups"], bool] = False,
     description: Optional[str] = None,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
     extend: bool = False,
     filters: Optional[type] = UNSET,
     pagination: Optional[bool] = UNSET,
@@ -415,7 +414,7 @@ def interface(
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL interface.
 
@@ -459,7 +458,7 @@ def input(  # noqa:A001
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
     is_filter: Union[Literal["lookups"], bool] = False,
     partial: bool = False,
 ) -> Callable[[_T], _T]:
@@ -507,7 +506,7 @@ def partial(  # noqa:A001
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    directives: Optional[Sequence[StrawberrySchemaDirective]] = (),
+    directives: Optional[Sequence[object]] = (),
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.
 
