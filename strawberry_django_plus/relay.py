@@ -42,7 +42,6 @@ from strawberry.field import StrawberryField
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
-from strawberry.schema_directive import StrawberrySchemaDirective
 from strawberry.type import StrawberryList, StrawberryOptional
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
@@ -985,16 +984,17 @@ class InputMutationField(RelayField):
             "__doc__": f"Input data for `{name}` mutation",
             "__annotations__": {},
         }
+        f_types = {}
         for arg in args:
             annotation = annotations[arg.python_name]
             if get_origin(annotation) is Annotated:
                 directives = tuple(
-                    d for d in get_args(annotation)[1:] if isinstance(d, StrawberrySchemaDirective)
+                    d for d in get_args(annotation)[1:] if hasattr(d, "__strawberry_directive__")
                 )
             else:
                 directives = ()
 
-            type_dict["__annotations__"][arg.python_name] = arg.type
+            type_dict["__annotations__"][arg.python_name] = annotation
             arg_field = strawberry.field(
                 name=arg.graphql_name,
                 is_subscription=arg.is_subscription,
@@ -1003,7 +1003,7 @@ class InputMutationField(RelayField):
                 directives=directives,
             )
             arg_field.graphql_name = arg.graphql_name
-            arg_field.type_annotation = arg.type_annotation
+            f_types[arg_field] = arg.type_annotation
             type_dict[arg.python_name] = arg_field
 
         # TODO: We are not creating a type for the output payload, as it is not easy to
@@ -1015,6 +1015,11 @@ class InputMutationField(RelayField):
             type_annotation=StrawberryAnnotation(new_type, namespace=namespace),
             description=type_dict["__doc__"],
         )
+
+        # FIXME: We need to set this after strawberry.input() or else it will have problems
+        # with Annotated annotations for scalar types. Find out why in the future...
+        for f, annotation in f_types.items():
+            f.type = annotation
 
         return super().__call__(resolver)
 
