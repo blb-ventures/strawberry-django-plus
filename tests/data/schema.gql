@@ -390,6 +390,14 @@ type Query {
     """The ID of the object."""
     id: GlobalID!
   ): TagType
+  staff(
+    """The ID of the object."""
+    id: GlobalID!
+  ): StaffType
+  staffList(
+    """The IDs of the objects."""
+    ids: [GlobalID!]!
+  ): [StaffType!]!
   issueList: [IssueType!]!
   milestoneList(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
   projectList: [ProjectType!]!
@@ -448,6 +456,19 @@ type Query {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): TagTypeConnection!
+  staffConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): StaffTypeConnection!
   issueLoginRequired(
     """The ID of the object."""
     id: GlobalID!
@@ -531,6 +552,48 @@ type Query {
     last: Int = null
     name: String!
   ): ProjectTypeConnection!
+}
+
+type StaffType implements Node {
+  id: GlobalID!
+
+  """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
+  username: String!
+  email: String!
+
+  """
+  Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+  """
+  isActive: Boolean!
+
+  """
+  Designates that this user has all permissions without explicitly assigning them.
+  """
+  isSuperuser: Boolean!
+
+  """Designates whether the user can log into this admin site."""
+  isStaff: Boolean!
+}
+
+"""A connection to a list of items."""
+type StaffTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [StaffTypeEdge!]!
+
+  """Total quantity of existing nodes"""
+  totalCount: Int!
+}
+
+"""An edge in a connection."""
+type StaffTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: StaffType!
 }
 
 """An enumeration."""

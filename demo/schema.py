@@ -40,6 +40,19 @@ class UserType(relay.Node):
         return f"{root.first_name or ''} {root.last_name or ''}".strip()
 
 
+@gql.django.type(UserModel)
+class StaffType(relay.Node):
+    username: gql.auto
+    email: gql.auto
+    is_active: gql.auto
+    is_superuser: gql.auto
+    is_staff: gql.auto
+
+    @classmethod
+    def get_queryset(cls, queryset: QuerySet[UserModel], info: Info) -> QuerySet[UserModel]:
+        return queryset.filter(is_staff=True)
+
+
 @gql.django.type(Project)
 class ProjectType(relay.Node):
     name: gql.auto
@@ -167,6 +180,8 @@ class Query:
     milestones: List[MilestoneType] = gql.django.node()
     project: Optional[ProjectType] = gql.django.node()
     tag: Optional[TagType] = gql.django.node()
+    staff: Optional[StaffType] = gql.django.node()
+    staff_list: List[StaffType] = gql.django.node()
 
     issue_list: List[IssueType] = gql.django.field()
     milestone_list: List[MilestoneType] = gql.django.field(
@@ -184,6 +199,7 @@ class Query:
 
     project_conn: relay.Connection[ProjectType] = gql.django.connection()
     tag_conn: relay.Connection[TagType] = gql.django.connection()
+    staff_conn: relay.Connection[StaffType] = gql.django.connection()
 
     # Login required to resolve
     issue_login_required: IssueType = gql.django.node(directives=[IsAuthenticated()])
