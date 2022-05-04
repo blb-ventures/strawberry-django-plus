@@ -325,14 +325,17 @@ def resolve_model_nodes(
     # avoid circular import
     from strawberry_django_plus.permissions import filter_with_perms
 
-    if not issubclass(source, Model):
+    if issubclass(source, Model):
+        origin = None
+    else:
+        origin = source
         django_type = get_django_type(source, ensure_type=True)
         source = cast(Type[_M], django_type.model)
 
     qs = source._default_manager.all()
 
-    if hasattr(django_type.origin, "get_queryset"):
-        qs = django_type.origin.get_queryset(qs, info)
+    if origin and hasattr(origin, "get_queryset"):
+        qs = origin.get_queryset(qs, info)  # type:ignore
 
     if node_ids is not None:
         qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
@@ -387,19 +390,20 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
         The resolved node, already prefetched from the database
 
     """
-    if not issubclass(source, Model):
+    if issubclass(source, Model):
+        origin = None
+    else:
+        origin = source
         django_type = get_django_type(source, ensure_type=True)
         source = cast(Type[_M], django_type.model)
-    else:
-        django_type = source
 
     if isinstance(node_id, GlobalID):
         node_id = node_id.node_id
 
     qs = source._default_manager.filter(pk=node_id)
 
-    if hasattr(django_type.origin, "get_queryset"):
-        qs = django_type.origin.get_queryset(qs, info)
+    if origin and hasattr(origin, "get_queryset"):
+        qs = origin.get_queryset(qs, info)
 
     if required:
         ret = resolve_result(qs, info=info, qs_resolver=resolve_qs_get_one)
@@ -475,15 +479,18 @@ def resolve_connection(
     from strawberry_django_plus.permissions import filter_with_perms
 
     if nodes is None:
-        if not issubclass(source, Model):
+        if issubclass(source, Model):
+            origin = None
+        else:
+            origin = source
             django_type = get_django_type(source, ensure_type=True)
             source = cast(Type[_M], django_type.model)
 
         nodes = source._default_manager.all()
         assert isinstance(nodes, QuerySet)
 
-        if hasattr(django_type.origin, "get_queryset"):
-            nodes = django_type.origin.get_queryset(nodes, info)
+        if origin and hasattr(origin, "get_queryset"):
+            nodes = origin.get_queryset(nodes, info)  # type:ignore
 
     if is_awaitable(nodes, info=info):
         return resolve_async(
