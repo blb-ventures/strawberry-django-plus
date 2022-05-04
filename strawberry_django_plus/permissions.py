@@ -533,7 +533,8 @@ class HasPermDirective(AuthDirective):
 
     def __eq__(self, other: Self):
         return (
-            self.target == other.target
+            self.__class__ == other.__class__
+            and self.target == other.target
             and set(self.perms) == set(other.perms)
             and self.any == other.any
             and self.message == other.message
