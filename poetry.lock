@@ -204,8 +204,8 @@ bcrypt = ["bcrypt"]
 name = "django-choices-field"
 version = "2.0"
 description = "Django field that set/get django's new TextChoices/IntegerChoices enum."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.8,<4.0"
 
 [[package]]
@@ -886,10 +886,14 @@ category = "dev"
 optional = false
 python-versions = "*"
 
+[extras]
+debug-toolbar = ["django-debug-toolbar"]
+enum = ["django-choices-field"]
+
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "76d9f62f494e22e1ee181e0a5d1961c9dd918512f1fc650ba1f34159907de7dd"
+content-hash = "823ab372d8f992493aa4631798f255de68a2b13f155e4589a985c3dd9b459082"
 
 [metadata.files]
 appnope = [
@@ -1209,6 +1213,7 @@ pytest = [
 ]
 pytest-asyncio = [
     {file = "pytest-asyncio-0.18.3.tar.gz", hash = "sha256:7659bdb0a9eb9c6e3ef992eef11a2b3e69697800ad02fb06374a210d85b29f91"},
+    {file = "pytest_asyncio-0.18.3-1-py3-none-any.whl", hash = "sha256:16cf40bdf2b4fb7fc8e4b82bd05ce3fbcd454cbf7b92afc445fe299dabb88213"},
     {file = "pytest_asyncio-0.18.3-py3-none-any.whl", hash = "sha256:8fafa6c52161addfd41ee7ab35f11836c5a16ec208f93ee388f752bea3493a84"},
 ]
 pytest-cov = [
