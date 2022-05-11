@@ -13,6 +13,7 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
+    ForwardRef,
     Generic,
     Iterable,
     List,
@@ -888,6 +889,8 @@ class ConnectionField(RelayField):
         if not nodes_type:
             raise TypeError("Connection nodes resolver needs a return type decoration.")
 
+        if isinstance(nodes_type, str):
+            nodes_type = ForwardRef(nodes_type, is_argument=False)
         resolved = _eval_type(nodes_type, namespace, None)
         origin = get_origin(resolved)
         if not origin or (not isinstance(origin, type) and not issubclass(origin, Iterable)):
