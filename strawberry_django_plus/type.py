@@ -281,10 +281,8 @@ def _process_type(
         setattr(cls, f.name, f)
 
     # Make sure model is also considered a "virtual subclass" of cls
-    is_type_of = [lambda obj, info: isinstance(obj, (cls, model))]
-    if hasattr(cls, "is_type_of"):
-        is_type_of.append(cls.is_type_of)  # type:ignore
-    cls.is_type_of = lambda obj, info: any(f(obj, info) for f in is_type_of)  # type:ignore
+    if "is_type_of" not in cls.__dict__:
+        cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))  # type:ignore
 
     # Default querying methods for relay
     if issubclass(cls, Node):
