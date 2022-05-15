@@ -35,6 +35,9 @@ from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations, is_similar_django_type
 from typing_extensions import Annotated
 
+from strawberry_django_plus.optimizer import OptimizerStore, PrefetchType
+from strawberry_django_plus.utils.typing import TypeOrSequence
+
 from . import field
 from .descriptors import ModelProperty
 from .field import StrawberryDjangoField, connection, node
@@ -253,6 +256,10 @@ def _process_type(
     filters: Optional[type] = UNSET,
     order: Optional[type] = UNSET,
     pagination: Optional[bool] = UNSET,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
     **kwargs,
 ) -> _O:
     original_annotations = cls.__dict__.get("__annotations__", {})
@@ -266,6 +273,12 @@ def _process_type(
         filters=filters,
         order=order,
         pagination=pagination,
+        disable_optimization=disable_optimization,
+        store=OptimizerStore.with_hints(
+            only=only,
+            select_related=select_related,
+            prefetch_related=prefetch_related,
+        ),
     )
 
     fields = list(_get_fields(django_type).values())
@@ -336,6 +349,8 @@ class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
     order: Optional[Union[type, UnsetType]]
     filters: Optional[Union[type, UnsetType]]
     pagination: Optional[Union[bool, UnsetType]]
+    disable_optimization: bool
+    store: OptimizerStore
 
 
 @__dataclass_transform__(
@@ -363,6 +378,10 @@ def type(  # noqa:A001
     filters: Optional[type] = UNSET,
     pagination: Optional[bool] = UNSET,
     order: Optional[type] = UNSET,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
 
@@ -390,6 +409,10 @@ def type(  # noqa:A001
             filters=filters,
             pagination=pagination,
             order=order,
+            only=only,
+            select_related=select_related,
+            prefetch_related=prefetch_related,
+            disable_optimization=disable_optimization,
         )
 
     return wrapper

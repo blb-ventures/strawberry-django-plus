@@ -40,6 +40,7 @@ from .relay import Connection, Edge, NodeType
 from .utils import resolvers
 from .utils.inspect import (
     PrefetchInspector,
+    get_django_type,
     get_model_fields,
     get_possible_type_definitions,
     get_selections,
@@ -110,6 +111,14 @@ def _get_model_hints(
 
     fields = {schema.config.name_converter.get_graphql_name(f): f for f in type_def.fields}
     model_fields = get_model_fields(model)
+
+    dj_type = get_django_type(type_def.origin)
+    if dj_type:
+        if dj_type.disable_optimization:
+            return store
+
+        if dj_type.store:
+            store |= dj_type.store
 
     # Make sure that the model's pk is always selected when using only
     pk = model._meta.pk
