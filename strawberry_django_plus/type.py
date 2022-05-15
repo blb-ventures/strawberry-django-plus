@@ -86,11 +86,9 @@ def _from_django_type(
     else:
         is_connection = False
 
-    if isinstance(attr, StrawberryDjangoField) and not attr.origin_django_type:
+    if is_connection or isinstance(attr, ConnectionField):
         field = attr
-    elif is_connection or isinstance(attr, ConnectionField):
-        field = attr
-        if not isinstance(field, Connection):
+        if not isinstance(field, ConnectionField):
             field = connection()
 
         field = cast(StrawberryDjangoField, field)
@@ -104,6 +102,8 @@ def _from_django_type(
             field.base_resolver = StrawberryResolver(conn_resolver)
             if type_annotation is not None:
                 field.type_annotation = type_annotation
+    elif isinstance(attr, StrawberryDjangoField) and not attr.origin_django_type:
+        field = attr
     elif isinstance(attr, dataclasses.Field):
         default = getattr(attr, "default", UNSET)
         if default is dataclasses.MISSING:
