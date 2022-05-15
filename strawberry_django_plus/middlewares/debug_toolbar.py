@@ -1,15 +1,21 @@
 # Based on https://github.com/flavors/django-graphiql-debug-toolbar
 
+import asyncio
 import collections
+import contextlib
+import inspect
 import json
 from typing import Optional
 import weakref
 
+from asgiref.sync import sync_to_async
 from debug_toolbar.middleware import DebugToolbarMiddleware as _DebugToolbarMiddleware
 from debug_toolbar.middleware import _HTML_TYPES
 from debug_toolbar.middleware import show_toolbar
+from debug_toolbar.panels.sql.panel import SQLPanel
 from debug_toolbar.panels.templates import TemplatesPanel
 from debug_toolbar.toolbar import DebugToolbar
+from django.core.exceptions import SynchronousOnlyOperation
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
@@ -18,12 +24,41 @@ from django.utils.encoding import force_str
 from strawberry.django.views import BaseView
 
 _store_cache = weakref.WeakKeyDictionary()
+_debug_toolbar_map: weakref.WeakKeyDictionary[
+    HttpRequest,
+    DebugToolbar,
+] = weakref.WeakKeyDictionary()
+
 _original_store = DebugToolbar.store
+_original_debug_toolbar_init = DebugToolbar.__init__
+_original_store_template_info = TemplatesPanel._store_template_info
+
+
+def _is_websocket(request: HttpRequest):
+    return (
+        request.META.get("HTTP_UPGRADE") == "websocket"
+        and request.META.get("HTTP_CONNECTION") == "Upgrade"
+    )
+
+
+def _debug_toolbar_init(self, request, *args, **kwargs):
+    _debug_toolbar_map[request] = self
+    _original_debug_toolbar_init(self, request, *args, **kwargs)
+    self.config["RENDER_PANELS"] = False
+    self.config["SKIP_TEMPLATE_PREFIXES"] = tuple(self.config.get("SKIP_TEMPLATE_PREFIXES", [])) + (
+        "graphql/",
+    )
 
 
 def _store(toolbar: DebugToolbar):
+    _debug_toolbar_map[toolbar.request] = toolbar
     _original_store(toolbar)
     _store_cache[toolbar.request] = toolbar.store_id
+
+
+def _store_template_info(*args, **kwargs):
+    with contextlib.suppress(SynchronousOnlyOperation):
+        return _original_store_template_info(*args, **kwargs)
 
 
 def _get_payload(request: HttpRequest, response: HttpResponse):
@@ -58,18 +93,63 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
     return payload
 
 
+DebugToolbar.__init__ = _debug_toolbar_init
 DebugToolbar.store = _store  # type:ignore
-
-# FIXME: This is breaking async views when it tries to render the user
-# without being in an async safe context. How to properly handle this?
-TemplatesPanel._store_template_info = lambda *args, **kwargs: None
+TemplatesPanel._store_template_info = _store_template_info
 
 
 class DebugToolbarMiddleware(_DebugToolbarMiddleware):
     sync_capable = True
     async_capable = True
 
+    def __init__(self, get_response):
+        self._original_get_response = get_response
+
+        if inspect.iscoroutinefunction(get_response):
+            self._is_coroutine = asyncio.coroutines._is_coroutine  # type:ignore
+
+            def _get_response(request):
+                toolbar = _debug_toolbar_map.pop(request, None)
+                for panel in toolbar.enabled_panels if toolbar else []:
+                    if isinstance(panel, SQLPanel):
+                        sql_panel = panel
+                        break
+                else:
+                    sql_panel = None
+
+                async def _inner_get_response():
+                    if sql_panel:
+                        await sync_to_async(sql_panel.enable_instrumentation)()
+                    try:
+                        return await self._original_get_response(request)
+                    finally:
+                        if sql_panel:
+                            await sync_to_async(sql_panel.disable_instrumentation)()
+
+                return asyncio.run(_inner_get_response())
+
+            get_response = _get_response
+        else:
+            self._is_coroutine = None
+
+        super().__init__(get_response)
+
     def __call__(self, request: HttpRequest):
+        if self._is_coroutine:
+            return self.__acall__(request)
+
+        if _is_websocket(request):
+            return self._original_get_response(request)
+
+        return self.process_request(request)
+
+    async def __acall__(self, request: HttpRequest):
+        if _is_websocket(request):
+            return await self._original_get_response(request)
+
+        return await sync_to_async(self.process_request, thread_sensitive=False)(request)
+
+    def process_request(self, request: HttpRequest):
         response = super().__call__(request)
 
         if not show_toolbar(request) or DebugToolbar.is_toolbar_request(request):
