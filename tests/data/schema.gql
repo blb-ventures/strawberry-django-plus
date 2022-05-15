@@ -365,6 +365,11 @@ type ProjectTypeEdge {
 
 """All available queries for this schema."""
 type Query {
+  node(
+    """The ID of the object."""
+    id: GlobalID!
+  ): Node
+
   """Foobar"""
   issue(
     """The ID of the object."""

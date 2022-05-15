@@ -1,3 +1,5 @@
+from typing import List, cast
+
 import pytest
 
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
@@ -44,6 +46,70 @@ def test_user_query(db, gql_client: GraphQLTestClient):
                 "fullName": "John Snow",
             }
         }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_interface_query(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        node (id: $id) {
+          __typename
+          id
+          ... on IssueType {
+            name
+            milestone {
+              id
+              name
+              project {
+                id
+                name
+              }
+            }
+            tags {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    issue = IssueFactory.create()
+    assert issue.milestone
+    tags = TagFactory.create_batch(4)
+    issue.tags.set(tags)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 4):
+        res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+
+    assert isinstance(res.data, dict)
+    assert isinstance(res.data["node"], dict)
+    assert {frozenset(d.items()) for d in cast(List, res.data["node"].pop("tags"))} == frozenset(
+        {
+            frozenset(
+                {
+                    "id": to_base64("TagType", t.pk),
+                    "name": t.name,
+                }.items()
+            )
+            for t in tags
+        }
+    )
+    assert res.data == {
+        "node": {
+            "__typename": "IssueType",
+            "id": to_base64("IssueType", issue.pk),
+            "name": issue.name,
+            "milestone": {
+                "id": to_base64("MilestoneType", issue.milestone.pk),
+                "name": issue.milestone.name,
+                "project": {
+                    "id": to_base64("ProjectType", issue.milestone.project.pk),
+                    "name": issue.milestone.project.name,
+                },
+            },
+        }
+    }
 
 
 @pytest.mark.django_db(transaction=True)

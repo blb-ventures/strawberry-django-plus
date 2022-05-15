@@ -1,3 +1,4 @@
+from collections import defaultdict
 import contextvars
 import dataclasses
 from typing import (
@@ -55,9 +56,11 @@ __all__ = [
     "optimize",
 ]
 
-_sentinel = object()
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
+
+_sentinel = object()
+_interfaces: "defaultdict[Schema, Dict[TypeDefinition, List[TypeDefinition]]]" = defaultdict(dict)
 
 PrefetchType: TypeAlias = Union[str, Prefetch]
 
@@ -72,7 +75,7 @@ def _get_model_hints(
     prefix: str = "",
     model_cache: Optional[Dict[Type[models.Model], List[Tuple[int, "OptimizerStore"]]]] = None,
     level: int = 0,
-) -> "OptimizerStore":
+) -> "OptimizerStore | None":
     store = OptimizerStore()
     model_cache = model_cache or {}
     typename = schema.config.name_converter.from_object(type_def)
@@ -96,7 +99,7 @@ def _get_model_hints(
                 if node.name != "node":
                     continue
 
-                store |= _get_model_hints(
+                new_store = _get_model_hints(
                     model=model,
                     schema=schema,
                     type_def=n_type_def,
@@ -106,6 +109,8 @@ def _get_model_hints(
                     model_cache=model_cache,
                     level=level,
                 )
+                if new_store is not None:
+                    store |= new_store
 
         return store
 
@@ -113,12 +118,16 @@ def _get_model_hints(
     model_fields = get_model_fields(model)
 
     dj_type = get_django_type(type_def.origin)
-    if dj_type:
-        if dj_type.disable_optimization:
-            return store
+    if (
+        dj_type is None
+        or not issubclass(model, dj_type.model)
+        or getattr(dj_type, "disable_optimization", False)
+    ):
+        return None
 
-        if dj_type.store:
-            store |= dj_type.store
+    dj_type_store = getattr(dj_type, "store", None)
+    if dj_type_store:
+        store |= dj_type_store
 
     # Make sure that the model's pk is always selected when using only
     pk = model._meta.pk
@@ -172,8 +181,9 @@ def _get_model_hints(
                         model_cache=model_cache,
                         level=level + 1,
                     )
-                    model_cache.setdefault(f_model, []).append((level, f_store))
-                    store |= f_store.with_prefix(path)
+                    if f_store is not None:
+                        model_cache.setdefault(f_model, []).append((level, f_store))
+                        store |= f_store.with_prefix(path)
             elif isinstance(model_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel)):
                 f_types = list(get_possible_type_definitions(field.type))
                 if len(f_types) > 1:
@@ -191,26 +201,27 @@ def _get_model_hints(
                         model_cache=model_cache,
                         level=level + 1,
                     )
-                    if (
-                        (config is None or config.enable_only)
-                        and f_store.only
-                        and not isinstance(remote_field, ManyToManyRel)
-                    ):
-                        # If adding a reverse relation, make sure to select its pointer to us,
-                        # or else this might causa a refetch from the database
-                        f_store.only.append(remote_field.attname or remote_field.name)
+                    if f_store is not None:
+                        if (
+                            (config is None or config.enable_only)
+                            and f_store.only
+                            and not isinstance(remote_field, ManyToManyRel)
+                        ):
+                            # If adding a reverse relation, make sure to select its pointer to us,
+                            # or else this might causa a refetch from the database
+                            f_store.only.append(remote_field.attname or remote_field.name)
 
-                    model_cache.setdefault(remote_model, []).append((level, f_store))
+                        model_cache.setdefault(remote_model, []).append((level, f_store))
 
-                    # We need to use _base_manager here instead of _default_manager because we
-                    # are getting related objects, and not querying it directly
-                    f_qs = f_store.apply(
-                        remote_model._base_manager.all(),  # type:ignore
-                        config=config,
-                    )
-                    f_prefetch = Prefetch(path, queryset=f_qs)
-                    f_prefetch._optimizer_sentinel = _sentinel  # type:ignore
-                    store.prefetch_related.append(f_prefetch)
+                        # We need to use _base_manager here instead of _default_manager because we
+                        # are getting related objects, and not querying it directly
+                        f_qs = f_store.apply(
+                            remote_model._base_manager.all(),  # type:ignore
+                            config=config,
+                        )
+                        f_prefetch = Prefetch(path, queryset=f_qs)
+                        f_prefetch._optimizer_sentinel = _sentinel  # type:ignore
+                        store.prefetch_related.append(f_prefetch)
             else:
                 store.only.append(path)
 
@@ -287,17 +298,39 @@ def optimize(
         return qs
 
     for type_def in get_possible_type_definitions(strawberry_type):
+        if type_def.is_interface:
+            type_defs = _interfaces[schema].get(type_def)
+            if type_defs is None:
+                type_defs = []
+
+                for t in schema.schema_converter.type_map.values():
+                    tdef = t.definition
+                    if not isinstance(tdef, TypeDefinition):
+                        continue
+
+                    if issubclass(tdef.origin, type_def.origin):
+                        dj_type = get_django_type(tdef.origin)
+                        if dj_type and issubclass(qs.model, dj_type.model):
+                            type_defs.append(tdef)
+
+                _interfaces[schema][type_def] = type_defs
+        else:
+            type_defs = [type_def]
+
         for selection in convert_selections(info, info.field_nodes):
             if isinstance(selection, InlineFragment) or selection.name != field_name:
                 continue
 
-            store |= _get_model_hints(
-                qs.model,
-                schema,
-                type_def,
-                selection,
-                config=config,
-            )
+            for tdef in type_defs:
+                new_store = _get_model_hints(
+                    qs.model,
+                    schema,
+                    tdef,
+                    selection,
+                    config=config,
+                )
+                if new_store is not None:
+                    store |= new_store
 
     # Nothing found do optimize, just skip this...
     if not store:

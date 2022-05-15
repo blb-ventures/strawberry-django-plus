@@ -174,6 +174,8 @@ class MilestoneInput:
 class Query:
     """All available queries for this schema."""
 
+    node: Optional[gql.Node] = gql.django.node()
+
     issue: Optional[IssueType] = gql.django.node(description="Foobar")
     milestone: Optional[MilestoneType] = gql.django.node()
     milestone_mandatory: MilestoneType = gql.django.node()
