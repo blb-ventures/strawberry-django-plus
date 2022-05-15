@@ -24,10 +24,9 @@ from django.utils.encoding import force_str
 from strawberry.django.views import BaseView
 
 _store_cache = weakref.WeakKeyDictionary()
-_debug_toolbar_map: weakref.WeakKeyDictionary[
-    HttpRequest,
-    DebugToolbar,
-] = weakref.WeakKeyDictionary()
+_debug_toolbar_map: "weakref.WeakKeyDictionary[HttpRequest, DebugToolbar]" = (
+    weakref.WeakKeyDictionary()
+)
 
 _original_store = DebugToolbar.store
 _original_debug_toolbar_init = DebugToolbar.__init__
