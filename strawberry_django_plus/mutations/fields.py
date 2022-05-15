@@ -90,11 +90,87 @@ def _map_exception(error: Exception):
     return error
 
 
-class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
+class DjangoMutationField(StrawberryDjangoField):
+    """Mutation for django models.
+
+    This fields does 2 things:
+
+    - It ensures that the mutation resolver gets called in an async safe environment.
+    - If `handle_django_errors` is True (the default), the return values gets
+      changed to a union with `OperationMessage`, which will be returned instead
+      if the mutation raises any `PermissionDenied`, `ValidationError` or
+      `ObjectDoesNotExist`.
+
+    Do not instantiate this directly. Instead, use `@gql.django.mutation`
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        self._handle_errors: bool = kwargs.pop("handle_django_errors", True)
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, resolver: Callable[..., Iterable[relay.Node]]):
+        if self._handle_errors:
+            name = to_camel_case(resolver.__name__)
+            cap_name = name[0].upper() + name[1:]
+            namespace = sys.modules[resolver.__module__].__dict__
+            annotation = StrawberryAnnotation(
+                resolver.__annotations__["return"],
+                namespace=namespace,
+            )
+            # Transform the return value into a union of it with OperationMessages
+            resolver.__annotations__["return"] = strawberry.union(
+                f"{cap_name}Payload",
+                (annotation.resolve(), OperationInfo),
+            )
+        return super().__call__(resolver)
+
+    @property
+    def type(self) -> Union[StrawberryType, type]:  # noqa:A003
+        return super().type
+
+    @type.setter
+    def type(self, type_: Any) -> None:  # noqa:A003
+        if type_ is not None and self._handle_errors:
+            name = to_camel_case(self.python_name)
+            cap_name = name[0].upper() + name[1:]
+
+            if isinstance(type_, StrawberryAnnotation):
+                type_ = type_.annotation
+
+            types_ = tuple(get_possible_types(type_))
+            type_ = strawberry.union(f"{cap_name}Payload", types_ + (OperationInfo,))
+
+        self.type_annotation = type_
+
+    def get_result(
+        self,
+        source: Any,
+        info: Info,
+        args: List[Any],
+        kwargs: Dict[str, Any],
+    ) -> AwaitableOrValue[Any]:
+        # FIXME: Any other exception types that we should capture here?
+        resolver = aio.resolver(
+            self.resolver,
+            on_error=_map_exception if self._handle_errors else None,
+            info=info,
+        )
+        return resolver(source, info, args, kwargs)
+
+
+class DjangoInputMutationField(DjangoMutationField, relay.InputMutationField):
     """Input mutation for django models.
 
-    This is basically the same as `relay.InputMutationField`, but it ensure that
-    the mutation resolver gets called in an async safe environment.
+    This fields does 3 things:
+
+    - It ensures that the mutation resolver gets called in an async safe environment.
+    - If `handle_django_errors` is True (the default), the return values gets
+      changed to a union with `OperationMessage`, which will be returned instead
+      if the mutation raises any `PermissionDenied`, `ValidationError` or
+      `ObjectDoesNotExist`.
+    - It transforms the resolver arguments to a new type and receives it in
+      a `input` argument at the graphql side.
 
     Do not instantiate this directly. Instead, use `@gql.django.input_mutation`
 
@@ -115,39 +191,6 @@ class DjangoInputMutationField(relay.InputMutationField, StrawberryDjangoField):
                 type_annotation=StrawberryAnnotation(self.input_type, namespace=namespace),
                 description=type_def and type_def.description,
             )
-
-    def __call__(self, resolver: Callable[..., Iterable[relay.Node]]):
-        name = to_camel_case(resolver.__name__)
-        cap_name = name[0].upper() + name[1:]
-        namespace = sys.modules[resolver.__module__].__dict__
-        annotation = StrawberryAnnotation(
-            resolver.__annotations__["return"],
-            namespace=namespace,
-        )
-        # Transform the return value into a union of it with OperationMessages
-        resolver.__annotations__["return"] = strawberry.union(
-            f"{cap_name}Payload",
-            (annotation.resolve(), OperationInfo),
-        )
-        return super().__call__(resolver)
-
-    @property
-    def type(self) -> Union[StrawberryType, type]:  # noqa:A003
-        return super().type
-
-    @type.setter
-    def type(self, type_: Any) -> None:  # noqa:A003
-        if type_ is not None:
-            name = to_camel_case(self.python_name)
-            cap_name = name[0].upper() + name[1:]
-
-            if isinstance(type_, StrawberryAnnotation):
-                type_ = type_.annotation
-
-            types_ = tuple(get_possible_types(type_))
-            type_ = strawberry.union(f"{cap_name}Payload", types_ + (OperationInfo,))
-
-        self.type_annotation = type_
 
     def get_result(
         self,
@@ -261,6 +304,119 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 
 
 @overload
+def mutation(
+    *,
+    input_type: Optional[type] = None,
+    resolver: Callable[[], _T],
+    name: Optional[str] = None,
+    field_name: Optional[str] = None,
+    filters: Any = UNSET,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[False] = False,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
+) -> _T:
+    ...
+
+
+@overload
+def mutation(
+    *,
+    input_type: Optional[type] = None,
+    name: Optional[str] = None,
+    field_name: Optional[str] = None,
+    filters: Any = UNSET,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    init: Literal[True] = True,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
+) -> Any:
+    ...
+
+
+@overload
+def mutation(
+    resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
+    *,
+    input_type: Optional[type] = None,
+    name: Optional[str] = None,
+    field_name: Optional[str] = None,
+    filters: Any = UNSET,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
+) -> DjangoInputMutationField:
+    ...
+
+
+def mutation(
+    resolver=None,
+    *,
+    input_type: Optional[type] = None,
+    name: Optional[str] = None,
+    field_name: Optional[str] = None,
+    filters: Any = UNSET,
+    is_subscription: bool = False,
+    description: Optional[str] = None,
+    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    deprecation_reason: Optional[str] = None,
+    default: Any = UNSET,
+    default_factory: Union[Callable, object] = UNSET,
+    directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init=None,
+) -> Any:
+    """Annotate a property or a method to create a mutation field.
+
+    This fields does 2 things:
+
+    - It ensures that the mutation resolver gets called in an async safe environment.
+    - If `handle_django_errors` is True (the default), the return values gets
+      changed to a union with `OperationMessage`, which will be returned instead
+      if the mutation raises any `PermissionDenied`, `ValidationError` or
+      `ObjectDoesNotExist`.
+
+    """
+    f = DjangoMutationField(
+        input_type=input_type,
+        python_name=None,
+        django_name=field_name,
+        graphql_name=name,
+        type_annotation=None,
+        description=description,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
+        deprecation_reason=deprecation_reason,
+        default=default,
+        default_factory=default_factory,
+        directives=directives,
+        filters=filters,
+        handle_django_errors=handle_django_errors,
+    )
+    if resolver is not None:
+        f = f(resolver)
+    return f
+
+
+@overload
 def input_mutation(
     *,
     input_type: Optional[type] = None,
@@ -276,6 +432,7 @@ def input_mutation(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> _T:
     ...
 
@@ -295,6 +452,7 @@ def input_mutation(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> Any:
     ...
 
@@ -314,6 +472,7 @@ def input_mutation(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> DjangoInputMutationField:
     ...
 
@@ -332,6 +491,7 @@ def input_mutation(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -339,8 +499,15 @@ def input_mutation(
 ) -> Any:
     """Annotate a property or a method to create an input mutation field.
 
-    This is basically the same as `@relay.input_mutation`, but it ensure
-    that the mutation resolver gets called in an async safe environment.
+    This fields does 3 things:
+
+        - It ensures that the mutation resolver gets called in an async safe environment.
+        - If `handle_django_errors` is True (the default), the return values gets
+          changed to a union with `OperationMessage`, which will be returned instead
+          if the mutation raises any `PermissionDenied`, `ValidationError` or
+          `ObjectDoesNotExist`.
+        - It transforms the resolver arguments to a new type and receives it in
+          a `input` argument at the graphql side.
 
     """
     f = DjangoInputMutationField(
@@ -357,6 +524,7 @@ def input_mutation(
         default_factory=default_factory,
         directives=directives,
         filters=filters,
+        handle_django_errors=handle_django_errors,
     )
     if resolver is not None:
         f = f(resolver)
