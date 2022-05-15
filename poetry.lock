@@ -205,7 +205,7 @@ name = "django-choices-field"
 version = "2.0"
 description = "Django field that set/get django's new TextChoices/IntegerChoices enum."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.8,<4.0"
 
 [[package]]
@@ -893,7 +893,7 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "823ab372d8f992493aa4631798f255de68a2b13f155e4589a985c3dd9b459082"
+content-hash = "79d3d7de1b7b56cfb005d608503caeb8c6a6a7e32a7f02a01f999a687bc70a79"
 
 [metadata.files]
 appnope = [
