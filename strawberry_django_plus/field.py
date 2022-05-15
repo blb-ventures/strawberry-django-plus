@@ -5,7 +5,6 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
-    Iterable,
     List,
     Literal,
     Optional,
@@ -238,6 +237,8 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         qs: QuerySet[_M],
         info: Info,
         kwargs: Dict[str, Any],
+        *,
+        skip_fetch: bool = False,
     ) -> QuerySet[_M]:
         # Remove info from kwargs since we will pass it positionaly to get_queryset
         if "info" in kwargs:
@@ -251,7 +252,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 qs = qs.filter(pk__in=[n.node_id for n in nodes])
 
         qs = self.get_queryset(filter_with_perms(qs, info), info, **kwargs)
-        if not isinstance(self, relay.ConnectionField):
+        if not skip_fetch and not isinstance(self, relay.ConnectionField):
             # This is what QuerySet does internally to fetch results.
             # After this, iterating over the queryset should be async safe
             qs._fetch_all()  # type:ignore
@@ -308,19 +309,18 @@ class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoFie
         args: List[Any],
         kwargs: Dict[str, Any],
         *,
-        nodes: Optional[Iterable[Any]] = None,
+        nodes: Optional[QuerySet[Any]] = None,
     ):
         if nodes is None:
             nodes = self.model._default_manager.all()
 
             if self.origin_django_type and hasattr(self.origin_django_type.origin, "get_queryset"):
-                nodes = self.origin_django_type.origin.get_queryset(nodes, info)
+                nodes = cast(
+                    QuerySet[Any],
+                    self.origin_django_type.origin.get_queryset(nodes, info),
+                )
 
-        return resolvers.resolve_result(
-            nodes,
-            info=info,
-            qs_resolver=lambda qs: self.get_queryset_as_list(qs, info, kwargs),
-        )
+        return self.get_queryset_as_list(nodes, info, kwargs, skip_fetch=True)
 
 
 @overload
