@@ -312,7 +312,7 @@ def _process_type(
                 cls,
             )
 
-        if not _has_own_node_resolver(cls, "resolve_connection_resolver"):
+        if not _has_own_node_resolver(cls, "resolve_connection"):
             cls.resolve_connection = types.MethodType(
                 lambda *args, **kwargs: resolve_connection(
                     *args,
