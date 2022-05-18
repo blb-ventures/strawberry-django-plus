@@ -463,9 +463,9 @@ class OptimizerStore:
 
                 p1 = PrefetchInspector(existing)
                 p2 = PrefetchInspector(p)
-                if getattr(existing, "_sentinel", None) is _sentinel:
+                if getattr(existing, "_optimizer_sentinel", None) is _sentinel:
                     ret = p1.merge(p2, allow_unsafe_ops=True)
-                elif getattr(p, "_sentinel", None) is _sentinel:
+                elif getattr(p, "_optimizer_sentinel", None) is _sentinel:
                     ret = p2.merge(p1, allow_unsafe_ops=True)
                 else:
                     # The order here doesn't matter

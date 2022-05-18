@@ -294,7 +294,7 @@ class PrefetchInspector:
 
     @prefetch_related.setter
     def prefetch_related(self, value: Optional[Iterable[Union[Prefetch, str]]]):
-        self.query.select_related = tuple(value or [])  # type:ignore
+        self.qs._prefetch_related_lookups = tuple(value or [])  # type:ignore
 
     @property
     def annotations(self) -> Dict[str, Expression]:
@@ -333,12 +333,12 @@ class PrefetchInspector:
         # Merge only/deferred
         if not allow_unsafe_ops and (self.defer is None) != (other.defer is None):
             raise ValueError(
-                "Tried to prefetch 2 queries with with different deferred "
+                "Tried to prefetch 2 queries with different deferred "
                 "operations. Use only `only` or `deferred`, not both..."
             )
-        if self.only and other.only:
+        if self.only is not None and other.only is not None:
             self.only = self.only | other.only
-        elif self.defer and other.defer:
+        elif self.defer is not None and other.defer is not None:
             self.defer = self.defer | other.defer
         else:
             # One has defer, the other only. In this case, defer nothing
