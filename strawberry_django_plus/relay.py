@@ -329,10 +329,14 @@ class Node(abc.ABC):
 
     All types that are relay ready should inherit from this interface and
     implement the following methods.
+    Attributes:
+        id_field:
+            (Optional) Define id field of node
 
     Methods:
         resolve_id:
-            (Optional) Called to resolve the node's id. By default ir returns `node.id`
+            (Optional) Called to resolve the node's id.
+            By default it returns `getattr(node, 'id_field', 'id')`
             to use the one provided when creating the node itself.
         resolve_node:
             Called to retrieve a node given its id
@@ -395,6 +399,8 @@ class Node(abc.ABC):
             The resolved id (which is expected to be str)
 
         """
+        if hasattr(cls, "id_field"):
+            return getattr(root, cls.id_field)
         return root.id
 
     @classmethod

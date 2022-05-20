@@ -338,7 +338,12 @@ def resolve_model_nodes(
         qs = origin.get_queryset(qs, info)  # type:ignore
 
     if node_ids is not None:
-        qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
+        id_field = "pk"
+        if hasattr(origin, "id_field"):
+            id_field = origin.id_field
+        qs = qs.filter(
+            **{f"{id_field}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]}
+        )
 
     if filter_perms:
         assert info
@@ -400,7 +405,11 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     if isinstance(node_id, GlobalID):
         node_id = node_id.node_id
 
-    qs = source._default_manager.filter(pk=node_id)
+    id_field = "pk"
+    if hasattr(origin, "id_field"):
+        id_field = origin.id_field
+
+    qs = source._default_manager.filter(**{id_field: node_id})
 
     if origin and hasattr(origin, "get_queryset"):
         qs = origin.get_queryset(qs, info)
