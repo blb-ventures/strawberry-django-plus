@@ -76,7 +76,7 @@ class GraphQLTestClient(TestClient):
         body = self._build_body(query, variables, files)
 
         resp = self.request(body, headers, files)
-        if inspect.isawaitable(resp):
+        if inspect.iscoroutine(resp):
             resp = asyncio.run(resp)
 
         data = self._decode(resp, type="multipart" if files else "json")
