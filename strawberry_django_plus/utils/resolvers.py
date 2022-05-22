@@ -338,9 +338,7 @@ def resolve_model_nodes(
         qs = origin.get_queryset(qs, info)  # type:ignore
 
     if node_ids is not None:
-        id_field = "pk"
-        if hasattr(origin, "id_field"):
-            id_field = origin.id_field
+        id_field = getattr(origin, "id_field", "pk")
         qs = qs.filter(
             **{f"{id_field}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]}
         )
@@ -405,9 +403,7 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     if isinstance(node_id, GlobalID):
         node_id = node_id.node_id
 
-    id_field = "pk"
-    if hasattr(origin, "id_field"):
-        id_field = origin.id_field
+    id_field = getattr(origin, "id_field", "pk")
 
     qs = source._default_manager.filter(**{id_field: node_id})
 
@@ -422,10 +418,12 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     return ret
 
 
-def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
+def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> AwaitableOrValue[str]:
     """Resolve the model id, ensuring it is retrieved in a sync context.
 
     Args:
+        source:
+            The source model or the model type that implements the `Node` interface
         root:
             The source model object.
 
@@ -433,14 +431,16 @@ def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
         The resolved object id
 
     """
+    id_field = getattr(source, "id_field", "pk")
     assert isinstance(root, Model)
-    pk = root.__class__._meta.pk
-    assert pk
+    if id_field == "pk":
+        id_field = root.__class__._meta.pk.attname
+    assert id_field
     try:
         # Prefer to retrieve this from the cache
-        return str(root.__dict__[pk.attname])
+        return str(root.__dict__[id_field])
     except KeyError:
-        return getattr_str_async_safe(root, pk.attname)
+        return getattr_str_async_safe(root, id_field)
 
 
 def resolve_connection(
