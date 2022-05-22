@@ -6,7 +6,7 @@ from django.db.models.query import QuerySet
 
 for cls in [QuerySet, BaseManager, models.ForeignKey, models.ManyToManyField]:
     if not hasattr(cls, "__class_getitem__"):
-        cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)
+        cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)  # type:ignore
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
