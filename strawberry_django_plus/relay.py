@@ -331,13 +331,13 @@ class Node(abc.ABC):
     implement the following methods.
 
     Attributes:
-        id_field:
+        id_attr:
             (Optional) Define id field of node
 
     Methods:
         resolve_id:
             (Optional) Called to resolve the node's id.
-            By default it returns `getattr(node, getattr(node, 'id_field'. 'id'))`
+            By default it returns `getattr(node, getattr(node, 'id_attr'. 'id'))`
             to use the one provided when creating the node itself.
         resolve_node:
             Called to retrieve a node given its id
@@ -388,7 +388,7 @@ class Node(abc.ABC):
     ) -> AwaitableOrValue[str]:
         """Resolve the node id.
 
-        By default this returns `getattr(node, getattr(node, 'id_field'. 'id'))`.
+        By default this returns `getattr(node, getattr(node, 'id_attr'. 'id'))`.
         Override this to return something else.
 
         Args:
@@ -401,8 +401,8 @@ class Node(abc.ABC):
             The resolved id (which is expected to be str)
 
         """
-        id_field = getattr(cls, "id_field", "id")
-        return getattr(root, id_field)
+        id_attr = getattr(cls, "id_attr", "id")
+        return getattr(root, id_attr)
 
     @classmethod
     def resolve_connection(

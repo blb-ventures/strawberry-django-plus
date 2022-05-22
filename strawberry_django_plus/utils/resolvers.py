@@ -338,9 +338,9 @@ def resolve_model_nodes(
         qs = origin.get_queryset(qs, info)  # type:ignore
 
     if node_ids is not None:
-        id_field = getattr(origin, "id_field", "pk")
+        id_attr = getattr(origin, "id_attr", "pk")
         qs = qs.filter(
-            **{f"{id_field}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]}
+            **{f"{id_attr}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]}
         )
 
     if filter_perms:
@@ -403,9 +403,9 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     if isinstance(node_id, GlobalID):
         node_id = node_id.node_id
 
-    id_field = getattr(origin, "id_field", "pk")
+    id_attr = getattr(origin, "id_attr", "pk")
 
-    qs = source._default_manager.filter(**{id_field: node_id})
+    qs = source._default_manager.filter(**{id_attr: node_id})
 
     if origin and hasattr(origin, "get_queryset"):
         qs = origin.get_queryset(qs, info)
@@ -431,16 +431,16 @@ def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> Awaita
         The resolved object id
 
     """
-    id_field = getattr(source, "id_field", "pk")
+    id_attr = getattr(source, "id_attr", "pk")
     assert isinstance(root, Model)
-    if id_field == "pk":
-        id_field = root.__class__._meta.pk.attname
-    assert id_field
+    if id_attr == "pk":
+        id_attr = root.__class__._meta.pk.attname
+    assert id_attr
     try:
         # Prefer to retrieve this from the cache
-        return str(root.__dict__[id_field])
+        return str(root.__dict__[id_attr])
     except KeyError:
-        return getattr_str_async_safe(root, id_field)
+        return getattr_str_async_safe(root, id_attr)
 
 
 def resolve_connection(
