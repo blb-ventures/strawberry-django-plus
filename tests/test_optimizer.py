@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import Any, List, cast
 
 import pytest
 
@@ -141,7 +141,7 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
     for p in ProjectFactory.create_batch(2):
         for m in MilestoneFactory.create_batch(2, project=p):
             for i in IssueFactory.create_batch(2, milestone=m):
-                r = {
+                r: dict[str, Any] = {
                     "id": to_base64("IssueType", i.id),
                     "name": i.name,
                     "milestone": {
@@ -276,14 +276,14 @@ def test_query_prefetch(db, gql_client: GraphQLTestClient):
 
     expected = []
     for p in ProjectFactory.create_batch(2):
-        p_res = {
+        p_res: dict[str, Any] = {
             "id": to_base64("ProjectType", p.id),
             "name": p.name,
             "milestones": [],
         }
         expected.append(p_res)
         for m in MilestoneFactory.create_batch(2, project=p):
-            m_res = {
+            m_res: dict[str, Any] = {
                 "id": to_base64("MilestoneType", m.id),
                 "name": m.name,
                 "project": {
@@ -361,14 +361,14 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
 
     expected = []
     for p in ProjectFactory.create_batch(3):
-        p_res = {
+        p_res: dict[str, Any] = {
             "id": to_base64("ProjectType", p.id),
             "name": p.name,
             "milestones": [],
         }
         expected.append(p_res)
         for m in MilestoneFactory.create_batch(3, project=p):
-            m_res = {
+            m_res: dict[str, Any] = {
                 "id": to_base64("MilestoneType", m.id),
                 "name": m.name,
                 "project": {

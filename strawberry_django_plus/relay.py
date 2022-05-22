@@ -983,7 +983,7 @@ class InputMutationField(RelayField):
         resolver = StrawberryResolver(resolver)
 
         args = resolver.arguments
-        type_dict = {
+        type_dict: dict[str, Any] = {
             "__doc__": f"Input data for `{name}` mutation",
             "__annotations__": {},
         }

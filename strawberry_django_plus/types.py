@@ -56,8 +56,12 @@ _T = TypeVar("_T", bound=Union[StrawberryType, ScalarWrapper, type])
 K = TypeVar("K")
 D = TypeVar("D")
 
-input_field_type_map[models.FileField] = Upload
-input_field_type_map[models.ImageField] = Upload
+input_field_type_map.update(
+    {  # type:ignore
+        models.FileField: Upload,
+        models.ImageField: Upload,
+    }
+)
 
 
 def register(
