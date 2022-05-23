@@ -390,10 +390,10 @@ def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
                 "issueAssignees": {
                     "set": [
                         {
-                            "user": {"id": to_base64("UserType", user_1.pk)},
+                            "user": {"id": to_base64("UserType", user_1.username)},
                         },
                         {
-                            "user": {"id": to_base64("UserType", user_2.pk)},
+                            "user": {"id": to_base64("UserType", user_2.username)},
                             "owner": True,
                         },
                         {
@@ -513,16 +513,16 @@ def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient
                 "assignees": {
                     "set": [
                         {
-                            "id": to_base64("UserType", user_1.pk),
+                            "id": to_base64("UserType", user_1.username),
                         },
                         {
-                            "id": to_base64("UserType", user_2.pk),
+                            "id": to_base64("UserType", user_2.username),
                             "throughDefaults": {
                                 "owner": True,
                             },
                         },
                         {
-                            "id": to_base64("UserType", user_3.pk),
+                            "id": to_base64("UserType", user_3.username),
                             "throughDefaults": {
                                 "owner": True,
                             },

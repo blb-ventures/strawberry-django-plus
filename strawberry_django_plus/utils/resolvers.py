@@ -338,7 +338,10 @@ def resolve_model_nodes(
         qs = origin.get_queryset(qs, info)  # type:ignore
 
     if node_ids is not None:
-        qs = qs.filter(pk__in=[i.node_id if isinstance(i, GlobalID) else i for i in node_ids])
+        id_attr = getattr(origin, "id_attr", "pk")
+        qs = qs.filter(
+            **{f"{id_attr}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]}
+        )
 
     if filter_perms:
         assert info
@@ -400,7 +403,9 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     if isinstance(node_id, GlobalID):
         node_id = node_id.node_id
 
-    qs = source._default_manager.filter(pk=node_id)
+    id_attr = getattr(origin, "id_attr", "pk")
+
+    qs = source._default_manager.filter(**{id_attr: node_id})
 
     if origin and hasattr(origin, "get_queryset"):
         qs = origin.get_queryset(qs, info)
@@ -413,10 +418,12 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     return ret
 
 
-def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
+def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> AwaitableOrValue[str]:
     """Resolve the model id, ensuring it is retrieved in a sync context.
 
     Args:
+        source:
+            The source model or the model type that implements the `Node` interface
         root:
             The source model object.
 
@@ -424,14 +431,18 @@ def resolve_model_id(root: Model) -> AwaitableOrValue[str]:
         The resolved object id
 
     """
+    id_attr = getattr(source, "id_attr", "pk")
     assert isinstance(root, Model)
-    pk = root.__class__._meta.pk
-    assert pk
+    if id_attr == "pk":
+        pk = root.__class__._meta.pk
+        assert pk
+        id_attr = pk.attname
+    assert id_attr
     try:
         # Prefer to retrieve this from the cache
-        return str(root.__dict__[pk.attname])
+        return str(root.__dict__[id_attr])
     except KeyError:
-        return getattr_str_async_safe(root, pk.attname)
+        return getattr_str_async_safe(root, id_attr)
 
 
 def resolve_connection(

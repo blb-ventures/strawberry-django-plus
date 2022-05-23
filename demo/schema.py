@@ -35,6 +35,8 @@ class UserType(relay.Node):
     is_superuser: gql.auto
     is_staff: gql.auto
 
+    id_attr = "username"
+
     @gql.django.field(only=["first_name", "last_name"])
     def full_name(self, root: UserModel) -> str:
         return f"{root.first_name or ''} {root.last_name or ''}".strip()
@@ -47,6 +49,8 @@ class StaffType(relay.Node):
     is_active: gql.auto
     is_superuser: gql.auto
     is_staff: gql.auto
+
+    id_attr = "username"
 
     @classmethod
     def get_queryset(cls, queryset: QuerySet[UserModel], info: Info) -> QuerySet[UserModel]:

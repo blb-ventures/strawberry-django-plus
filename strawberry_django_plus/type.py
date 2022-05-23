@@ -324,7 +324,7 @@ def _process_type(
 
         if not _has_own_node_resolver(cls, "resolve_id"):
             cls.resolve_id = types.MethodType(
-                lambda cls, root, *args, **kwargs: resolve_model_id(root),
+                lambda cls, root, *args, **kwargs: resolve_model_id(cls, root),
                 cls,
             )
 
