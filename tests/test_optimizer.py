@@ -40,7 +40,7 @@ def test_user_query(db, gql_client: GraphQLTestClient):
             res = gql_client.query(query)
         assert res.data == {
             "me": {
-                "id": to_base64("UserType", user.pk),
+                "id": to_base64("UserType", user.username),
                 "username": user.username,
                 "email": user.email,
                 "fullName": "John Snow",

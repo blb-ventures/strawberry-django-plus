@@ -341,14 +341,14 @@ def test_node_queryset(db, gql_client: GraphQLTestClient):
     """
 
     user = UserFactory.create(is_staff=False)
-    res = gql_client.query(query, {"id": to_base64("StaffType", user.pk)})
+    res = gql_client.query(query, {"id": to_base64("StaffType", user.username)})
     assert res.data == {"staff": None}
 
     staff = UserFactory.create(is_staff=True)
-    res = gql_client.query(query, {"id": to_base64("StaffType", staff.pk)})
+    res = gql_client.query(query, {"id": to_base64("StaffType", staff.username)})
     assert res.data == {
         "staff": {
-            "id": to_base64("StaffType", staff.pk),
+            "id": to_base64("StaffType", staff.username),
             "username": staff.username,
             "isStaff": True,
         }
@@ -370,12 +370,13 @@ def test_node_multiple_queryset(db, gql_client: GraphQLTestClient):
     user = UserFactory.create(is_staff=False)
     staff = UserFactory.create(is_staff=True)
     res = gql_client.query(
-        query, {"ids": [to_base64("StaffType", user.pk), to_base64("StaffType", staff.pk)]}
+        query,
+        {"ids": [to_base64("StaffType", user.username), to_base64("StaffType", staff.username)]},
     )
     assert res.data == {
         "staffList": [
             {
-                "id": to_base64("StaffType", staff.pk),
+                "id": to_base64("StaffType", staff.username),
                 "username": staff.username,
                 "isStaff": True,
             }
@@ -407,7 +408,7 @@ def test_connection_queryset(db, gql_client: GraphQLTestClient):
             "edges": [
                 {
                     "node": {
-                        "id": to_base64("StaffType", staff.pk),
+                        "id": to_base64("StaffType", staff.username),
                         "username": staff.username,
                         "isStaff": True,
                     }
