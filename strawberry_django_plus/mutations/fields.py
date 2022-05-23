@@ -119,9 +119,10 @@ class DjangoMutationField(StrawberryDjangoField):
                 namespace=namespace,
             )
             # Transform the return value into a union of it with OperationMessages
+            types_ = tuple(get_possible_types(annotation.resolve()))
             resolver.__annotations__["return"] = strawberry.union(
                 f"{cap_name}Payload",
-                (annotation.resolve(), OperationInfo),
+                types_ + (OperationInfo,),
             )
         return super().__call__(resolver)
 
