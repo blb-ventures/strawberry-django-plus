@@ -434,7 +434,9 @@ def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> Awaita
     id_attr = getattr(source, "id_attr", "pk")
     assert isinstance(root, Model)
     if id_attr == "pk":
-        id_attr = root.__class__._meta.pk.attname
+        pk = root.__class__._meta.pk
+        assert pk
+        id_attr = pk.attname
     assert id_attr
     try:
         # Prefer to retrieve this from the cache
