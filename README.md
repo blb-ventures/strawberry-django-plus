@@ -488,11 +488,14 @@ type Query {
 ```
 
 It is expected that types implementing the `Node` interface define some methods, like
-`resolve_nodes` and `resolve_node`. Take a look at
+`resolve_nodes` and `resolve_node`. By default the `id` field is used for the node id.
+This is customizable with the `id_attr` attribute. Take a look at
 [the documentation](/strawberry_django_plus/relay.py) for more information.
 
 Also note that Django fields created with `@gql.django.type` automatically implements
 all of the required methods when the type inherits from `Node`.
+By default the `pk` field is used for the node id (overwrites the default `id` field) but
+can also be customized with the `id_attr`attribute.
 
 This module also exposes a mutation that converts all of its arguments to a single input.
 For example:
