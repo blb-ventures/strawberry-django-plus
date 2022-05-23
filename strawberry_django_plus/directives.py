@@ -33,8 +33,6 @@ from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import TypeAlias
 
-from .utils.inspect import get_possible_type_definitions
-
 try:
     # Try to use the smaller/faster cache decorator if available
     _cache = functools.cache  # type:ignore
@@ -121,6 +119,9 @@ class SchemaDirectiveExtension(Extension):
         return _next(root, info, *args, **kwargs)
 
     def _get_directives(self, info: GraphQLResolveInfo):
+        # Avoid circular references
+        from .utils.inspect import get_possible_type_definitions
+
         type_name = info.parent_type.name
         field_name = info.field_name
         key = (type_name, field_name)
