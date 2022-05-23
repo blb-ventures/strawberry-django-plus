@@ -7,6 +7,7 @@ from strawberry_django import (
     OneToManyInput,
     OneToOneInput,
     auth,
+    django_resolver,
     filters,
     ordering,
 )
@@ -24,6 +25,7 @@ from strawberry_django_plus.type import input, interface, partial, type
 __all__ = [
     # strawberry_django
     "auth",
+    "django_resolver",
     "filters",
     "ordering",
     "DjangoFileType",
