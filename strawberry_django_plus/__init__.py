@@ -2,20 +2,13 @@ import inspect
 import re
 
 from strawberry import object_type
-from strawberry.auto import StrawberryAuto, auto
 from strawberry.enum import EnumDefinition
 from strawberry.field import StrawberryField
 from strawberry.schema.name_converter import NameConverter
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry_django.fields import types
-from strawberry_django.fields import types as ftypes
 
 # Just import this for the monkey patch
 from .utils.printer import print_schema  # noqa:F401
-
-# Monkey patch strawberry_django to use strawberry's auto
-types.auto = auto
-ftypes.auto = auto
 
 _cls_docs = {}
 _original_process_type = object_type._process_type
@@ -100,7 +93,6 @@ def _from_generic(*args, **kwargs):
     return v
 
 
-types.is_auto = lambda type_: isinstance(type_, StrawberryAuto)
 object_type._process_type = _process_type
 object_type._wrap_dataclass = _wrap_dataclass
 StrawberryField.__init__ = _field_init

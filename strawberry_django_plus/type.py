@@ -19,18 +19,15 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
-from strawberry import UNSET, auto
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.auto import StrawberryAuto
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
-from strawberry_django.fields.types import (
-    get_model_field,
-    is_auto,
-    resolve_model_field_name,
-)
+from strawberry_django.fields.types import get_model_field, resolve_model_field_name
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations, is_similar_django_type
 from typing_extensions import Annotated
@@ -153,7 +150,7 @@ def _from_django_type(
     # annotation of field is used as a class type
     if type_annotation is not None:
         field.type_annotation = type_annotation
-        field.is_auto = is_auto(field.type_annotation)
+        field.is_auto = isinstance(field.type_annotation, StrawberryAuto)
 
     # resolve the django_name and check if it is relation field. django_name
     # is used to access the field data in resolvers
@@ -169,7 +166,7 @@ def _from_django_type(
                 if get_origin(annotation) is Annotated:
                     annotation = get_args(annotation)[0]
                 field.type_annotation = StrawberryAnnotation(annotation)
-                field.is_auto = is_auto(field.type_annotation)
+                field.is_auto = isinstance(field.type_annotation, StrawberryAuto)
 
             if field.description is None:
                 field.description = model_attr.description
@@ -288,7 +285,7 @@ def _process_type(
     for f in fields:
         annotation = f.type_annotation.annotation if f.type_annotation is not None else f.type
         if annotation is None:
-            annotation = StrawberryAnnotation(auto)
+            annotation = StrawberryAnnotation(strawberry.auto)
 
         cls.__annotations__[f.name] = annotation
         setattr(cls, f.name, f)
