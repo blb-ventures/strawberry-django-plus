@@ -166,7 +166,7 @@ def get_with_perms(
     info: Info,
     *,
     required: Literal[True],
-    model: Type[_M] = ...,
+    model: Type[_M],
 ) -> _M:
     ...
 
@@ -177,8 +177,28 @@ def get_with_perms(
     info: Info,
     *,
     required: bool = ...,
-    model: Type[_M] = ...,
+    model: Type[_M],
 ) -> Optional[_M]:
+    ...
+
+
+@overload
+def get_with_perms(
+    pk: GlobalID,
+    info: Info,
+    *,
+    required: Literal[True],
+) -> Any:
+    ...
+
+
+@overload
+def get_with_perms(
+    pk: GlobalID,
+    info: Info,
+    *,
+    required: bool = ...,
+) -> Optional[Any]:
     ...
 
 
