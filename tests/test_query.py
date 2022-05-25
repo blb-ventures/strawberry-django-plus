@@ -2,7 +2,7 @@ import pytest
 
 from strawberry_django_plus.relay import to_base64
 
-from .faker import MilestoneFactory, ProjectFactory, UserFactory
+from .faker import MilestoneFactory, ProjectFactory, StaffUserFactory, UserFactory
 from .utils import GraphQLTestClient
 
 
@@ -40,6 +40,75 @@ def test_node_single_optional(db, gql_client: GraphQLTestClient):
 
     res = gql_client.query(query, {"id": to_base64("MilestoneType", "9999")})
     assert res.data == {"milestone": None}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_node_polymorphy(db, gql_client: GraphQLTestClient):
+    user = UserFactory.create()
+    staff = StaffUserFactory.create()
+
+    # base case
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        node(id: $id) {
+          ... on UserType {
+             id
+             username
+             isStaff
+          }
+        }
+      }
+    """
+    res = gql_client.query(query, {"id": to_base64("UserType", user.username)})
+    assert res.data == {
+        "node": {
+            "id": to_base64("UserType", user.username),
+            "username": user.username,
+            "isStaff": False,
+        }
+    }
+
+    # every staff is also user
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        node(id: $id) {
+          ... on UserType {
+             id
+             username
+             isStaff
+          }
+        }
+      }
+    """
+    res = gql_client.query(query, {"id": to_base64("UserType", staff.username)})
+    assert res.data == {
+        "node": {
+            "id": to_base64("UserType", staff.username),
+            "username": staff.username,
+            "isStaff": True,
+        }
+    }
+
+    # now check StaffType with staff
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        node(id: $id) {
+          ... on StaffType {
+             id
+             username
+             isStaff
+          }
+        }
+      }
+    """
+    res = gql_client.query(query, {"id": to_base64("StaffType", staff.username)})
+    assert res.data == {
+        "node": {
+            "id": to_base64("StaffType", staff.username),
+            "username": staff.username,
+            "isStaff": True,
+        }
+    }
 
 
 @pytest.mark.django_db(transaction=True)
