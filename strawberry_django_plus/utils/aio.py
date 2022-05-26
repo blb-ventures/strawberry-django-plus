@@ -1,11 +1,8 @@
-import asyncio
-from asyncio.exceptions import CancelledError
 import functools
 from typing import (
     Any,
     Awaitable,
     Callable,
-    Coroutine,
     Optional,
     Type,
     TypeVar,
@@ -221,29 +218,25 @@ def resolver(func, *, on_result=None, on_error=None, info=None) -> Any:
                 raise retval
 
         if is_awaitable(retval, info=info):
-            future = asyncio.Future()
 
-            def resolve_future(task: asyncio.Task):
-                if future.cancelled():
-                    return
-
+            async def resolve():
                 try:
-                    exc = task.exception()
-                    if exc is not None:
-                        if on_error is not None:
-                            exc = on_error(exc)
+                    resolved = await retval
+                except Exception as exc:
+                    if on_error is not None:
+                        exc = on_error(exc)
 
-                        if isinstance(exc, BaseException):
-                            future.set_exception(exc)
-                        else:
-                            future.set_result(exc)
-                    else:
-                        future.set_result(task.result())
-                except CancelledError:
-                    future.cancel()
+                    if not isinstance(exc, BaseException):
+                        return exc
 
-            asyncio.create_task(cast(Coroutine, retval)).add_done_callback(resolve_future)
-            return future
+                    raise exc
+                else:
+                    if on_result is not None:
+                        resolved = on_result(resolved)
+
+                    return resolved
+
+            return resolve()
 
         if on_result is not None:
             retval = on_result(retval)
