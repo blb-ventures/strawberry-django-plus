@@ -24,6 +24,7 @@ from django.db.models.fields.reverse_related import (
 )
 from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
+from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry.extensions.base_extension import Extension
 from strawberry.lazy_type import LazyType
@@ -530,11 +531,9 @@ class DjangoOptimizerExtension(Extension):
         execution_context: Optional[ExecutionContext] = None,
     ):
         super().__init__(execution_context=execution_context)  # type:ignore
-        self.config = OptimizerConfig(
-            enable_only=enable_only_optimization,
-            enable_select_related=enable_select_related_optimization,
-            enable_prefetch_related=enable_prefetch_related_optimization,
-        )
+        self._enable_ony = enable_only_optimization
+        self._enable_select_related = enable_select_related_optimization
+        self._enable_prefetch_related = enable_prefetch_related_optimization
 
     def on_request_start(self) -> AwaitableOrValue[None]:
         if not self.enabled.get():
@@ -561,7 +560,14 @@ class DjangoOptimizerExtension(Extension):
             if isinstance(ret, BaseManager):
                 ret = ret.all()
             if ret._result_cache is None:  # type:ignore
-                return resolvers.resolve_qs(optimize(qs=ret, info=info, config=self.config))
+                config = OptimizerConfig(
+                    enable_only=(
+                        self._enable_ony and info.operation.operation == OperationType.QUERY
+                    ),
+                    enable_select_related=self._enable_select_related,
+                    enable_prefetch_related=self._enable_prefetch_related,
+                )
+                return resolvers.resolve_qs(optimize(qs=ret, info=info, config=config))
 
         return ret
 
@@ -575,4 +581,9 @@ class DjangoOptimizerExtension(Extension):
         if not self.enabled.get():
             return qs
 
-        return optimize(qs, info, config=self.config, store=store)
+        config = OptimizerConfig(
+            enable_only=self._enable_ony and info.operation.operation == OperationType.QUERY,
+            enable_select_related=self._enable_select_related,
+            enable_prefetch_related=self._enable_prefetch_related,
+        )
+        return optimize(qs, info, config=config, store=store)
