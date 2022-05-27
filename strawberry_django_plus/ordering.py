@@ -46,7 +46,7 @@ def order(  # noqa:A001
             cls,
             name=cast(str, name),
             description=cast(str, description),
-            directives=directives,  # type:ignore
+            directives=directives,
         )
 
     return wrapper
