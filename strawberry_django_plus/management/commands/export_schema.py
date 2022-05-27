@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from strawberry import Schema
+from strawberry.printer import print_schema
 from strawberry.utils.importer import import_module_symbol
-
-from strawberry_django_plus.utils.printer import print_schema
 
 
 class Command(BaseCommand):

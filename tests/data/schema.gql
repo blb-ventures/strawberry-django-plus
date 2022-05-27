@@ -58,12 +58,6 @@ When the condition fails, the following can happen (following this priority):
 """
 directive @hasPerm(permissions: [PermDefinition!]!, any: Boolean! = true) on FIELD_DEFINITION
 
-"""Permission definition for schema directives."""
-input PermDefinition {
-  resource: String
-  permission: String
-}
-
 input AssigneeInputPartial {
   id: GlobalID
   throughDefaults: AssigneeThroughInputPartial
@@ -700,4 +694,10 @@ type UserType implements Node {
   """Designates whether the user can log into this admin site."""
   isStaff: Boolean!
   fullName: String!
+}
+
+"""Permission definition for schema directives."""
+input PermDefinition {
+  resource: String
+  permission: String
 }

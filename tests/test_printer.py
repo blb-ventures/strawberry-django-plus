@@ -1,6 +1,6 @@
 import os
 
-from strawberry_django_plus.utils.printer import print_schema
+from strawberry.printer import print_schema
 
 
 def test_printer():

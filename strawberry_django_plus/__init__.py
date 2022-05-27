@@ -7,9 +7,6 @@ from strawberry.field import StrawberryField
 from strawberry.schema.name_converter import NameConverter
 from strawberry.types.fields.resolver import StrawberryResolver
 
-# Just import this for the monkey patch
-from .utils.printer import print_schema  # noqa:F401
-
 _cls_docs = {}
 _original_process_type = object_type._process_type
 _original_process_type = object_type._process_type

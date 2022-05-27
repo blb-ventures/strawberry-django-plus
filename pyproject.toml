@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "strawberry-django-plus"
-version = "1.13.2"
+version = "1.14"
 description = "Enhanced Strawberry GraphQL integration with Django"
 authors = ["Thiago Bellini Ribeiro <thiago@bellini.dev>"]
 license = "MIT"
@@ -29,7 +29,7 @@ packages = [{ include = "strawberry_django_plus" }]
 [tool.poetry.dependencies]
 python = "^3.8"
 django = ">= 3.2"
-strawberry-graphql = ">= 0.110.0"
+strawberry-graphql = ">= 0.114.0"
 strawberry-graphql-django = ">= 0.3"
 typing-extensions = ">= 4.1.0"
 django-debug-toolbar = { version = ">=3.4", optional = true }
