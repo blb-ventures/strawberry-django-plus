@@ -39,7 +39,7 @@ def order(  # noqa:A001
             if isinstance(type_, StrawberryAuto):
                 type_ = Ordering
 
-            cls.__annotations__[fname] = Optional[type_]
+            cls.__annotations__[fname] = Optional[type_]  # type:ignore
             setattr(cls, fname, UNSET)
 
         return strawberry.input(

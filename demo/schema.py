@@ -38,7 +38,7 @@ class UserType(relay.Node):
     id_attr = "username"
 
     @gql.django.field(only=["first_name", "last_name"])
-    def full_name(self, root: UserModel) -> str:
+    def full_name(self, root: AbstractUser) -> str:
         return f"{root.first_name or ''} {root.last_name or ''}".strip()
 
 
@@ -53,7 +53,7 @@ class StaffType(relay.Node):
     id_attr = "username"
 
     @classmethod
-    def get_queryset(cls, queryset: QuerySet[UserModel], info: Info) -> QuerySet[UserModel]:
+    def get_queryset(cls, queryset: QuerySet[AbstractUser], info: Info) -> QuerySet[AbstractUser]:
         return queryset.filter(is_staff=True)
 
 

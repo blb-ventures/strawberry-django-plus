@@ -237,7 +237,7 @@ def resolve_model_field_type(
             )
 
             if is_lookup:
-                retval = FilterLookup[retval]
+                retval = FilterLookup[retval]  # type:ignore
 
     is_input = django_type.is_input
     is_partial = django_type.is_partial
@@ -260,6 +260,6 @@ def resolve_model_field_type(
             optional = field.null
 
     if optional:
-        retval = Optional[retval]
+        retval = Optional[retval]  # type:ignore
 
     return retval

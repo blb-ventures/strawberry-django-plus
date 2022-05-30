@@ -144,7 +144,7 @@ class Assignee(models.Model):
         related_query_name="issue_assignee",
     )
     user_id: int
-    user = models.ForeignKey[User](
+    user = models.ForeignKey["User"](
         User,
         on_delete=models.CASCADE,
         related_name="issue_assignees",

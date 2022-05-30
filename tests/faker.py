@@ -28,7 +28,7 @@ class GroupFactory(_BaseFactory[Group]):
     name = factory.Sequence(lambda n: f"Group {n}")
 
 
-class UserFactory(_BaseFactory[User]):
+class UserFactory(_BaseFactory["User"]):
     class Meta:
         model = User
 
