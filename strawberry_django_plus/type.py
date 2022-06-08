@@ -226,7 +226,7 @@ def _get_fields(django_type: "StrawberryDjangoType"):
         if name in fields:
             continue
 
-        attr = getattr(origin, name)
+        attr = getattr(origin, name, None)
         if not isinstance(attr, StrawberryField):
             continue
 
