@@ -666,11 +666,11 @@ class Connection(Generic[NodeType]):
             https://relay.dev/graphql/connections.htm#sec-Pagination-algorithm
 
         """
-        if total_count is None:
-            try:
-                # Support ORMs that define .count() (e.g. django)
-                total_count = cast(int, nodes.count())  # type:ignore
-            except (AttributeError, TypeError):
+        if total_count is None:            
+            # Support ORMs that define .count() (e.g. django)
+            try:                        
+                total_count = int(nodes.count())
+            except (AttributeError, ValueError, TypeError):
                 if isinstance(nodes, Sized):
                     total_count = len(nodes)
                 else:
