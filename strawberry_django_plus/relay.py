@@ -669,7 +669,7 @@ class Connection(Generic[NodeType]):
         if total_count is None:
             # Support ORMs that define .count() (e.g. django)
             try:
-                total_count = int(nodes.count())
+                total_count = int(nodes.count())  # type:ignore
             except (AttributeError, ValueError, TypeError):
                 if isinstance(nodes, Sized):
                     total_count = len(nodes)
