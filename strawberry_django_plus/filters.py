@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any, Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
@@ -37,6 +38,9 @@ def _build_filter_kwargs(filters):
         if field_value is UNSET:
             continue
 
+        if isinstance(field_value, Enum):
+            field_value = field_value.value
+
         field_name = _filters.lookup_name_conversion_map.get(field_name, field_name)
         filter_method = getattr(filters, f"filter_{field_name}", None)
         if filter_method:
@@ -49,6 +53,8 @@ def _build_filter_kwargs(filters):
         if utils.is_strawberry_type(field_value):
             subfield_filter_kwargs, subfield_filter_methods = _build_filter_kwargs(field_value)
             for subfield_name, subfield_value in subfield_filter_kwargs.items():
+                if isinstance(subfield_value, Enum):
+                    subfield_value = subfield_value.value
                 filter_kwargs[f"{field_name}__{subfield_name}"] = subfield_value
 
             filter_methods.extend(subfield_filter_methods)
