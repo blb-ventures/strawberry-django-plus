@@ -36,8 +36,9 @@ import uuid
 
 from graphql import GraphQLID
 import strawberry
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument
+from strawberry.arguments import StrawberryArgument
 from strawberry.custom_scalar import ScalarDefinition
 from strawberry.field import StrawberryField
 from strawberry.lazy_type import LazyType

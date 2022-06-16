@@ -2,7 +2,7 @@ from typing import Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
 import strawberry
-from strawberry.arguments import UNSET
+from strawberry import UNSET
 from strawberry.auto import StrawberryAuto
 from strawberry.field import StrawberryField
 from strawberry.utils.typing import __dataclass_transform__

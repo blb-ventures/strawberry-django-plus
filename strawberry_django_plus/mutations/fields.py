@@ -21,8 +21,9 @@ from django.core.exceptions import (
     ValidationError,
 )
 import strawberry
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument
+from strawberry.arguments import StrawberryArgument
 from strawberry.permission import BasePermission
 from strawberry.type import StrawberryType
 from strawberry.types.fields.resolver import StrawberryResolver

@@ -19,7 +19,7 @@ from django.db.models.fields import NOT_PROVIDED
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ForeignObjectRel
 import strawberry
-from strawberry.arguments import UNSET
+from strawberry import UNSET
 from strawberry.custom_scalar import ScalarWrapper
 from strawberry.file_uploads import Upload
 from strawberry.type import StrawberryType

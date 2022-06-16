@@ -25,7 +25,7 @@ from django.db.models.fields.reverse_related import (
     OneToOneRel,
 )
 import strawberry
-from strawberry.arguments import UNSET
+from strawberry import UNSET
 from strawberry.file_uploads.scalars import Upload
 from strawberry.types.info import Info
 from strawberry_django.fields.types import (
