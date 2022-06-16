@@ -26,8 +26,8 @@ from django.db.models.fields.related_descriptors import (
 )
 from django.db.models.query_utils import DeferredAttribute
 import strawberry
-from strawberry.annotation import StrawberryAnnotation
 from strawberry import UNSET
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
