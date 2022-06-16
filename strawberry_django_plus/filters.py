@@ -1,6 +1,7 @@
 from typing import Any, Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
+from django.db.models.sql.query import get_field_names_from_opts  # type:ignore
 from strawberry import UNSET
 from strawberry.field import StrawberryField
 from strawberry.utils.typing import __dataclass_transform__
@@ -43,7 +44,7 @@ def _build_filter_kwargs(filters):
             filter_methods.append(filter_method)
             continue
 
-        if django_model and field_name not in django_model._meta._forward_fields_map:  # type:ignore
+        if django_model and field_name not in get_field_names_from_opts(django_model._meta):
             continue
 
         if utils.is_strawberry_type(field_value):
