@@ -292,7 +292,7 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
         assert data is not None
 
         vdata = vars(data)
-        pk = vdata.pop("id")
+        pk = vdata.pop("id", UNSET)
         if pk is UNSET:
             pk = vdata.pop("pk")
 
