@@ -1010,7 +1010,11 @@ class InputMutationField(RelayField):
                 name=arg.graphql_name,
                 is_subscription=arg.is_subscription,
                 description=arg.description,
-                default=arg.default,
+                # FIXME: We are using default_factory instead of default to allow the default
+                # value to be UNSET if it was given as such.
+                default_factory=(
+                    (lambda: arg.default) if arg.default is not dataclasses.MISSING else UNSET
+                ),
                 directives=directives,
             )
             arg_field.graphql_name = arg.graphql_name
