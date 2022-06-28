@@ -261,7 +261,6 @@ class AuthDirective(SchemaDirectiveWithResolver):
                     resolver,
                     root,
                     info,
-                    **kwargs,
                 ),
                 info=info,
             )
@@ -374,17 +373,16 @@ class ConditionDirective(AuthDirective):
         root: Any,
         info: GraphQLResolveInfo,
         user: UserType,
-        **kwargs,
     ):
         return self.resolve_retval(
             helper,
             root,
             info,
             resolver,
-            self.check_condition(root, info, user, **kwargs),
+            self.check_condition(root, info, user),
         )
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType):
         raise NotImplementedError
 
 
@@ -398,7 +396,7 @@ class IsAuthenticated(ConditionDirective):
 
     message: Private[str] = dataclasses.field(default="User is not authenticated.")
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType):
         return user.is_authenticated and user.is_active
 
 
@@ -412,7 +410,7 @@ class IsStaff(ConditionDirective):
 
     message: Private[str] = dataclasses.field(default="User is not a staff member.")
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType):
         return user.is_authenticated and user.is_staff
 
 
@@ -426,7 +424,7 @@ class IsSuperuser(ConditionDirective):
 
     message: Private[str] = dataclasses.field(default="User is not a superuser.")
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType):
         return user.is_authenticated and user.is_superuser
 
 
