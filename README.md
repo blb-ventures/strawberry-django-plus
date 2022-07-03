@@ -95,7 +95,7 @@ class Artist(models.Model):
 class Album(models.Moodel):
     name = models.CharField()
     release_date = models.DateTimeField()
-    artist = models.ForeignKey("Artist", related_name="albuns")
+    artist = models.ForeignKey("Artist", related_name="albums")
 
 class Song(models.Model):
     name = model.CharField()
@@ -207,13 +207,13 @@ Song.objects.all().only(
 )
 ```
 
-Note that even though `album__release_date` field was not selected here, it got selected
-in the prefetch query later. Since Django caches known objects, we have to select it here or
-else it would trigger extra queries latter.
+Note that even though the `album__release_date` field was not selected here, it was later selected
+in the prefetch query. Since Django caches known objects, we have to select it here, or
+else it would trigger extra queries later.
 
 It is also possible to include hints for non-model fields using the field api or even our
 `@model_property` (or its cached variation, `@cached_model_property`) decorator on the model
-itself, for people who likes to keep all the business logic at the model.
+itself, for people who like to keep all the business logic at the model.
 
 For example, the following will automatically optimize `only` and `select_related` if that
 field gets selected:
@@ -271,7 +271,7 @@ name so that this lib will not try to register it again.
 
 ### Permissioned resolvers
 
-Permissioning is done using schema directives by applying them to the fields that requires
+Permissioning is done using schema directives by applying them to the fields that require
 permission checking.
 
 For example:
@@ -340,7 +340,7 @@ schema = strawberry.Schema(
 
 ### Django mutations
 
-This lib provides 3 CRUD mutations for create/update/delete operations, and also a facility
+This lib provides 3 CRUD mutations for create/update/delete operations and also a facility
 for creating custom mutations with automatic `ValidationError` support.
 
 ## CRUD mutations
@@ -381,7 +381,7 @@ class Mutation:
 
 It is possible to create custom model mutations with `gql.django.input_mutation`, which will
 automatically convert the arguments to a input type and mark the return value as a union
-between the type annotation and `types.OperationInfo`. The later will be returned if
+between the type annotation and `types.OperationInfo`. The latter will be returned if
 the resolver raises `ValidationError`.
 
 For example:
@@ -488,14 +488,14 @@ type Query {
 ```
 
 It is expected that types implementing the `Node` interface define some methods, like
-`resolve_nodes` and `resolve_node`. By default the `id` field is used for the node id.
-This is customizable with the `id_attr` attribute. Take a look at
+`resolve_nodes` and `resolve_node`. By default, the `id` field is used for the node id.
+However, this is customizable with the `id_attr` attribute. Take a look at
 [the documentation](/strawberry_django_plus/relay.py) for more information.
 
 Also note that Django fields created with `@gql.django.type` automatically implements
 all of the required methods when the type inherits from `Node`.
-By default the `pk` field is used for the node id (overwrites the default `id` field) but
-can also be customized with the `id_attr`attribute.
+By default, the `pk` field is used for the node id (overwrites the default `id` field), but
+this can also be customized with the `id_attr`attribute.
 
 This module also exposes a mutation that converts all of its arguments to a single input.
 For example:
@@ -545,8 +545,8 @@ MIDDLEWARE = [
 
 ## Contributing
 
-We use [poetry](https://github.com/sdispater/poetry) to manage dependencies, to
-get started follow these steps:
+We use [poetry](https://github.com/sdispater/poetry) to manage dependencies. To
+get started, follow these steps:
 
 ```shell
 git clone https://github.com/blb-ventures/strawberry-django-plus
@@ -560,7 +560,7 @@ This will install all the dependencies (including dev ones) and run the tests.
 ### Pre commit
 
 We have a configuration for
-[pre-commit](https://github.com/pre-commit/pre-commit), to add the hook run the
+[pre-commit](https://github.com/pre-commit/pre-commit). To add the hook, run the
 following command:
 
 ```shell
