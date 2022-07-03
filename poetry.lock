@@ -120,11 +120,11 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "charset-normalizer"
-version = "2.0.12"
+version = "2.1.0"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 category = "dev"
 optional = false
-python-versions = ">=3.5.0"
+python-versions = ">=3.6.0"
 
 [package.extras]
 unicode_backport = ["unicodedata2"]
@@ -310,7 +310,7 @@ flake8 = ">=3.5,<5"
 
 [[package]]
 name = "flake8-bugbear"
-version = "22.6.22"
+version = "22.7.1"
 description = "A plugin for flake8 finding likely bugs and design problems in your program. Contains warnings that don't belong in pyflakes and pycodestyle."
 category = "dev"
 optional = false
@@ -741,7 +741,7 @@ six = ">=1.4.0"
 
 [[package]]
 name = "requests"
-version = "2.28.0"
+version = "2.28.1"
 description = "Python HTTP for Humans."
 category = "dev"
 optional = false
@@ -749,13 +749,13 @@ python-versions = ">=3.7, <4"
 
 [package.dependencies]
 certifi = ">=2017.4.17"
-charset-normalizer = ">=2.0.0,<2.1.0"
+charset-normalizer = ">=2,<3"
 idna = ">=2.5,<4"
 urllib3 = ">=1.21.1,<1.27"
 
 [package.extras]
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
-use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
+use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "six"
@@ -791,7 +791,7 @@ tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.114.5"
+version = "0.116.1"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -808,7 +808,7 @@ typing_extensions = ">=3.7.4,<5.0.0"
 
 [package.extras]
 asgi = ["starlette (>=0.13.6)"]
-debug-server = ["starlette (>=0.13.6)", "uvicorn (>=0.11.6,<0.18.0)"]
+debug-server = ["starlette (>=0.13.6)", "uvicorn (>=0.11.6,<0.19.0)"]
 django = ["Django (>=3.2)", "asgiref (>=3.2,<4.0)"]
 flask = ["flask (>=1.1)"]
 opentelemetry = ["opentelemetry-api (<2)", "opentelemetry-sdk (<2)"]
@@ -820,7 +820,7 @@ fastapi = ["fastapi (>=0.65.2)"]
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.3"
+version = "0.3.1"
 description = "Strawberry GraphQL Django extension"
 category = "main"
 optional = false
@@ -851,7 +851,7 @@ test = ["pre-commit", "pytest"]
 
 [[package]]
 name = "typing-extensions"
-version = "4.2.0"
+version = "4.3.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 category = "main"
 optional = false
@@ -893,7 +893,7 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "333c1f2e41e6c63af4e319e160f6cdcc46612974a8c4587a30a321780ebb7058"
+content-hash = "f0734080df13635f60ea9e8387a68123d99906d3c65610e6d9efe3bc9c111533"
 
 [metadata.files]
 appnope = [
@@ -976,8 +976,8 @@ certifi = [
     {file = "certifi-2022.6.15.tar.gz", hash = "sha256:84c85a9078b11105f04f3036a9482ae10e4621616db313fe045dd24743a0820d"},
 ]
 charset-normalizer = [
-    {file = "charset-normalizer-2.0.12.tar.gz", hash = "sha256:2857e29ff0d34db842cd7ca3230549d1a697f96ee6d3fb071cfa6c7393832597"},
-    {file = "charset_normalizer-2.0.12-py3-none-any.whl", hash = "sha256:6881edbebdb17b39b4eaaa821b438bf6eddffb4468cf344f09f89def34a8b1df"},
+    {file = "charset-normalizer-2.1.0.tar.gz", hash = "sha256:575e708016ff3a5e3681541cb9d79312c416835686d054a23accb873b254f413"},
+    {file = "charset_normalizer-2.1.0-py3-none-any.whl", hash = "sha256:5189b6f22b01957427f35b6a08d9a0bc45b46d3788ef5a92e978433c7a35f8a5"},
 ]
 click = [
     {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
@@ -1084,8 +1084,8 @@ flake8-broken-line = [
     {file = "flake8_broken_line-0.4.0-py3-none-any.whl", hash = "sha256:e9c522856862239a2c7ef2c1de0276fa598572aa864bd4e9c7efc2a827538515"},
 ]
 flake8-bugbear = [
-    {file = "flake8-bugbear-22.6.22.tar.gz", hash = "sha256:ac3317eba27d79dc19dcdeb7356ca1f656f0cde11d899c4551badf770f05cbef"},
-    {file = "flake8_bugbear-22.6.22-py3-none-any.whl", hash = "sha256:ad2b33dbe33a6d4ca1f0037e1d156d0a89107ee63c0600e3b4f7b60e37998ac2"},
+    {file = "flake8-bugbear-22.7.1.tar.gz", hash = "sha256:e450976a07e4f9d6c043d4f72b17ec1baf717fe37f7997009c8ae58064f88305"},
+    {file = "flake8_bugbear-22.7.1-py3-none-any.whl", hash = "sha256:db5d7a831ef4412a224b26c708967ff816818cabae415e76b8c58df156c4b8e5"},
 ]
 flake8-builtins = [
     {file = "flake8-builtins-1.5.3.tar.gz", hash = "sha256:09998853b2405e98e61d2ff3027c47033adbdc17f9fe44ca58443d876eb00f3b"},
@@ -1232,8 +1232,8 @@ python-multipart = [
     {file = "python-multipart-0.0.5.tar.gz", hash = "sha256:f7bb5f611fc600d15fa47b3974c8aa16e93724513b49b5f95c81e6624c83fa43"},
 ]
 requests = [
-    {file = "requests-2.28.0-py3-none-any.whl", hash = "sha256:bc7861137fbce630f17b03d3ad02ad0bf978c844f3536d0edda6499dafce2b6f"},
-    {file = "requests-2.28.0.tar.gz", hash = "sha256:d568723a7ebd25875d8d1eaf5dfa068cd2fc8194b2e483d7b1f7c81918dbec6b"},
+    {file = "requests-2.28.1-py3-none-any.whl", hash = "sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349"},
+    {file = "requests-2.28.1.tar.gz", hash = "sha256:7c5599b102feddaa661c826c56ab4fee28bfd17f5abca1ebbe3e7f19d7c97983"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
@@ -1248,12 +1248,12 @@ stack-data = [
     {file = "stack_data-0.3.0.tar.gz", hash = "sha256:77bec1402dcd0987e9022326473fdbcc767304892a533ed8c29888dacb7dddbc"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.114.5.tar.gz", hash = "sha256:b6e007281cf29a66eeba66a512744853d8aa53b4ca2525befb6f350bb7b24df6"},
-    {file = "strawberry_graphql-0.114.5-py3-none-any.whl", hash = "sha256:3f65de6c16ec3630cf2ad319040da71b91bec0076dd7d4e510d5e855ff785ff6"},
+    {file = "strawberry-graphql-0.116.1.tar.gz", hash = "sha256:087b503d674437f14bb1e160fb6b8a7e8defbc1a4f8e70f580ad66b7e4ee019c"},
+    {file = "strawberry_graphql-0.116.1-py3-none-any.whl", hash = "sha256:c49698dfd901e35dd5ac96d7ec7e3b497bcd413bba636df00eb3a5a5f3db25ba"},
 ]
 strawberry-graphql-django = [
-    {file = "strawberry-graphql-django-0.3.tar.gz", hash = "sha256:4f262b33dacb2e93b466ab231cb7b547f03debf229fed554c5d87f9e342fc1a2"},
-    {file = "strawberry_graphql_django-0.3-py3-none-any.whl", hash = "sha256:931970edc3c774b6ec656f9cff22c954327261877fc7ceede82b1bf4020b2bd4"},
+    {file = "strawberry-graphql-django-0.3.1.tar.gz", hash = "sha256:d66dd816211b5e4a60920a9e0697c1df63d8e14edf02ab04e1c1b696d19eda33"},
+    {file = "strawberry_graphql_django-0.3.1-py3-none-any.whl", hash = "sha256:f2c55da70d02cb67ee225995798a4b5f26b802228a4fa8fb931eb55e50c775dd"},
 ]
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
@@ -1264,8 +1264,8 @@ traitlets = [
     {file = "traitlets-5.3.0.tar.gz", hash = "sha256:0bb9f1f9f017aa8ec187d8b1b2a7a6626a2a1d877116baba52a129bfa124f8e2"},
 ]
 typing-extensions = [
-    {file = "typing_extensions-4.2.0-py3-none-any.whl", hash = "sha256:6657594ee297170d19f67d55c05852a874e7eb634f4f753dbd667855e07c1708"},
-    {file = "typing_extensions-4.2.0.tar.gz", hash = "sha256:f1c24655a0da0d1b67f07e17a5e6b2a105894e6824b92096378bb3668ef02376"},
+    {file = "typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
+    {file = "typing_extensions-4.3.0.tar.gz", hash = "sha256:e6d2677a32f47fc7eb2795db1dd15c1f34eff616bcaf2cfb5e997f854fa1c4a6"},
 ]
 tzdata = [
     {file = "tzdata-2022.1-py2.py3-none-any.whl", hash = "sha256:238e70234214138ed7b4e8a0fab0e5e13872edab3be586ab8198c407620e2ab9"},

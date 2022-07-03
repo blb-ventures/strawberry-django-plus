@@ -1013,7 +1013,9 @@ class InputMutationField(RelayField):
                 # FIXME: We are using default_factory instead of default to allow the default
                 # value to be UNSET if it was given as such.
                 default_factory=(
-                    (lambda: arg.default) if arg.default is not dataclasses.MISSING else UNSET
+                    (lambda _arg=arg: _arg.default)
+                    if arg.default is not dataclasses.MISSING
+                    else UNSET
                 ),
                 directives=directives,
             )
@@ -1040,10 +1042,7 @@ class InputMutationField(RelayField):
 
     @property
     def arguments(self) -> List[StrawberryArgument]:
-        args = [
-            arg for arg in super().arguments if arg.python_name in StrawberryResolver._SPECIAL_ARGS
-        ]
-        return args + list(self.default_args.values())
+        return list(self.default_args.values())
 
     def get_result(
         self,

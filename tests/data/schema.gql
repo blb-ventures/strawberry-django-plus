@@ -398,7 +398,7 @@ type Query {
     ids: [GlobalID!]!
   ): [StaffType!]!
   issueList: [IssueType!]!
-  milestoneList(pagination: OffsetPaginationInput, order: MilestoneOrder, filters: MilestoneFilter): [MilestoneType!]!
+  milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   projectList: [ProjectType!]!
   tagList: [TagType!]!
   issueConn(
@@ -426,8 +426,8 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-    order: MilestoneOrder
     filters: MilestoneFilter
+    order: MilestoneOrder
   ): MilestoneTypeConnection!
   projectConn(
     """Returns the items in the list that come before the specified cursor."""
