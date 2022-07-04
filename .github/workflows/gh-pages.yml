@@ -26,4 +26,4 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: 3.x
-      - run: 	poetry install --extras "docs"; mkdocs gh-deploy --force;
+      - run: 	poetry install --extras "docs"; python -m mkdocs gh-deploy --force;
