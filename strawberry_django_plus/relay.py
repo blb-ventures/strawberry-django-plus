@@ -623,8 +623,9 @@ class Connection(Generic[NodeType]):
     edges: List[Edge[NodeType]] = strawberry.field(
         description="Contains the nodes in this connection",
     )
-    total_count: int = strawberry.field(
+    total_count: Optional[int] = strawberry.field(
         description="Total quantity of existing nodes",
+        default=None,
     )
 
     @classmethod
@@ -674,32 +675,30 @@ class Connection(Generic[NodeType]):
             except (AttributeError, ValueError, TypeError):
                 if isinstance(nodes, Sized):
                     total_count = len(nodes)
-                else:
-                    nodes = list(nodes)
-                    total_count = len(nodes)
+
+        max_results = config.RELAY_MAX_RESULTS
+        if max_results is None:
+            max_results = math.inf
 
         start = 0
-        end = total_count
+        end = total_count if total_count is not None else math.inf
 
         if after:
             after_type, after_parsed = from_base64(after)
             assert after_type == connection_typename
-            start = max(start, int(after_parsed) + 1)
+            start = int(after_parsed) + 1
         if before:
             before_type, before_parsed = from_base64(before)
             assert before_type == connection_typename
-            end = min(end, int(before_parsed))
+            end = int(before_parsed)
 
-        has_first_or_last = False
-        max_results = config.RELAY_MAX_RESULTS
-        if max_results is None:
-            max_results = math.inf
+        if end is None:
+            end = max_results
 
         if isinstance(first, int):
             if first < 0:
                 raise ValueError("Argument 'first' must be a non-negative integer.")
 
-            has_first_or_last = True
             if first > max_results:
                 raise ValueError(f"Argument 'first' cannot be higher than {max_results}.")
 
@@ -711,21 +710,40 @@ class Connection(Generic[NodeType]):
             if last > max_results:
                 raise ValueError(f"Argument 'last' cannot be higher than {max_results}.")
 
-            has_first_or_last = True
+            if end == math.inf:
+                raise ValueError("Cannot use last with unlimited results")
+
             start = max(start, end - last)
 
-        if not has_first_or_last:
-            end = min(end, start + max_results)
+        # If at this point end is still inf, consider it to be start + max_results
+        if end == math.inf:
+            end = start + max_results
 
+        expected = end - start
+        # If no parameters are given, end could be total_results at this point.
+        # Make sure we don't exceed max_results in here
+        if expected > max_results:
+            end = start + max_results
+            expected = end - start
+
+        # Overfetch by 1 to check if we have a next result
         edges = [
             Edge(cursor=to_base64(connection_typename, start + i), node=v)
-            for i, v in enumerate(cast(Sequence, nodes)[start:end])
+            for i, v in enumerate(cast(Sequence, nodes)[start : end + 1])  # noqa:E203
         ]
+
+        # Remove the overfetched result
+        if len(edges) == expected + 1:
+            edges = edges[:-1]
+            has_next_page = True
+        else:
+            has_next_page = False
+
         page_info = PageInfo(
             start_cursor=edges[0].cursor if edges else None,
             end_cursor=edges[-1].cursor if edges else None,
             has_previous_page=start > 0,
-            has_next_page=end < total_count,
+            has_next_page=has_next_page,
         )
 
         return cls(

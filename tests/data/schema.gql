@@ -173,7 +173,7 @@ type IssueTypeConnection {
   edges: [IssueTypeEdge!]!
 
   """Total quantity of existing nodes"""
-  totalCount: Int!
+  totalCount: Int
 }
 
 """An edge in a connection."""
@@ -224,7 +224,7 @@ type MilestoneTypeConnection {
   edges: [MilestoneTypeEdge!]!
 
   """Total quantity of existing nodes"""
-  totalCount: Int!
+  totalCount: Int
 }
 
 """An edge in a connection."""
@@ -345,7 +345,7 @@ type ProjectTypeConnection {
   edges: [ProjectTypeEdge!]!
 
   """Total quantity of existing nodes"""
-  totalCount: Int!
+  totalCount: Int
 }
 
 """An edge in a connection."""
@@ -583,7 +583,7 @@ type StaffTypeConnection {
   edges: [StaffTypeEdge!]!
 
   """Total quantity of existing nodes"""
-  totalCount: Int!
+  totalCount: Int
 }
 
 """An edge in a connection."""
@@ -660,7 +660,7 @@ type TagTypeConnection {
   edges: [TagTypeEdge!]!
 
   """Total quantity of existing nodes"""
-  totalCount: Int!
+  totalCount: Int
 }
 
 """An edge in a connection."""
