@@ -14,9 +14,10 @@ test:
 
 
 serve:
-	${POETRY} install --extras "docs"
+	poetry install --extras "docs"
 	${MKDOCS} serve
 
 deploy-docs:
-	${POETRY} install -E "docs"
-	${MKDOCS} gh-deploy --force
+	python3 -m pip install poetry
+	poetry install -E "docs"
+	mkdocs gh-deploy --force
