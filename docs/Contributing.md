@@ -20,4 +20,6 @@ pre-commit install
 ```
 
 ### Docs setup and local server:
-`make serve`
+```shell
+make serve-docs
+```
