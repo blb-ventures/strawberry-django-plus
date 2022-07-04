@@ -21,4 +21,9 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-        - run: 	poetry install --extras "docs"; mkdocs gh-deploy --force
+        - name: Install dependencies
+          run: |
+          poetry install --extras "docs";
+        - name: build and deploy docs
+          run: |
+            mkdocs gh-deploy --force;
