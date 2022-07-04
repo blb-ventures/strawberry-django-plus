@@ -1,4 +1,4 @@
-.PHONY : install test serve deploy-docs
+.PHONY : install test serve
 
 POETRY := $(shell command -v poetry 2> /dev/null)
 MKDOCS := $(shell command -v mkdocs 2> /dev/null)
@@ -18,7 +18,7 @@ serve:
 
 deploy-docs:
 	python -m pip install poetry
-	poetry export -f requirements.txt --output requirements.txt --without-hashes
+	poetry export -E docs -f requirements.txt --output requirements.txt --without-hashes
 	python -m pip install -r requirements.txt # for some reason it is not installed by poetry
 	mkdocs gh-deploy --force
 	rm requirements.txt
