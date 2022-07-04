@@ -5,7 +5,6 @@ MKDOCS := $(shell command -v mkdocs 2> /dev/null)
 
 all: install test serve
 
-
 install:
 	${POETRY} install
 
@@ -20,5 +19,5 @@ serve:
 deploy-docs:
 	python3 -m pip install poetry
 	poetry install -E "docs"
-	poetry run pip install mkdocs
-	python -m mkdocs gh-deploy --force
+	poetry run pip install mkdocs # for some reason it is not installed by poetry
+	mkdocs gh-deploy --force
