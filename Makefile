@@ -1,10 +1,9 @@
-.PHONY : install test serve deploy-docs
+.PHONY : install test serve lint
 
 POETRY := $(shell command -v poetry 2> /dev/null)
 MKDOCS := $(shell command -v mkdocs 2> /dev/null)
 
 all: install test serve
-
 
 install:
 	${POETRY} install
@@ -14,11 +13,13 @@ test:
 
 
 serve:
-	${POETRY} install --extras "docs"
+	poetry install --extras "docs"
 	${MKDOCS} serve
 
-# gh-actions use only!
+
 deploy-docs:
-	${POETRY} install --extras "docs"
-	python docs/pre_build.py
-	${MKDOCS} gh-deploy --force
+	python -m pip install poetry
+	poetry export -E docs -f requirements.txt --output requirements.txt --without-hashes
+	python -m pip install -r requirements.txt # for some reason it is not installed by poetry
+	mkdocs gh-deploy --force
+	rm requirements.txt

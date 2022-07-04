@@ -1,5 +1,5 @@
 site_name: Strawberry Django +
-site_description: Strawberry-Django extra features
+site_description: Strawberry-Django with extra features
 #site_url: https://nrbnlulu.github.io/strawberry-django-auth/
 site_author: community
 repo_name: strawberry-django-plus
@@ -56,10 +56,6 @@ markdown_extensions:
   - md_in_html
   - pymdownx.tabbed:
       alternate_style: true
-
-  - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
 
   - toc:
       permalink: true
