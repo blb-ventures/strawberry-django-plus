@@ -334,7 +334,7 @@ def _process_type(
     return cls
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
     """Strawberry django type metadata."""
 
