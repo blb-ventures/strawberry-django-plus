@@ -20,4 +20,5 @@ serve:
 deploy-docs:
 	python3 -m pip install poetry
 	poetry install -E "docs"
-	mkdocs gh-deploy --force
+	poetry run pip install mkdocs
+	python -m mkdocs gh-deploy --force
