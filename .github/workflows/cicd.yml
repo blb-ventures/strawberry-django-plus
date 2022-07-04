@@ -52,12 +52,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry install -E debug-toolbar -E enum -E docs
+          poetry install -E debug-toolbar -E enum
           poetry run pip install "Django~=${{ matrix.django-version }}"
-
-      - name: build and deploy docs
-        run: |
-          mkdocs gh-deploy --force;
 
       - name: Check for pyright errors
         uses: jakebailey/pyright-action@v1
