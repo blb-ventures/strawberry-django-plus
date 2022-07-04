@@ -19,6 +19,6 @@ serve:
 
 # gh-actions use only!
 deploy-docs:
-	${POETRY} install --extras "docs"
+	poetry install --extras "docs"
 	python docs/pre_build.py
-	${MKDOCS} gh-deploy --force
+	mkdocs gh-deploy --force
