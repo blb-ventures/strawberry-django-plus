@@ -23,40 +23,44 @@ Now consider the following:
 
         class Artist(models.Model):
             name = models.CharField()
-        
+
+
         class Album(models.Moodel):
             name = models.CharField()
             release_date = models.DateTimeField()
             artist = models.ForeignKey("Artist", related_name="albuns")
-        
+
+
         class Song(models.Model):
             name = model.CharField()
             duration = models.DecimalField()
             album = models.ForeignKey("Album", related_name="songs")
         ```
     === "schema"
-    
         ```python
         from strawberry_django_plus import gql
-        
+
         @gql.django.type(Artist)
         class ArtistType:
             name: auto
             albums: "List[AlbumType]"
-        
+
+
         @gql.django.type(Album)
         class AlbumType:
             name: auto
             release_date: auto
             artist: ArtistType
             songs: "List[SongType]"
-        
+
+
         @gql.django.type(Song)
         class SongType:
             name: auto
             duration: auto
             album_type: AlbumType
-        
+
+
         @gql.type
         class Query:
             artist: Artist = gql.django.field()
@@ -64,7 +68,6 @@ Now consider the following:
         ```
 
     === "query for the artist field"
-
         ```gql
         query {
           artist {
