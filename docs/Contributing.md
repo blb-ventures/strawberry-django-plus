@@ -20,5 +20,5 @@ pre-commit install
 ```
 
 ### Docs setup and local server:
-`make serve` or `make -f ./MakeFile serve`
+`make serve`
 

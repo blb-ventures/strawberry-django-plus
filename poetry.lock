@@ -441,7 +441,7 @@ name = "importlib-metadata"
 version = "4.12.0"
 description = "Read metadata from Python packages"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -551,7 +551,7 @@ name = "markdown"
 version = "3.3.7"
 description = "Python implementation of Markdown."
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -992,7 +992,7 @@ tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.114.5"
+version = "0.116.2"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -1009,7 +1009,7 @@ typing_extensions = ">=3.7.4,<5.0.0"
 
 [package.extras]
 asgi = ["starlette (>=0.13.6)"]
-debug-server = ["starlette (>=0.13.6)", "uvicorn (>=0.11.6,<0.18.0)"]
+debug-server = ["starlette (>=0.13.6)", "uvicorn (>=0.11.6,<0.19.0)"]
 django = ["Django (>=3.2)", "asgiref (>=3.2,<4.0)"]
 flask = ["flask (>=1.1)"]
 opentelemetry = ["opentelemetry-api (<2)", "opentelemetry-sdk (<2)"]
@@ -1103,7 +1103,7 @@ name = "zipp"
 version = "3.8.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.7"
 
 [package.extras]
@@ -1112,13 +1112,13 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 
 [extras]
 debug-toolbar = ["django-debug-toolbar"]
-docs = ["mkdocs", "mkdocs-markdownextradata-plugin"]
+docs = ["mkdocs", "mkdocs-markdownextradata-plugin", "mkdocs-material", "mkdocs-minify-plugin", "pymdown-extensions", "markdown"]
 enum = ["django-choices-field"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "d9f9c72260a66d1d0e098a3e6a7a0895d4eb513d49fe24eb4ea610078ef81e2c"
+content-hash = "d664f9fb33d5dc96028e585283e41d1f9aa402d21a530ed971b079703804f3f0"
 
 [metadata.files]
 appnope = [
@@ -1606,8 +1606,8 @@ stack-data = [
     {file = "stack_data-0.3.0.tar.gz", hash = "sha256:77bec1402dcd0987e9022326473fdbcc767304892a533ed8c29888dacb7dddbc"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.114.5.tar.gz", hash = "sha256:b6e007281cf29a66eeba66a512744853d8aa53b4ca2525befb6f350bb7b24df6"},
-    {file = "strawberry_graphql-0.114.5-py3-none-any.whl", hash = "sha256:3f65de6c16ec3630cf2ad319040da71b91bec0076dd7d4e510d5e855ff785ff6"},
+    {file = "strawberry-graphql-0.116.2.tar.gz", hash = "sha256:d0d1db73a71df1fb1f95fe061ad526394f0b028fa26cede7461c82388f3ef3e5"},
+    {file = "strawberry_graphql-0.116.2-py3-none-any.whl", hash = "sha256:9f972d3789f4ce61aeb9c76b12809b6969055636c95df3641809b420a9b4d2be"},
 ]
 strawberry-graphql-django = [
     {file = "strawberry-graphql-django-0.3.tar.gz", hash = "sha256:4f262b33dacb2e93b466ab231cb7b547f03debf229fed554c5d87f9e342fc1a2"},
