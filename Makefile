@@ -20,6 +20,7 @@ deploy-docs:
 	python3 -m pip install poetry
 	poetry export -f requirements.txt --output requirements.txt --without-hashes
 	python3 -m pip install -r requirements.txt
+	python3 -m pip install mkdocs-material-extensions
 	python3 -m pip install mkdocs # for some reason it is not installed by poetry
 	python3 -m mkdocs gh-deploy --force
 	rm requirements.txt
