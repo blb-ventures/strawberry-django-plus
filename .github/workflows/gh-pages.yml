@@ -15,4 +15,3 @@ jobs:
         with:
           python-version: 3.10.4
       - run: make deploy-docs
-

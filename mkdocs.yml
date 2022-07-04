@@ -10,20 +10,18 @@ theme:
   language: en
   palette:
   - scheme: default
-    primary: purple
-    accent: indigo
+    primary: red
+    accent: green
     toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to light mode
 
   - scheme: slate
-    primary: black
-    accent: purple
+    primary: green
+    accent: red
     toggle:
       icon: material/toggle-switch
       name: Switch to dark mode
-
-
 
   logo: images/logo.png
   favicon: images/logo.svg
