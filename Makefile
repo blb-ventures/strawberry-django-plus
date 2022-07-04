@@ -17,9 +17,9 @@ serve:
 	${MKDOCS} serve
 
 deploy-docs:
-	pip install poetry
+	python3 -m pip install poetry
 	poetry export -f requirements.txt --output requirements.txt --without-hashes
-	pip install -r requirements.txt
-	pip install mkdocs # for some reason it is not installed by poetry
-	python -m mkdocs gh-deploy --force
+	python3 -m pip install -r requirements.txt
+	python3 -m pip install mkdocs # for some reason it is not installed by poetry
+	python3 -m mkdocs gh-deploy --force
 	rm requirements.txt
