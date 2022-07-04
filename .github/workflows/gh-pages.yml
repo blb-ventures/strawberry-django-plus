@@ -22,8 +22,5 @@ jobs:
           path: .venv
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v3
-        with:
-          python-version: 3.x
-      - run: 	poetry install --extras "docs"; python -m mkdocs gh-deploy --force;
+      - uses: actions/cache@v3
+          - run: poetry install --extras docs; python -m mkdocs gh-deploy --force;
