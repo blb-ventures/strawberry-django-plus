@@ -74,7 +74,7 @@ __all__ = [
 
 _T = TypeVar("_T")
 _R = TypeVar("_R")
-_connection_typename = "arrayconnection"
+connection_typename = "arrayconnection"
 
 NodeType = TypeVar("NodeType", bound="Node")
 
@@ -95,7 +95,7 @@ def from_base64(value: str) -> Tuple[str, str]:
 
     """
     try:
-        res = base64.b64decode(value.encode()).decode().split(":")
+        res = base64.b64decode(value.encode()).decode().split(":", 1)
     except Exception as e:
         raise ValueError(str(e)) from e
 
@@ -683,11 +683,11 @@ class Connection(Generic[NodeType]):
 
         if after:
             after_type, after_parsed = from_base64(after)
-            assert after_type == _connection_typename
+            assert after_type == connection_typename
             start = max(start, int(after_parsed) + 1)
         if before:
             before_type, before_parsed = from_base64(before)
-            assert before_type == _connection_typename
+            assert before_type == connection_typename
             end = min(end, int(before_parsed))
 
         has_first_or_last = False
@@ -718,7 +718,7 @@ class Connection(Generic[NodeType]):
             end = min(end, start + max_results)
 
         edges = [
-            Edge(cursor=to_base64(_connection_typename, start + i), node=v)
+            Edge(cursor=to_base64(connection_typename, start + i), node=v)
             for i, v in enumerate(cast(Sequence, nodes)[start:end])
         ]
         page_info = PageInfo(
