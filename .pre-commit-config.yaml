@@ -24,12 +24,6 @@ repos:
       - id: pyupgrade
         args: ["--py38-plus"]
 
-  - repo: https://github.com/myint/docformatter
-    rev: v1.4
-    hooks:
-      - id: docformatter
-        args: ["-i", "--wrap-summaries", "0", "--blank"]
-
   - repo: https://github.com/myint/autoflake
     rev: v1.4
     hooks:

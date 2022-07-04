@@ -7,6 +7,8 @@
 ![python version](https://img.shields.io/pypi/pyversions/strawberry-django-plus.svg)
 ![django version](https://img.shields.io/pypi/djversions/strawberry-django-plus.svg)
 
+![Logo](./images/logo.png){ align=left }
+
 Enhanced Strawberry integration with Django.
 
 Built on top of [strawberry-django](https://github.com/strawberry-graphql/strawberry-graphql-django)
@@ -36,17 +38,10 @@ integration, enhancing its overall functionality.
 
 ## Installation
 
+Install with pip:
+
 ```shell
 pip install strawberry-django-plus
 ```
 
-
-
-## Licensing
-
-The code in this project is licensed under MIT license. See [LICENSE](./LICENSE)
-for more information.
-
-## Stats
-
-![Recent Activity](https://images.repography.com/23718985/blb-ventures/strawberry-django-plus/recent-activity/bf7c25def67510b494ac7981e0f4082c.svg)
+You can now jump to the [quickstart](QuickStart.md).
