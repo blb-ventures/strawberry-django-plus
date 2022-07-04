@@ -7,9 +7,9 @@
 ![python version](https://img.shields.io/pypi/pyversions/strawberry-django-plus.svg)
 ![django version](https://img.shields.io/pypi/djversions/strawberry-django-plus.svg)
 
-![Logo](./images/logo.png){ align=left }  
+![Logo](./images/logo.png){ align=left }
 
-Enhanced Strawberry integration with Django.  
+Enhanced Strawberry integration with Django.
 
 Built on top of [strawberry-django](https://github.com/strawberry-graphql/strawberry-graphql-django)
 integration, enhancing its overall functionality.
