@@ -19,4 +19,5 @@ serve:
 deploy-docs:
 	python3 -m pip install poetry
 	poetry install -E "docs"
-	poetry run pip install mkdocs # for some reason it is not installed by poetry
+	pip install mkdocs # for some reason it is not installed by poetry
+	python -m mkdocs gh-deploy --force
