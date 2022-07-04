@@ -1,4 +1,4 @@
-name: docs deploy
+name: Docs deploy
 
 on:
   push:
@@ -21,9 +21,9 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-        - name: Install dependencies
-          run: |
+      - name: Install dependencies
+        run: |
           poetry install --extras "docs";
-        - name: build and deploy docs
-          run: |
-            mkdocs gh-deploy --force;
+      - name: build and deploy docs
+        run: |
+          mkdocs gh-deploy --force;
