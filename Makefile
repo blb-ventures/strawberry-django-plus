@@ -1,4 +1,4 @@
-.PHONY : install test serve
+.PHONY : install test serve lint
 
 POETRY := $(shell command -v poetry 2> /dev/null)
 MKDOCS := $(shell command -v mkdocs 2> /dev/null)
@@ -15,6 +15,7 @@ test:
 serve:
 	poetry install --extras "docs"
 	${MKDOCS} serve
+
 
 deploy-docs:
 	python -m pip install poetry
