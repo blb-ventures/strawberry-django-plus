@@ -17,7 +17,3 @@ serve:
 	${POETRY} install --extras "docs"
 	${MKDOCS} serve
 
-# gh-actions use only!
-deploy-docs:
-	poetry install --extras "docs"
-	mkdocs gh-deploy --force

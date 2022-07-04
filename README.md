@@ -36,35 +36,10 @@ integration, enhancing its overall functionality.
 
 ## Installation
 
-Install it with pip:
-
 ```shell
 pip install strawberry-django-plus
 ```
 
-
-### Django Debug Toolbar Integration
-
-Install [Django Debug Toolbar](https://github.com/jazzband/django-debug-toolbar)
-and change its middleware from:
-
-```python
-MIDDLEWARE = [
-    ...
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
-    ...
-]
-```
-
-To:
-
-```python
-MIDDLEWARE = [
-    ...
-    "strawberry_django_plus.middlewares.debug_toolbar.DebugToolbarMiddleware",
-    ...
-]
-```
 
 
 ## Licensing
