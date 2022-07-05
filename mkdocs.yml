@@ -81,7 +81,7 @@ dev_addr: 127.0.0.1:7000
 
 nav:
   - Start here: index.md
-  - Quick start: QuickStart.md
+  - Quick start: quickstart.md
   - Extensions:
-       - Query optimizer: QueryOptimizer.md
-  - Contributing: Contributing.md
+       - Query optimizer: query-optimizer.md
+  - Contributing: contributing.md

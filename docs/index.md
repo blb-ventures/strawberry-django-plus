@@ -45,4 +45,4 @@ Install with pip:
 pip install strawberry-django-plus
 ```
 
-You can now jump to the [quickstart](QuickStart.md).
+You can now jump to the [quickstart](quickstart.md).
