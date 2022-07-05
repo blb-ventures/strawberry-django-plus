@@ -168,16 +168,17 @@ Querying a song and its related fields like this:
 {
   song {
     id
-    album
-    id
-    name
-    artist {
+    album {
       id
       name
-      albums {
+      artist {
         id
         name
-        release_date
+        albums {
+          id
+          name
+          release_date
+        }
       }
     }
   }
