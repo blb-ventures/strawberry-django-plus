@@ -1,5 +1,13 @@
 # strawberry-django-plus
 
+![Logo](./images/logo.png){ align=left }
+
+Enhanced Strawberry integration with Django.
+
+Built on top of [strawberry-django](https://github.com/strawberry-graphql/strawberry-graphql-django)
+integration, enhancing its overall functionality.
+___
+
 [![build status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fblb-ventures%2Fstrawberry-django-plus%2Fbadge%3Fref%3Dmain&style=flat)](https://actions-badge.atrox.dev/blb-ventures/strawberry-django-plus/goto?ref=main)
 [![coverage](https://img.shields.io/codecov/c/github/blb-ventures/strawberry-django-plus.svg)](https://codecov.io/gh/blb-ventures/strawberry-django-plus)
 [![downloads](https://pepy.tech/badge/strawberry-django-plus)](https://pepy.tech/project/strawberry-django-plus)
@@ -7,15 +15,7 @@
 ![python version](https://img.shields.io/pypi/pyversions/strawberry-django-plus.svg)
 ![django version](https://img.shields.io/pypi/djversions/strawberry-django-plus.svg)
 
-![Logo](./images/logo.png){ align=left }
-
-Enhanced Strawberry integration with Django.
-
-Built on top of [strawberry-django](https://github.com/strawberry-graphql/strawberry-graphql-django)
-integration, enhancing its overall functionality.
-
 ## Features
-
 
 * [x] All supported features by `strawberry` and `strawberry-django`.
 * [x] [Query optimizer extension](#query-optimizer-extension) that automatically optimizes querysets

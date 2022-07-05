@@ -13,5 +13,5 @@ test:
 
 
 serve-docs:
-	poetry install --extras "docs"
+	${POETRY} install
 	${MKDOCS} serve
