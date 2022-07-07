@@ -35,11 +35,10 @@ integration, enhancing its overall functionality.
 - A well typed and documented API.
 
 ## Installation
-
 ```shell
 pip install strawberry-django-plus
 ```
-
+## [Documentation can be found here](https://blb-ventures.github.io/strawberry-django-plus/index)
 
 
 ## Licensing
