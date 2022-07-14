@@ -1,6 +1,7 @@
+---
 site_name: Strawberry Django +
 site_description: Strawberry-Django with extra features
-#site_url: https://nrbnlulu.github.io/strawberry-django-auth/
+site_url: https://blb-ventures.github.io/strawberry-django-plus/
 site_author: community
 repo_name: strawberry-django-plus
 repo_url: https://github.com/blb-ventures/strawberry-django-plus/
@@ -9,42 +10,39 @@ theme:
   name: material
   language: en
   palette:
-  - scheme: default
-    primary: red
-    accent: green
-    toggle:
+    - scheme: default
+      primary: red
+      accent: green
+      toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to light mode
 
-  - scheme: slate
-    primary: green
-    accent: red
-    toggle:
-      icon: material/toggle-switch
-      name: Switch to dark mode
+    - scheme: slate
+      primary: green
+      accent: red
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
 
   logo: images/logo.png
   favicon: images/logo.svg
   features:
     - content.code.annotate
 extra:
-#  analytics:
-#    provider: google
-#    property: G-XYFSBNLH00
-    feedback:
-      title: Was this page helpful?
-      ratings:
-        - icon: material/emoticon-happy-outline
-          name: This page was helpful
-          data: 1
-          note: >-
-            Thanks for your feedback!
-        - icon: material/emoticon-sad-outline
-          name: This page could be improved
-          data: 0
-          note: >-
-            Thanks for your feedback! Help us improve this page by
-            <a href="https://github.com/blb-ventures/strawberry-django-plus/issues" target=_blank>posting an issue</a>.
+  feedback:
+    title: Was this page helpful?
+    ratings:
+      - icon: material/emoticon-happy-outline
+        name: This page was helpful
+        data: 1
+        note: >-
+          Thanks for your feedback!
+      - icon: material/emoticon-sad-outline
+        name: This page could be improved
+        data: 0
+        note: >-
+          Thanks for your feedback! Help us improve this page by
+          <a href="https://github.com/blb-ventures/strawberry-django-plus/issues" target=_blank>posting an issue</a>.
 
 markdown_extensions:
   - admonition
@@ -75,7 +73,7 @@ plugins:
   - minify:
       minify_html: true
   - markdownextradata:
-        data: docs/data
+      data: docs/data
 
 dev_addr: 127.0.0.1:7000
 
@@ -83,5 +81,6 @@ nav:
   - Start here: index.md
   - Quick start: quickstart.md
   - Extensions:
-       - Query optimizer: query-optimizer.md
+      - Query optimizer: query-optimizer.md
+      - Django debug toolbar: debug-toolbar.md
   - Contributing: contributing.md
