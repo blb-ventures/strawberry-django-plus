@@ -308,7 +308,6 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 @overload
 def mutation(
     *,
-    input_type: Optional[type] = None,
     resolver: Callable[[], _T],
     name: Optional[str] = None,
     field_name: Optional[str] = None,
@@ -329,7 +328,6 @@ def mutation(
 @overload
 def mutation(
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -350,7 +348,6 @@ def mutation(
 def mutation(
     resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -369,7 +366,6 @@ def mutation(
 def mutation(
     resolver=None,
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -398,7 +394,6 @@ def mutation(
 
     """
     f = DjangoMutationField(
-        input_type=input_type,
         python_name=None,
         django_name=field_name,
         graphql_name=name,
