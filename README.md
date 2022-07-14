@@ -10,7 +10,9 @@
 Enhanced Strawberry integration with Django.
 
 Built on top of [strawberry-django](https://github.com/strawberry-graphql/strawberry-graphql-django)
-integration, enhancing its overall functionality. Check the [docs](https://blb-ventures.github.io/strawberry-django-plus/)
+integration, enhancing its overall functionality.
+
+Check the [docs](https://blb-ventures.github.io/strawberry-django-plus/)
 for information on how to use this lib.
 
 ## Features
