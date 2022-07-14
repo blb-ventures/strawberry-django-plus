@@ -308,7 +308,6 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
 @overload
 def mutation(
     *,
-    input_type: Optional[type] = None,
     resolver: Callable[[], _T],
     name: Optional[str] = None,
     field_name: Optional[str] = None,
@@ -329,7 +328,6 @@ def mutation(
 @overload
 def mutation(
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -350,7 +348,6 @@ def mutation(
 def mutation(
     resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -369,7 +366,6 @@ def mutation(
 def mutation(
     resolver=None,
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -398,7 +394,6 @@ def mutation(
 
     """
     f = DjangoMutationField(
-        input_type=input_type,
         python_name=None,
         django_name=field_name,
         graphql_name=name,
@@ -547,6 +542,7 @@ def create(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> Any:
     """Create mutation for django input fields.
 
@@ -577,6 +573,7 @@ def create(
         default_factory=default_factory,
         directives=directives,
         filters=filters,
+        handle_django_errors=handle_django_errors,
     )
 
 
@@ -594,6 +591,7 @@ def update(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> Any:
     """Update mutation for django input fields.
 
@@ -622,6 +620,7 @@ def update(
         default_factory=default_factory,
         directives=directives,
         filters=filters,
+        handle_django_errors=handle_django_errors,
     )
 
 
@@ -639,6 +638,7 @@ def delete(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> Any:
     return DjangoDeleteMutationField(
         input_type=input_type,
@@ -654,4 +654,5 @@ def delete(
         default_factory=default_factory,
         directives=directives,
         filters=filters,
+        handle_django_errors=handle_django_errors,
     )
