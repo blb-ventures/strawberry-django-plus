@@ -542,6 +542,7 @@ def create(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> Any:
     """Create mutation for django input fields.
 
@@ -572,6 +573,7 @@ def create(
         default_factory=default_factory,
         directives=directives,
         filters=filters,
+        handle_django_errors=handle_django_errors,
     )
 
 
@@ -589,6 +591,7 @@ def update(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> Any:
     """Update mutation for django input fields.
 
@@ -617,6 +620,7 @@ def update(
         default_factory=default_factory,
         directives=directives,
         filters=filters,
+        handle_django_errors=handle_django_errors,
     )
 
 
@@ -634,6 +638,7 @@ def delete(
     default: Any = UNSET,
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
+    handle_django_errors: bool = True,
 ) -> Any:
     return DjangoDeleteMutationField(
         input_type=input_type,
@@ -649,4 +654,5 @@ def delete(
         default_factory=default_factory,
         directives=directives,
         filters=filters,
+        handle_django_errors=handle_django_errors,
     )
