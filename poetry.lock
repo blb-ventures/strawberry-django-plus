@@ -548,11 +548,11 @@ python-versions = "*"
 
 [[package]]
 name = "markdown"
-version = "3.3.7"
+version = "3.4"
 description = "Python implementation of Markdown."
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
 importlib-metadata = {version = ">=4.4", markers = "python_version < \"3.10\""}
@@ -992,7 +992,7 @@ tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.118.2"
+version = "0.119.0"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -1380,8 +1380,8 @@ jsmin = [
     {file = "jsmin-3.0.1.tar.gz", hash = "sha256:c0959a121ef94542e807a674142606f7e90214a2b3d1eb17300244bbb5cc2bfc"},
 ]
 markdown = [
-    {file = "Markdown-3.3.7-py3-none-any.whl", hash = "sha256:f5da449a6e1c989a4cea2631aa8ee67caa5a2ef855d551c88f9e309f4634c621"},
-    {file = "Markdown-3.3.7.tar.gz", hash = "sha256:cbb516f16218e643d8e0a95b309f77eb118cb138d39a4f27851e6a63581db874"},
+    {file = "Markdown-3.4-py3-none-any.whl", hash = "sha256:e90f851d4b0f788ee2e9c352205d8a592fd0c713ca6b934f87b81bc14d24dab7"},
+    {file = "Markdown-3.4.tar.gz", hash = "sha256:03078d25ed76dd9d2a803e5708ddb1c4ec3a5ed7654bc882e032364f09c184d5"},
 ]
 markupsafe = [
     {file = "MarkupSafe-2.1.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:86b1f75c4e7c2ac2ccdaec2b9022845dbb81880ca318bb7a0a01fbf7813e3812"},
@@ -1604,8 +1604,8 @@ stack-data = [
     {file = "stack_data-0.3.0.tar.gz", hash = "sha256:77bec1402dcd0987e9022326473fdbcc767304892a533ed8c29888dacb7dddbc"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.118.2.tar.gz", hash = "sha256:03bc78cffe0936b801c8be43b9eaea299e7d700d4741673c888faaaf58b9766d"},
-    {file = "strawberry_graphql-0.118.2-py3-none-any.whl", hash = "sha256:0d4b3d7c396f9819f76690849b2a145561ee175145fc5744e64871f1dc276cda"},
+    {file = "strawberry-graphql-0.119.0.tar.gz", hash = "sha256:bfe720035a36f199aa4cdfdc51e5ecd891ae86d160946744d7c6551347e49c04"},
+    {file = "strawberry_graphql-0.119.0-py3-none-any.whl", hash = "sha256:1d1ae1f8e2646f5fbae54c60770cec558436a4dc2099217c94d5dc72f9cdef74"},
 ]
 strawberry-graphql-django = [
     {file = "strawberry-graphql-django-0.4.0.tar.gz", hash = "sha256:d321f173834f9156e33cc91a175000ff38e72afa9c7f412b30c678d7f274d014"},

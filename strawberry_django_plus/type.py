@@ -21,7 +21,6 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.auto import StrawberryAuto
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
@@ -33,7 +32,7 @@ from strawberry_django.utils import get_annotations, is_similar_django_type
 from typing_extensions import Annotated
 
 from strawberry_django_plus.optimizer import OptimizerStore, PrefetchType
-from strawberry_django_plus.utils.typing import TypeOrSequence
+from strawberry_django_plus.utils.typing import TypeOrSequence, is_auto
 
 from . import field
 from .descriptors import ModelProperty
@@ -150,7 +149,7 @@ def _from_django_type(
     # annotation of field is used as a class type
     if type_annotation is not None:
         field.type_annotation = type_annotation
-        field.is_auto = isinstance(field.type_annotation, StrawberryAuto)
+        field.is_auto = is_auto(field.type_annotation)
 
     # resolve the django_name and check if it is relation field. django_name
     # is used to access the field data in resolvers
@@ -166,7 +165,7 @@ def _from_django_type(
                 if get_origin(annotation) is Annotated:
                     annotation = get_args(annotation)[0]
                 field.type_annotation = StrawberryAnnotation(annotation)
-                field.is_auto = isinstance(field.type_annotation, StrawberryAuto)
+                field.is_auto = is_auto(field.type_annotation)
 
             if field.description is None:
                 field.description = model_attr.description

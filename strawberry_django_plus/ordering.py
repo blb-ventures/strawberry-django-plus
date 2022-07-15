@@ -3,11 +3,12 @@ from typing import Callable, Optional, Sequence, Type, TypeVar, cast
 from django.db.models.base import Model
 import strawberry
 from strawberry import UNSET
-from strawberry.auto import StrawberryAuto
 from strawberry.field import StrawberryField
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
 from strawberry_django.ordering import Ordering
+
+from strawberry_django_plus.utils.typing import is_auto
 
 from . import field
 from .relay import connection, node
@@ -36,7 +37,7 @@ def order(  # noqa:A001
 ) -> Callable[[_T], _T]:
     def wrapper(cls):
         for fname, type_ in cls.__annotations__.items():
-            if isinstance(type_, StrawberryAuto):
+            if is_auto(type_):
                 type_ = Ordering
 
             cls.__annotations__[fname] = Optional[type_]  # type:ignore
