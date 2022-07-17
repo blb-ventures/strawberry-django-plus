@@ -1,6 +1,6 @@
 import pytest
 
-from demo.models import Issue, Milestone
+from demo.models import Issue, Milestone, Project
 from strawberry_django_plus.relay import from_base64, to_base64
 from tests.faker import (
     IssueFactory,
@@ -150,6 +150,62 @@ def test_input_create_mutation(db, gql_client: GraphQLTestClient):
     assert issue.kind == Issue.Kind.FEATURE
     assert issue.milestone == milestone
     assert set(issue.tags.all()) == set(tags)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateMilestone ($input: MilestoneInput!) {
+      createMilestone (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on MilestoneType {
+          id
+          name
+          project {
+            id
+            name
+          }
+        }
+      }
+    }
+    """
+    assert not Project.objects.filter(name="New Project").exists()
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "name": "Some Milestone",
+                "project": {
+                    "name": "New Project",
+                },
+            }
+        },
+    )
+    assert res.data and isinstance(res.data["createMilestone"], dict)
+
+    typename, pk = from_base64(res.data["createMilestone"].pop("id"))
+    assert typename == "MilestoneType"
+
+    project = Project.objects.get(name="New Project")
+
+    assert res.data == {
+        "createMilestone": {
+            "__typename": "MilestoneType",
+            "name": "Some Milestone",
+            "project": {
+                "id": to_base64("ProjectType", project.pk),
+                "name": project.name,
+            },
+        }
+    }
 
 
 @pytest.mark.django_db(transaction=True)

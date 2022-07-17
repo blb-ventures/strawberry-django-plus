@@ -51,17 +51,42 @@ _InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
 
 
 def _parse_pk(
-    value: Optional[Union["ParsedObject", strawberry.ID, Model]],
+    value: Optional[Union["ParsedObject", strawberry.ID, _M]],
     model: Type[_M],
 ) -> Tuple[Optional[_M], Optional[Dict[str, Any]]]:
     if value is None:
         return None, None
+    elif isinstance(value, Model):
+        return value, None
     elif isinstance(value, ParsedObject):
         return value.parse(model)
     elif isinstance(value, dict):
         return None, value
 
     return model._default_manager.get(pk=value), None
+
+
+def _parse_data(info: Info, model: Type[_M], value: Any):
+    obj, data = _parse_pk(value, model)
+
+    parsed_data = {}
+    if data:
+        for k, v in data.items():
+            if v is UNSET:
+                continue
+
+            if isinstance(v, ParsedObject):
+                if v.pk is None:
+                    v = cast(_M, create(info, model(), v.data or {}))  # type:ignore
+                elif isinstance(v.pk, models.Model) and v.data:
+                    v = update(info, v.pk, v.data)
+                else:
+                    v = v.pk
+
+            if k == "through_defaults" or not obj or getattr(obj, k) != v:
+                parsed_data[k] = v
+
+    return obj, parsed_data
 
 
 @dataclasses.dataclass
@@ -248,6 +273,14 @@ def update(info, instance, data, *, full_clean=True):
             # m2m will be processed later
             m2m.append((field, value))
             continue
+        elif isinstance(field, models.ForeignKey) and isinstance(
+            value,
+            (ParsedObject, strawberry.ID),
+        ):
+            value, value_data = _parse_data(info, field.related_model, value)
+            # If value is None, that means we should create the model
+            if value is None:
+                value = field.related_model._default_manager.create(**value_data)
 
         for instance in instances:
             update_field(info, instance, field, value)
@@ -349,28 +382,6 @@ def update_m2m(
         assert accessor_name
         manager = cast("RelatedManager", getattr(instance, accessor_name))
 
-    def parse_data(value: Any):
-        obj, data = _parse_pk(value, manager.model)
-
-        parsed_data = {}
-        if data:
-            for k, v in data.items():
-                if v is UNSET:
-                    continue
-
-                if isinstance(v, ParsedObject):
-                    if v.pk is None:
-                        v = create(info, manager.model(), v.data or {})
-                    elif isinstance(v.pk, models.Model) and v.data:
-                        v = update(info, v.pk, v.data)
-                    else:
-                        v = v.pk
-
-                if k == "through_defaults" or not obj or getattr(obj, k) != v:
-                    parsed_data[k] = v
-
-        return obj, parsed_data
-
     to_add = []
     to_remove = []
     need_remove_cache = False
@@ -385,7 +396,7 @@ def update_m2m(
         existing = set(manager.all())
         need_remove_cache = need_remove_cache or bool(values)
         for v in values:
-            obj, data = parse_data(v)
+            obj, data = _parse_data(info, manager.model, v)
 
             if obj:
                 if data:
@@ -428,7 +439,7 @@ def update_m2m(
     else:
         need_remove_cache = need_remove_cache or bool(value.add)
         for v in value.add or []:
-            obj, data = parse_data(v)
+            obj, data = _parse_data(info, manager.model, v)
             if obj and data:
                 manager.add(obj, **data)
             elif obj:
@@ -441,7 +452,7 @@ def update_m2m(
 
         need_remove_cache = need_remove_cache or bool(value.remove)
         for v in value.remove or []:
-            obj, data = parse_data(v)
+            obj, data = _parse_data(info, manager.model, v)
             assert not data
             to_remove.append(obj)
 

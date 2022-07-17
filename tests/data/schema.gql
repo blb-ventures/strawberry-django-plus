@@ -193,7 +193,7 @@ input MilestoneFilter {
 
 input MilestoneInput {
   name: String!
-  project: NodeInput!
+  project: ProjectInputPartial!
   issues: [MilestoneIssueInput!]
 }
 
@@ -316,6 +316,13 @@ type PageInfo {
 
   """When paginating forwards, the cursor to continue."""
   endCursor: String
+}
+
+input ProjectInputPartial {
+  id: GlobalID
+
+  """The name of the project"""
+  name: String
 }
 
 input ProjectOrder {

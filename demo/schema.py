@@ -167,10 +167,15 @@ class MilestoneIssueInput:
     name: gql.auto
 
 
+@gql.django.partial(Project)
+class ProjectInputPartial(gql.NodeInputPartial):
+    name: gql.auto
+
+
 @gql.django.input(Milestone)
 class MilestoneInput:
     name: gql.auto
-    project: gql.auto
+    project: ProjectInputPartial
     issues: Optional[List[MilestoneIssueInput]]
 
 
