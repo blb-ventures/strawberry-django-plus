@@ -204,7 +204,11 @@ class DjangoInputMutationField(DjangoMutationField, relay.InputMutationField):
         input_obj = kwargs.pop("input", None)
 
         # FIXME: Any other exception types that we should capture here?
-        resolver = aio.resolver(self.resolver, on_error=_map_exception, info=info)
+        resolver = aio.resolver(
+            self.resolver,
+            on_error=_map_exception if self._handle_errors else None,
+            info=info,
+        )
         return resolver(source, info, input_obj, args, kwargs)
 
     def resolver(
