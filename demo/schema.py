@@ -6,6 +6,7 @@ from typing import Iterable, List, Optional, Type, cast
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
+from django.db.models import Exists, OuterRef, Prefetch
 from django.db.models.query import QuerySet
 from strawberry.types.info import Info
 from typing_extensions import Annotated
@@ -94,6 +95,25 @@ class MilestoneType(relay.Node):
     due_date: gql.auto
     project: ProjectType
     issues: List["IssueType"]
+
+    @gql.django.field(
+        prefetch_related=[
+            lambda info: Prefetch(
+                "issues",
+                queryset=Issue.objects.filter(
+                    Exists(
+                        Assignee.objects.filter(
+                            issue=OuterRef("pk"),
+                            user_id=info.context.request.user.id,
+                        )
+                    )
+                ),
+                to_attr="_my_issues",
+            )
+        ],
+    )
+    def my_issues(self) -> List["IssueType"]:
+        return self._my_issues  # type:ignore
 
     @gql.django.field
     async def async_field(self, value: str) -> str:
@@ -190,6 +210,7 @@ class Query:
     milestone_mandatory: MilestoneType = gql.django.node()
     milestones: List[MilestoneType] = gql.django.node()
     project: Optional[ProjectType] = gql.django.node()
+    project_login_required: Optional[ProjectType] = gql.django.node(directives=[IsAuthenticated()])
     tag: Optional[TagType] = gql.django.node()
     staff: Optional[StaffType] = gql.django.node()
     staff_list: List[StaffType] = gql.django.node()

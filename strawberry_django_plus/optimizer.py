@@ -35,7 +35,7 @@ from strawberry.types.nodes import InlineFragment, Selection, convert_selections
 from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.fields.types import resolve_model_field_name
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias, assert_never, assert_type
 
 from .descriptors import ModelProperty
 from .relay import Connection, Edge, NodeType
@@ -63,7 +63,9 @@ _M = TypeVar("_M", bound=models.Model)
 _sentinel = object()
 _interfaces: "defaultdict[Schema, Dict[TypeDefinition, List[TypeDefinition]]]" = defaultdict(dict)
 
-PrefetchType: TypeAlias = Union[str, Prefetch]
+
+PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], Prefetch]
+PrefetchType: TypeAlias = Union[str, Prefetch, PrefetchCallable]
 
 
 def _get_model_hints(
@@ -72,6 +74,7 @@ def _get_model_hints(
     type_def: TypeDefinition,
     selection: Selection,
     *,
+    info: GraphQLResolveInfo,
     config: Optional["OptimizerConfig"] = None,
     prefix: str = "",
     model_cache: Optional[Dict[Type[models.Model], List[Tuple[int, "OptimizerStore"]]]] = None,
@@ -105,6 +108,7 @@ def _get_model_hints(
                     schema=schema,
                     type_def=n_type_def,
                     selection=node,
+                    info=info,
                     config=config,
                     prefix=prefix,
                     model_cache=model_cache,
@@ -147,13 +151,13 @@ def _get_model_hints(
         # Add annotations from the field if they exist
         field_store = getattr(field, "store", None)
         if field_store is not None:
-            store |= field_store.with_prefix(prefix) if prefix else field_store
+            store |= field_store.with_prefix(prefix, info=info) if prefix else field_store
 
         # Then from the model property if one is defined
         model_attr = getattr(model, field.python_name, None)
         if model_attr is not None and isinstance(model_attr, ModelProperty):
             attr_store = model_attr.store
-            store |= attr_store.with_prefix(prefix) if prefix else attr_store
+            store |= attr_store.with_prefix(prefix, info=info) if prefix else attr_store
 
         # Lastly, from the django field itself
         model_fieldname: str = getattr(field, "django_name", field.python_name)
@@ -178,13 +182,14 @@ def _get_model_hints(
                         schema,
                         f_type_def,
                         f_selection,
+                        info=info,
                         config=config,
                         model_cache=model_cache,
                         level=level + 1,
                     )
                     if f_store is not None:
                         model_cache.setdefault(f_model, []).append((level, f_store))
-                        store |= f_store.with_prefix(path)
+                        store |= f_store.with_prefix(path, info=info)
             elif isinstance(model_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel)):
                 f_types = list(get_possible_type_definitions(field.type))
                 if len(f_types) > 1:
@@ -198,6 +203,7 @@ def _get_model_hints(
                         schema,
                         f_types[0],
                         f_selection,
+                        info=info,
                         config=config,
                         model_cache=model_cache,
                         level=level + 1,
@@ -218,6 +224,7 @@ def _get_model_hints(
                         # are getting related objects, and not querying it directly
                         f_qs = f_store.apply(
                             remote_model._base_manager.all(),  # type:ignore
+                            info=info,
                             config=config,
                         )
                         f_prefetch = Prefetch(path, queryset=f_qs)
@@ -328,6 +335,7 @@ def optimize(
                     schema,
                     tdef,
                     selection,
+                    info=info,
                     config=config,
                 )
                 if new_store is not None:
@@ -337,7 +345,7 @@ def optimize(
     if not store:
         return qs
 
-    qs = store.apply(qs, config=config)
+    qs = store.apply(qs, info=info, config=config)
     qs._gql_optimized = True  # type:ignore
     return qs
 
@@ -413,21 +421,26 @@ class OptimizerStore:
             ),
             prefetch_related=(
                 [prefetch_related]
-                if isinstance(prefetch_related, (str, Prefetch))
+                if isinstance(prefetch_related, (str, Prefetch, Callable))
                 else list(prefetch_related or [])
             ),
         )
 
-    def with_prefix(self, prefix: str):
+    def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):
         prefetch_related = []
         for p in self.prefetch_related:
+            if isinstance(p, Callable):
+                assert_type(p, PrefetchCallable)
+                p = p(info)
+                p.add_prefix(prefix)
+
             if isinstance(p, str):
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
             elif isinstance(p, Prefetch):
                 p.add_prefix(prefix)
                 prefetch_related.append(p)
             else:  # pragma:nocover
-                raise AssertionError(f"Unexpected prefetch type {repr(p)}")
+                assert_never(p)
 
         return self.__class__(
             only=[f"{prefix}{LOOKUP_SEP}{i}" for i in self.only],
@@ -439,13 +452,14 @@ class OptimizerStore:
         self,
         qs: QuerySet[_M],
         *,
+        info: GraphQLResolveInfo,
         config: Optional[OptimizerConfig] = None,
     ) -> QuerySet[_M]:
         config = config or OptimizerConfig()
 
         if config.enable_prefetch_related and self.prefetch_related:
             # Add all str at the same time to make it easier to handle Prefetch below
-            to_prefetch: Dict[str, PrefetchType] = {
+            to_prefetch: Dict[str, Union[str, Prefetch]] = {
                 p: p for p in self.prefetch_related if isinstance(p, str)
             }
 
@@ -453,6 +467,10 @@ class OptimizerStore:
                 # Already added above
                 if isinstance(p, str):
                     continue
+
+                if isinstance(p, Callable):
+                    assert_type(p, PrefetchCallable)
+                    p = p(info)
 
                 path = cast(str, p.prefetch_to)  # type:ignore
                 existing = to_prefetch.get(path)

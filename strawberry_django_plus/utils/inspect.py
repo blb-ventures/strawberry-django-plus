@@ -239,7 +239,7 @@ def get_selections(
                     )
                 ret[f.name] = f
         else:  # pragma:nocover
-            raise AssertionError(f"Unknown selection type {repr(s)}")
+            assert_never(s)
 
     return ret
 

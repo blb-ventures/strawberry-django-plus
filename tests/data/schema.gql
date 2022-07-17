@@ -213,6 +213,7 @@ type MilestoneType implements Node {
   project: ProjectType!
   issues: [IssueType!]!
   asyncField(value: String!): String!
+  myIssues: [IssueType!]!
 }
 
 """A connection to a list of items."""
@@ -392,6 +393,10 @@ type Query {
     """The ID of the object."""
     id: GlobalID!
   ): ProjectType
+  projectLoginRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): ProjectType @isAuthenticated
   tag(
     """The ID of the object."""
     id: GlobalID!

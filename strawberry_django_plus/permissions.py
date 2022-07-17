@@ -29,7 +29,7 @@ from strawberry.private import Private
 from strawberry.schema_directive import Location
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import Self, final
+from typing_extensions import Self, assert_never, final
 
 from .directives import SchemaDirectiveHelper, SchemaDirectiveWithResolver
 from .relay import Connection, GlobalID
@@ -625,7 +625,7 @@ class HasPermDirective(AuthDirective):
                 )
             return self._resolve_obj_perms(helper, root, info, user, ret)
         else:
-            raise AssertionError(f"Unknown target {self.target!r}")
+            assert_never(self.target)  # noqa:R503
 
     @resolvers.async_safe
     def _has_perm_safe(

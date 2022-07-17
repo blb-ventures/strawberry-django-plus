@@ -2,6 +2,7 @@ from typing import Any, List, cast
 
 import pytest
 
+from demo.models import Assignee
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.relay import to_base64
 
@@ -311,6 +312,82 @@ def test_query_prefetch(db, gql_client: GraphQLTestClient):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_with_callable(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($node_id: GlobalID!) {
+        projectLoginRequired (id: $node_id) {
+          id
+          name
+          milestones {
+            id
+            name
+            project {
+              id
+              name
+            }
+            myIssues {
+              id
+              name
+              milestone {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    user = UserFactory.create()
+    expected = []
+    for p in ProjectFactory.create_batch(2):
+        p_res: dict[str, Any] = {
+            "id": to_base64("ProjectType", p.id),
+            "name": p.name,
+            "milestones": [],
+        }
+        expected.append(p_res)
+        for m in MilestoneFactory.create_batch(2, project=p):
+            m_res: dict[str, Any] = {
+                "id": to_base64("MilestoneType", m.id),
+                "name": m.name,
+                "project": {
+                    "id": p_res["id"],
+                    "name": p_res["name"],
+                },
+                "myIssues": [],
+            }
+            p_res["milestones"].append(m_res)
+
+            # Those issues are not assigned to the user, thus they should not appear in the results
+            IssueFactory.create_batch(2, milestone=m)
+            for i in IssueFactory.create_batch(2, milestone=m):
+                Assignee.objects.create(user=user, issue=i)
+                m_res["myIssues"].append(
+                    {
+                        "id": to_base64("IssueType", i.id),
+                        "name": i.name,
+                        "milestone": {
+                            "id": m_res["id"],
+                            "name": m_res["name"],
+                        },
+                    }
+                )
+
+    assert len(expected) == 2
+    for e in expected:
+        with gql_client.login(user):
+            if DjangoOptimizerExtension.enabled.get():
+                with assert_num_queries(5):
+                    res = gql_client.query(query, {"node_id": e["id"]})
+                    assert res.data == {"projectLoginRequired": e}
+            else:
+                # myIssues requires the optimizer to be turned on
+                res = gql_client.query(query, {"node_id": e["id"]}, asserts_errors=False)
+                assert res.errors
 
 
 @pytest.mark.django_db(transaction=True)
