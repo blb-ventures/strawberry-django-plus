@@ -548,7 +548,7 @@ python-versions = "*"
 
 [[package]]
 name = "markdown"
-version = "3.4"
+version = "3.4.1"
 description = "Python implementation of Markdown."
 category = "dev"
 optional = false
@@ -857,7 +857,7 @@ testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.18.3"
+version = "0.19.0"
 description = "Pytest support for asyncio"
 category = "dev"
 optional = false
@@ -867,7 +867,7 @@ python-versions = ">=3.7"
 pytest = ">=6.1.0"
 
 [package.extras]
-testing = ["coverage (==6.2)", "hypothesis (>=5.7.1)", "flaky (>=3.5.0)", "mypy (==0.931)", "pytest-trio (>=0.7.0)"]
+testing = ["coverage (>=6.2)", "hypothesis (>=5.7.1)", "flaky (>=3.5.0)", "mypy (>=0.931)", "pytest-trio (>=0.7.0)"]
 
 [[package]]
 name = "pytest-cov"
@@ -992,7 +992,7 @@ tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.119.0"
+version = "0.119.1"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -1117,7 +1117,7 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "0df334f32c362efa834929c6638bc4361c7ef5758c4ad271bf6cf12ac0fca117"
+content-hash = "f67caaa1bf911dbb56a555f37f2c3525bcc8680052ca31a2afb83c2bb06e7e09"
 
 [metadata.files]
 appnope = [
@@ -1380,8 +1380,8 @@ jsmin = [
     {file = "jsmin-3.0.1.tar.gz", hash = "sha256:c0959a121ef94542e807a674142606f7e90214a2b3d1eb17300244bbb5cc2bfc"},
 ]
 markdown = [
-    {file = "Markdown-3.4-py3-none-any.whl", hash = "sha256:e90f851d4b0f788ee2e9c352205d8a592fd0c713ca6b934f87b81bc14d24dab7"},
-    {file = "Markdown-3.4.tar.gz", hash = "sha256:03078d25ed76dd9d2a803e5708ddb1c4ec3a5ed7654bc882e032364f09c184d5"},
+    {file = "Markdown-3.4.1-py3-none-any.whl", hash = "sha256:08fb8465cffd03d10b9dd34a5c3fea908e20391a2a90b88d66362cb05beed186"},
+    {file = "Markdown-3.4.1.tar.gz", hash = "sha256:3b809086bb6efad416156e00a0da66fe47618a5d6918dd688f53f40c8e4cfeff"},
 ]
 markupsafe = [
     {file = "MarkupSafe-2.1.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:86b1f75c4e7c2ac2ccdaec2b9022845dbb81880ca318bb7a0a01fbf7813e3812"},
@@ -1529,9 +1529,8 @@ pytest = [
     {file = "pytest-7.1.2.tar.gz", hash = "sha256:a06a0425453864a270bc45e71f783330a7428defb4230fb5e6a731fde06ecd45"},
 ]
 pytest-asyncio = [
-    {file = "pytest-asyncio-0.18.3.tar.gz", hash = "sha256:7659bdb0a9eb9c6e3ef992eef11a2b3e69697800ad02fb06374a210d85b29f91"},
-    {file = "pytest_asyncio-0.18.3-1-py3-none-any.whl", hash = "sha256:16cf40bdf2b4fb7fc8e4b82bd05ce3fbcd454cbf7b92afc445fe299dabb88213"},
-    {file = "pytest_asyncio-0.18.3-py3-none-any.whl", hash = "sha256:8fafa6c52161addfd41ee7ab35f11836c5a16ec208f93ee388f752bea3493a84"},
+    {file = "pytest-asyncio-0.19.0.tar.gz", hash = "sha256:ac4ebf3b6207259750bc32f4c1d8fcd7e79739edbc67ad0c58dd150b1d072fed"},
+    {file = "pytest_asyncio-0.19.0-py3-none-any.whl", hash = "sha256:7a97e37cfe1ed296e2e84941384bdd37c376453912d397ed39293e0916f521fa"},
 ]
 pytest-cov = [
     {file = "pytest-cov-3.0.0.tar.gz", hash = "sha256:e7f0f5b1617d2210a2cabc266dfe2f4c75a8d32fb89eafb7ad9d06f6d076d470"},
@@ -1604,8 +1603,8 @@ stack-data = [
     {file = "stack_data-0.3.0.tar.gz", hash = "sha256:77bec1402dcd0987e9022326473fdbcc767304892a533ed8c29888dacb7dddbc"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.119.0.tar.gz", hash = "sha256:bfe720035a36f199aa4cdfdc51e5ecd891ae86d160946744d7c6551347e49c04"},
-    {file = "strawberry_graphql-0.119.0-py3-none-any.whl", hash = "sha256:1d1ae1f8e2646f5fbae54c60770cec558436a4dc2099217c94d5dc72f9cdef74"},
+    {file = "strawberry-graphql-0.119.1.tar.gz", hash = "sha256:7603022d96509fcd5a80e6ea4e22657b51970853a36d2a790212186fbb72f3c6"},
+    {file = "strawberry_graphql-0.119.1-py3-none-any.whl", hash = "sha256:15b7bed3b629556cc3eac3b877cdc113365fcfd2c2e8b2625fa7ff4b5f9e0ffb"},
 ]
 strawberry-graphql-django = [
     {file = "strawberry-graphql-django-0.4.0.tar.gz", hash = "sha256:d321f173834f9156e33cc91a175000ff38e72afa9c7f412b30c678d7f274d014"},
@@ -1627,7 +1626,10 @@ tzdata = [
     {file = "tzdata-2022.1-py2.py3-none-any.whl", hash = "sha256:238e70234214138ed7b4e8a0fab0e5e13872edab3be586ab8198c407620e2ab9"},
     {file = "tzdata-2022.1.tar.gz", hash = "sha256:8b536a8ec63dc0751342b3984193a3118f8fca2afe25752bb9b7fffd398552d3"},
 ]
-urllib3 = []
+urllib3 = [
+    {file = "urllib3-1.26.10-py2.py3-none-any.whl", hash = "sha256:8298d6d56d39be0e3bc13c1c97d133f9b45d797169a0e11cdd0e0489d786f7ec"},
+    {file = "urllib3-1.26.10.tar.gz", hash = "sha256:879ba4d1e89654d9769ce13121e0f94310ea32e8d2f8cf587b77c08bbcdb30d6"},
+]
 watchdog = [
     {file = "watchdog-2.1.9-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:a735a990a1095f75ca4f36ea2ef2752c99e6ee997c46b0de507ba40a09bf7330"},
     {file = "watchdog-2.1.9-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:6b17d302850c8d412784d9246cfe8d7e3af6bcd45f958abb2d08a6f8bedf695d"},
