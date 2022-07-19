@@ -275,7 +275,8 @@ def update(info, instance, data, *, full_clean=True):
             continue
         elif isinstance(field, models.ForeignKey) and isinstance(
             value,
-            (ParsedObject, strawberry.ID),
+            # We are using str here because strawberry.ID can't be used for isinstance
+            (ParsedObject, str),
         ):
             value, value_data = _parse_data(info, field.related_model, value)
             # If value is None, that means we should create the model
