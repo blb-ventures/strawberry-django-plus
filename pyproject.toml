@@ -100,17 +100,19 @@ useLibraryCodeForTypes = true
 venvPath = "."
 venv = ".venv"
 ignore = ["**/migrations"]
-reportUnnecessaryTypeIgnoreComment = "warning"
-reportUnnecessaryCast = "warning"
 reportCallInDefaultInitializer = "warning"
+reportMatchNotExhaustive = "warning"
+reportMissingSuperCall = "warning"
 reportOverlappingOverload = "warning"
 reportUninitializedInstanceVariable = "none"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
 reportUntypedNamedTuple = "error"
-reportMissingSuperCall = "warning"
 reportUnusedExpression = "warning"
 reportUnnecessaryComparison = "warning"
-strictListInference = true
+reportUnnecessaryContains = "warning"
 strictDictionaryInference = true
+strictListInference = true
 strictSetInference = true
 
 [tool.pytest.ini_options]
