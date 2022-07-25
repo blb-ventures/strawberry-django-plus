@@ -367,8 +367,11 @@ def update_m2m(
     if isinstance(field, OneToOneRel):
         remote_field = field.remote_field
         value, data = _parse_pk(value, remote_field.model)
-        remote_field.save_form_data(value, instance)
-        value.save()
+        if value is None:
+            value = getattr(instance, field.name)
+        else:
+            remote_field.save_form_data(value, instance)
+            value.save()
 
         # If data was passed to the field, update it recursively
         if data:
