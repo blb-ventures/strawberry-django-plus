@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "strawberry-django-plus"
-version = "1.21.0"
+version = "1.22.0"
 description = "Enhanced Strawberry GraphQL integration with Django"
 authors = ["Thiago Bellini Ribeiro <thiago@bellini.dev>"]
 license = "MIT"
@@ -23,6 +23,7 @@ classifiers = [
   "Framework :: Django",
   "Framework :: Django :: 3.2",
   "Framework :: Django :: 4.0",
+  "Framework :: Django :: 4.1",
 ]
 packages = [{ include = "strawberry_django_plus" }]
 
