@@ -432,7 +432,6 @@ class OptimizerStore:
             if isinstance(p, Callable):
                 assert_type(p, PrefetchCallable)
                 p = p(info)
-                p.add_prefix(prefix)
 
             if isinstance(p, str):
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
