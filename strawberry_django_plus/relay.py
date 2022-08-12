@@ -8,6 +8,7 @@ import inspect
 import math
 import sys
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -350,6 +351,11 @@ class Node(abc.ABC):
 
     """
 
+    # We can't do CONNECTION_CLASS = Connection because it is not defined yet.
+    # We will define it below though as the default one.
+    if TYPE_CHECKING:
+        CONNECTION_CLASS: ClassVar[Type["Connection"]]
+
     @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
     def id(cls, root: "Node", info: Info) -> GlobalID:  # noqa:A003
@@ -465,7 +471,7 @@ class Node(abc.ABC):
         # FIXME: Remove cast once pyright resolves the negative TypeGuard form
         nodes = cast(Iterable[NodeType], nodes)
 
-        return Connection.from_nodes(
+        return cls.CONNECTION_CLASS.from_nodes(
             nodes,
             total_count=total_count,
             before=before,
@@ -602,6 +608,10 @@ class Edge(Generic[NodeType]):
         description="The item at the end of the edge",
     )
 
+    @classmethod
+    def from_node(cls, node: NodeType, *, cursor: Any = None):
+        return cls(cursor=to_base64(connection_typename, cursor), node=node)
+
 
 @strawberry.type(description="A connection to a list of items.")
 class Connection(Generic[NodeType]):
@@ -616,6 +626,8 @@ class Connection(Generic[NodeType]):
             Total quantity of existing nodes
 
     """
+
+    EDGE_CLASS: ClassVar[Type["Edge"]] = Edge
 
     page_info: PageInfo = strawberry.field(
         description="Pagination data for this connection",
@@ -728,7 +740,7 @@ class Connection(Generic[NodeType]):
 
         # Overfetch by 1 to check if we have a next result
         edges = [
-            Edge(cursor=to_base64(connection_typename, start + i), node=v)
+            cls.EDGE_CLASS.from_node(v, cursor=start + i)
             for i, v in enumerate(cast(Sequence, nodes)[start : end + 1])  # noqa:E203
         ]
 
@@ -751,6 +763,9 @@ class Connection(Generic[NodeType]):
             page_info=page_info,
             total_count=total_count,
         )
+
+
+Node.CONNECTION_CLASS = Connection
 
 
 class RelayField(StrawberryField):
