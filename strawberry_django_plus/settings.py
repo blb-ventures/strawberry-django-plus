@@ -23,6 +23,7 @@ class Config:
     """
 
     RELAY_MAX_RESULTS: Optional[int] = dataclasses.field(default=100)
+    RELAY_GLOBAL_ID_FIELD_NAME: str = dataclasses.field(default="id")
     REMOVE_DUPLICATED_SUFFIX: List[str] = dataclasses.field(
         default_factory=lambda: ["Input", "Partial"],
     )

@@ -1,3 +1,4 @@
+from django.test import override_settings
 import pytest
 
 from strawberry_django_plus.relay import to_base64
@@ -381,6 +382,42 @@ def test_node_multiple_queryset(db, gql_client: GraphQLTestClient):
                 "isStaff": True,
             }
         ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@override_settings(STRAWBERRY_DJANGO_RELAY_GLOBAL_ID_FIELD_NAME="global_id")
+def test_node_custom_global_id(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        staffConn {
+          edges {
+            node {
+              globalId
+              username
+              isStaff
+            }
+          }
+        }
+      }
+
+    """
+
+    UserFactory.create(is_staff=False)
+    staff = UserFactory.create(is_staff=True)
+    res = gql_client.query(query)
+    assert res.data == {
+        "staffConn": {
+            "edges": [
+                {
+                    "node": {
+                        "globalId": to_base64("StaffType", staff.username),
+                        "username": staff.username,
+                        "isStaff": True,
+                    }
+                }
+            ]
+        }
     }
 
 

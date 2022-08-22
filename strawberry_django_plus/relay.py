@@ -325,8 +325,35 @@ DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
 )
 
 
+class NodeMetaclass(abc.ABCMeta):
+    """Patch the Node class adding the Globally Unique ID field.
+
+    The Globally Unique ID field should be named "id", but sometimes it
+    is useful to have it named differently (e.g. "global_id"). This
+    metaclass adds the field to this class according to the name
+    specified in the RELAY_GLOBAL_ID_FIELD_NAME setting.
+
+    """
+
+    def __new__(cls, *args):
+        res = super().__new__(cls, *args)
+
+        graphql_name = to_camel_case(config.RELAY_GLOBAL_ID_FIELD_NAME)
+
+        @strawberry.field(
+            description="The Globally Unique ID of this object",
+            name=graphql_name,
+        )
+        @classmethod
+        def _id(cls, root: "Node", info: Info) -> GlobalID:
+            return cls._global_id_resolver(root, info)
+
+        setattr(res, config.RELAY_GLOBAL_ID_FIELD_NAME, _id)
+        return res
+
+
 @strawberry.interface(description="An object with a Globally Unique ID")
-class Node(abc.ABC):
+class Node(abc.ABC, metaclass=NodeMetaclass):
     """Node interface for GraphQL types.
 
     All types that are relay ready should inherit from this interface and
@@ -356,9 +383,15 @@ class Node(abc.ABC):
     if TYPE_CHECKING:
         CONNECTION_CLASS: ClassVar[Type["Connection"]]
 
-    @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
-    def id(cls, root: "Node", info: Info) -> GlobalID:  # noqa:A003
+    def _global_id_resolver(cls, root: "Node", info: Info) -> GlobalID:  # noqa:A003
+        """Resolve the Globally Unique ID of the node.
+
+        This is exposed as a field by the metaclass, by default named
+        "id". The field name can be changed with the
+        RELAY_GLOBAL_ID_FIELD_NAME setting.
+
+        """
         # FIXME: We want to support both integration objects that doesn't define a resolve_id
         # and also the ones that does override it. Is there a better way of handling this?
         if isinstance(root, Node):
