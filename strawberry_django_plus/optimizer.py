@@ -489,6 +489,7 @@ class OptimizerStore:
                 p: p for p in self.prefetch_related if isinstance(p, str)
             }
 
+            abort_only = set()
             for p in self.prefetch_related:
                 # Already added above
                 if isinstance(p, str):
@@ -504,6 +505,7 @@ class OptimizerStore:
                 # In this case, just replace it.
                 if not existing or isinstance(existing, str):
                     to_prefetch[path] = p
+                    abort_only.add(path)
                     continue
 
                 p1 = PrefetchInspector(existing)
@@ -517,6 +519,10 @@ class OptimizerStore:
                     ret = p1.merge(p2)
 
                 to_prefetch[path] = ret.prefetch
+
+            # Abort only optimization if one prefetch related was made for everything
+            for ao in abort_only:
+                to_prefetch[ao].queryset.query.deferred_loading = ([], True)  # type:ignore
 
             qs = qs.prefetch_related(*to_prefetch.values())
 
