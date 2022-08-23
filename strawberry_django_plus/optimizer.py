@@ -211,6 +211,7 @@ def _get_model_hints(
                         model_cache=model_cache,
                         level=level + 1,
                     )
+
                     if f_store is not None:
                         if (
                             (config is None or config.enable_only)
@@ -224,6 +225,21 @@ def _get_model_hints(
                                 f_store.only.append(model_field.content_type_field_name)
                             else:
                                 f_store.only.append(remote_field.attname or remote_field.name)
+
+                        path_lookup = f"{path}{LOOKUP_SEP}"
+                        if store.only and f_store.only:
+                            extra_only = [o for o in store.only or [] if o.startswith(path_lookup)]
+                            store.only = [o for o in store.only if o not in extra_only]
+                            f_store.only.extend(o[len(path_lookup) :] for o in extra_only)
+
+                        if store.select_related and f_store.select_related:
+                            extra_sr = [
+                                o for o in store.select_related or [] if o.startswith(path_lookup)
+                            ]
+                            store.select_related = [
+                                o for o in store.select_related if o not in extra_sr
+                            ]
+                            f_store.select_related.extend(o[len(path_lookup) :] for o in extra_sr)
 
                         model_cache.setdefault(remote_model, []).append((level, f_store))
 
