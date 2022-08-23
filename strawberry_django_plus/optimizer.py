@@ -14,7 +14,7 @@ from typing import (
     cast,
 )
 
-from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.constants import LOOKUP_SEP
@@ -191,6 +191,10 @@ def _get_model_hints(
                     if f_store is not None:
                         model_cache.setdefault(f_model, []).append((level, f_store))
                         store |= f_store.with_prefix(path, info=info)
+            elif isinstance(model_field, GenericForeignKey):
+                # There's not much we can do to optimize generic foreign keys regarding
+                # only/select_related because they can be anything. Just prefetch_related them
+                store.prefetch_related.append(model_fieldname)
             elif isinstance(
                 model_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)
             ):

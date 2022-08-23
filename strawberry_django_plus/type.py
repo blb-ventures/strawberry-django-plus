@@ -14,7 +14,7 @@ from typing import (
     get_origin,
 )
 
-from django.contrib.contenttypes.fields import GenericRel
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
@@ -192,7 +192,7 @@ def _from_django_type(
             )
 
         if field.description is None:
-            if isinstance(model_field, GenericRel):
+            if isinstance(model_field, (GenericRel, GenericForeignKey)):
                 description = None
             elif isinstance(model_field, (ManyToOneRel, ManyToManyRel)):
                 description = model_field.field.help_text
