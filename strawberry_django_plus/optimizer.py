@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.constants import LOOKUP_SEP
@@ -190,7 +191,9 @@ def _get_model_hints(
                     if f_store is not None:
                         model_cache.setdefault(f_model, []).append((level, f_store))
                         store |= f_store.with_prefix(path, info=info)
-            elif isinstance(model_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel)):
+            elif isinstance(
+                model_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)
+            ):
                 f_types = list(get_possible_type_definitions(field.type))
                 if len(f_types) > 1:
                     # This might be a generic foreign key. In this case, just prefetch it
@@ -216,7 +219,11 @@ def _get_model_hints(
                         ):
                             # If adding a reverse relation, make sure to select its pointer to us,
                             # or else this might causa a refetch from the database
-                            f_store.only.append(remote_field.attname or remote_field.name)
+                            if isinstance(model_field, GenericRelation):
+                                f_store.only.append(model_field.object_id_field_name)
+                                f_store.only.append(model_field.content_type_field_name)
+                            else:
+                                f_store.only.append(remote_field.attname or remote_field.name)
 
                         model_cache.setdefault(remote_model, []).append((level, f_store))
 
