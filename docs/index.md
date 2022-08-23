@@ -30,7 +30,7 @@ integration, enhancing its overall functionality.
       using schema directives, supporting both
       [django authentication system](https://docs.djangoproject.com/en/4.0/topics/auth/default/),
       direct and per-object permission checking for backends that implement those (e.g.
-      [django-guardian](https://django-guardian.readthedocs.io/en/stable])).
+      [django-guardian](https://django-guardian.readthedocs.io/en/stable)).
 - [x] [Mutations for Django](https://blb-ventures.github.io/strawberry-django-plus/quickstart/#django-mutations),
       with CRUD support and automatic errors validation.
 - [x] [Relay support](https://blb-ventures.github.io/strawberry-django-plus/quickstart/#relay-support)
