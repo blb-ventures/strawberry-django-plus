@@ -22,7 +22,6 @@ gql.relay
 
 ## How To
 
-
 ### Django Choices Enums
 
 Convert choices fields into GraphQL enums by using
@@ -138,12 +137,12 @@ from strawberry_django_plus import gql
 class SomeModelType(gql.Node):
     name: gql.auto
 
-@gql.django.input(SomeModelType)
+@gql.django.input(SomeModel)
 class SomeModelInput:
     name: gql.auto
 
 
-@gql.django.partial(SomeModelType)
+@gql.django.partial(SomeModel)
 class SomeModelInputPartial(gql.NodeInput):
     name: gql.auto
 
