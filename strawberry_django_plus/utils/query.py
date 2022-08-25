@@ -1,9 +1,11 @@
 import functools
 from typing import List, Optional, Set, Type, TypeVar
-
+from functools import partial
+from django.db.models.functions import Cast, Replace
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Exists, F, Model, Q, QuerySet
+from django.db.models import Exists, F, Model, Q, QuerySet, BigIntegerField
+from django.db.models.functions import Cast, Replace
 from strawberry_django.utils import is_async
 
 from .typing import TypeOrIterable, UserType
@@ -49,7 +51,9 @@ def _filter(
     elif any_perm:
         q &= Q(**{f"{lookup}codename__in": perms})
     else:
-        q = functools.reduce(lambda acu, p: acu & Q(**{f"{lookup}codename": p}), perms, q)
+        q = functools.reduce(
+            lambda acu, p: acu & Q(**{f"{lookup}codename": p}), perms, q
+        )
 
     return qs.filter(q)
 
@@ -148,13 +152,15 @@ def filter_for_user(
             model=model,
             ctype=ctype,
         )
+
         if user_model.objects.is_generic():
             user_qs = user_qs.filter(content_type=F("permission__content_type"))
         else:
             user_qs = user_qs.annotate(object_pk=F("content_object"))
 
-        obj_qs = user_qs.values_list("object_pk", flat=True).distinct()
-
+        obj_qs = user_qs.values_list(
+            Cast("object_pk", BigIntegerField()), flat=True
+        ).distinct()
         if with_groups:
             group_model = perm_models.group
             groups_field = get_user_model()._meta.get_field("groups")
@@ -174,7 +180,11 @@ def filter_for_user(
             else:
                 group_qs = group_qs.annotate(object_pk=F("content_object"))
 
-            obj_qs = obj_qs.union(group_qs.values_list("object_pk", flat=True).distinct())
+            obj_qs = obj_qs.union(
+                group_qs.values_list(
+                    Cast("object_pk", BigIntegerField()), flat=True
+                ).distinct()
+            )
 
         q |= Q(pk__in=obj_qs)
 
