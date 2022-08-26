@@ -35,6 +35,55 @@ class Mutation:
     delete_model: SomeModelType = gql.django.delete_mutation(gql.NodeInput)
 ```
 
+## Extending build in CUD mutations
+
+There might be the need to perform some pre or post validation before running the build-in mutations. A common use case is for example setting a model field based on the current request context. 
+
+As the syntax is not completely straightforward at the moment an example is listed as follows.
+
+```python
+
+from django.conf import settings
+from django.db import models
+
+# Django Model
+class Asset(models.Model):
+    name = models.TextField(null=True, blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+
+```
+
+The strawberry code uses a relay implementation but the concept should also work in a non-relay context.
+
+```python
+from strawberry_django_plus.mutations import resolvers
+
+@gql.django.type(Asset)
+class AssetNode(gql.relay.Node):
+    name: gql.auto
+    owner: UserNode
+
+@gql.django.partial(Asset)
+class UpdateAssetInput(gql.NodeInput):
+    name: gql.auto
+
+@gql.type
+class ModelMutation:
+
+    @gql.mutation
+    def update_asset(self, info: Info, input: UpdateAssetInput) -> ModelNode:
+        data = vars(input)
+        node_id: gql.relay.GlobalID = data.pop('id')
+        asset: Asset = node_id.resolve_node(info, ensure_type=Asset)
+
+        if asset.owner != info.context.request.user:
+            raise PermissionError("You can only modify objects you own.")
+
+        return resolvers.update(info, asset, resolvers.parse_input(info, data))
+```
+
+Important to note is that the input has to be converted via `vars` call. The concept is taken from the build-in mutation. You then need to call the `resolvers.update` function to mutate the model instance. The main benefit is that you keep all the validation and update logic from the build-in mutation.
+
 ## Custom model mutations
 
 It is possible to create custom model mutations with `gql.django.input_mutation`, which will
