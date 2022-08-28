@@ -37,7 +37,7 @@ class Mutation:
 
 ## Extending build in CUD mutations
 
-There might be the need to perform some pre or post validation before running the build-in mutations. A common use case is for example setting a model field based on the current request context. 
+There might be the need to perform some pre or post validation before running the built-in mutations. A common use case is for example setting a model field based on the current request context.
 
 As the syntax is not completely straightforward at the moment an example is listed as follows.
 
@@ -82,7 +82,7 @@ class ModelMutation:
         return resolvers.update(info, asset, resolvers.parse_input(info, data))
 ```
 
-Important to note is that the input has to be converted via `vars` call. The concept is taken from the build-in mutation. You then need to call the `resolvers.update` function to mutate the model instance. The main benefit is that you keep all the validation and update logic from the build-in mutation.
+Important to note is that the input has to be converted via `vars` call. The concept is taken from the built-in mutation. You then need to call the `resolvers.update` function to mutate the model instance. The main benefit is that you keep all the validation and update logic from the built-in mutation.
 
 ## Custom model mutations
 
