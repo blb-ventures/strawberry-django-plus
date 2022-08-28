@@ -201,9 +201,12 @@ def _from_django_type(
             if description:
                 field.description = str(description)
 
-    # FIXME: How to properly workaround this for mutations?
-    if django_type.is_input and field.default_value is UNSET:
-        field.default = UNSET
+    if (
+        django_type.is_input
+        and field.default_value is UNSET
+        and field.default_factory is dataclasses.MISSING
+    ):
+        field.default_factory = lambda: UNSET
 
     return field
 
