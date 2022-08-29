@@ -31,7 +31,7 @@ for information on how to use this lib.
   [django authentication system](https://docs.djangoproject.com/en/4.0/topics/auth/default/),
   direct and per-object permission checking for backends that implement those (e.g.
   [django-guardian](https://django-guardian.readthedocs.io/en/stable/)).
-- [Mutations for Django](https://blb-ventures.github.io/strawberry-django-plus/quickstart/#django-mutations),
+- [Mutations for Django](https://blb-ventures.github.io/strawberry-django-plus/mutations/),
   with CRUD support and automatic errors validation.
 - [Relay support](https://blb-ventures.github.io/strawberry-django-plus/quickstart/#relay-support)
   for queries, connections and input mutations, all integrated with django types directly.
