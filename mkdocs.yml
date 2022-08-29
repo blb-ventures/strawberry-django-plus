@@ -80,6 +80,7 @@ dev_addr: 127.0.0.1:7000
 nav:
   - Start here: index.md
   - Quick start: quickstart.md
+  - Mutations: mutations.md
   - Extensions:
       - Query optimizer: query-optimizer.md
       - Django debug toolbar: debug-toolbar.md
