@@ -318,7 +318,7 @@ DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
     # specs expect this type to be "ID".
     name="GlobalID",
     description=GraphQLID.description,
-    parse_literal=lambda v: GlobalID.from_id(GraphQLID.parse_literal(v)),
+    parse_literal=lambda v, vars=None: GlobalID.from_id(GraphQLID.parse_literal(v, vars)),
     parse_value=GlobalID.from_id,
     serialize=str,
     specified_by_url="https://relay.dev/graphql/objectidentification.htm",
@@ -367,7 +367,10 @@ class Node(abc.ABC):
             resolve_id = cls.resolve_id
 
         node_id = resolve_id(root, info=info)
-        type_name = info.path.typename
+        resolve_typename = (
+            root.__class__.resolve_typename if isinstance(root, Node) else cls.resolve_typename
+        )
+        type_name = resolve_typename(root, info)
         assert type_name
 
         if isinstance(node_id, str):
@@ -410,6 +413,10 @@ class Node(abc.ABC):
         """
         id_attr = getattr(cls, "id_attr", "id")
         return getattr(root, id_attr)
+
+    @classmethod
+    def resolve_typename(cls: Type[NodeType], root: NodeType, info: Info):
+        return info.path.typename
 
     @classmethod
     def resolve_connection(
