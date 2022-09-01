@@ -155,7 +155,7 @@ def test_ordering(db, gql_client: GraphQLTestClient):
 
     milestone_1 = MilestoneFactory.create(name="Foo", project__name="Proj 3")
     milestone_2 = MilestoneFactory.create(name="Bar", project__name="Proj 1")
-    milestone_3 = MilestoneFactory.create(name="Zar", project__name="Proj 2")
+    milestone_3 = MilestoneFactory.create(name="Zaffar", project__name="Proj 2")
 
     # Without ordering this should return the natural order of the database
     res = gql_client.query(query)
@@ -237,7 +237,7 @@ def test_filtering(db, gql_client: GraphQLTestClient):
     p = ProjectFactory.create()
     milestone_1 = MilestoneFactory.create(name="Foo", project=p)
     milestone_2 = MilestoneFactory.create(name="Bar")
-    milestone_3 = MilestoneFactory.create(name="Zar", project=p)
+    milestone_3 = MilestoneFactory.create(name="Zaffar", project=p)
 
     res = gql_client.query(query)
     assert res.data
@@ -296,7 +296,7 @@ def test_filtering_custom(db, gql_client: GraphQLTestClient):
     p = ProjectFactory.create()
     milestone_1 = MilestoneFactory.create(name="Foo", project=p)
     milestone_2 = MilestoneFactory.create(name="Bar")
-    milestone_3 = MilestoneFactory.create(name="Zar", project=p)
+    milestone_3 = MilestoneFactory.create(name="Zaffar", project=p)
 
     res = gql_client.query(query)
     assert res.data
