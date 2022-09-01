@@ -947,8 +947,9 @@ class ConnectionField(RelayField):
                 "like `Iterable[<NodeType>]`, `List[<NodeType>]`, etc"
             )
 
+        ntype = get_args(resolved)[0]
         type_override = StrawberryAnnotation(
-            Connection[get_args(resolved)[0]],  # type:ignore
+            ntype.CONNECTION_CLASS[ntype],
             namespace=namespace,
         ).resolve()
 
