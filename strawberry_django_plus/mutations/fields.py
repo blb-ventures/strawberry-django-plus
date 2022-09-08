@@ -251,6 +251,10 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        self.full_clean = kwargs.get("full_clean", False) == "True"
+        super().__init__(*args, **kwargs)
+
     @async_safe
     def resolver(
         self,
@@ -267,13 +271,12 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         if pk is UNSET:
             pk = vdata.pop("pk")
 
-        full_clean = kwargs.get("full_clean", False) == "True"
         # Do not optimize anything while retrieving the object to update
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
             instance = get_with_perms(pk, info, required=True, model=self.model)
             return resolvers.update(
-                info, instance, resolvers.parse_input(info, vdata), full_clean=full_clean
+                info, instance, resolvers.parse_input(info, vdata), full_clean=self.full_clean
             )
         finally:
             DjangoOptimizerExtension.enabled.reset(token)
@@ -599,6 +602,7 @@ def update(
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
+    full_clean: bool = True,
 ) -> Any:
     """Update mutation for django input fields.
 
@@ -628,6 +632,7 @@ def update(
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
+        full_clean=full_clean,
     )
 
 
