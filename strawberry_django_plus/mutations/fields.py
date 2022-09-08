@@ -230,6 +230,10 @@ class DjangoCreateMutationField(DjangoInputMutationField):
 
     """
 
+    def __init__(self, full_clean=False, *args, **kwargs):
+        self.full_clean = full_clean
+        super().__init__(*args, **kwargs)
+
     @async_safe
     def resolver(
         self,
@@ -240,7 +244,9 @@ class DjangoCreateMutationField(DjangoInputMutationField):
         kwargs: Dict[str, Any],
     ) -> Any:
         assert data is not None
-        return resolvers.create(info, self.model, resolvers.parse_input(info, vars(data)))
+        return resolvers.create(
+            info, self.model, resolvers.parse_input(info, vars(data)), full_clean=self.full_clean
+        )
 
 
 class DjangoUpdateMutationField(DjangoInputMutationField):
@@ -553,6 +559,7 @@ def create(
     default_factory: Union[Callable, object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
+    full_clean: bool = True,
 ) -> Any:
     """Create mutation for django input fields.
 
@@ -584,6 +591,7 @@ def create(
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
+        full_clean=full_clean,
     )
 
 
