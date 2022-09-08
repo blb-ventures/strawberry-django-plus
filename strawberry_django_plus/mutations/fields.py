@@ -267,11 +267,14 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         if pk is UNSET:
             pk = vdata.pop("pk")
 
+        full_clean = kwargs.get("full_clean", False) == "True"
         # Do not optimize anything while retrieving the object to update
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
             instance = get_with_perms(pk, info, required=True, model=self.model)
-            return resolvers.update(info, instance, resolvers.parse_input(info, vdata))
+            return resolvers.update(
+                info, instance, resolvers.parse_input(info, vdata), full_clean=full_clean
+            )
         finally:
             DjangoOptimizerExtension.enabled.reset(token)
 
