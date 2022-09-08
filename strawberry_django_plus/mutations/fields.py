@@ -251,8 +251,8 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        self.full_clean = kwargs.get("full_clean", False) == "True"
+    def __init__(self, full_clean=False, *args, **kwargs):
+        self.full_clean = full_clean
         super().__init__(*args, **kwargs)
 
     @async_safe
