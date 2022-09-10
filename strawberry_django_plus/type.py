@@ -2,7 +2,6 @@ import dataclasses
 import types
 from typing import (
     Callable,
-    Generic,
     Literal,
     Optional,
     Sequence,
@@ -197,7 +196,8 @@ def _from_django_type(
             elif isinstance(model_field, (ManyToOneRel, ManyToManyRel)):
                 description = model_field.field.help_text
             else:
-                description = model_field.help_text
+                description = getattr(model_field, "help_text")  # noqa:B009
+
             if description:
                 field.description = str(description)
 
@@ -339,13 +339,9 @@ def _process_type(
 
 
 @dataclasses.dataclass
-class StrawberryDjangoType(Generic[_O, _M], _StraberryDjangoType):
+class StrawberryDjangoType(_StraberryDjangoType[_O, _M]):
     """Strawberry django type metadata."""
 
-    origin: _O
-    model: Type[_M]
-    is_input: bool
-    is_partial: bool
     is_filter: Union[Literal["lookups"], bool]
     order: Optional[Union[type, UnsetType]]
     filters: Optional[Union[type, UnsetType]]

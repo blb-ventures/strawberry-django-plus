@@ -260,6 +260,6 @@ def resolve_model_field_type(
             optional = field.null
 
     if optional:
-        retval = Optional[retval]  # type:ignore
+        retval = Optional[retval]
 
     return retval

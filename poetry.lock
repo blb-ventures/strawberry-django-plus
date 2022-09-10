@@ -96,7 +96,7 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "certifi"
-version = "2022.6.15"
+version = "2022.6.15.1"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "dev"
 optional = false
@@ -214,7 +214,7 @@ sqlparse = ">=0.2.0"
 
 [[package]]
 name = "django-extensions"
-version = "3.2.0"
+version = "3.2.1"
 description = "Extensions for Django"
 category = "dev"
 optional = false
@@ -616,7 +616,7 @@ pyyaml = "*"
 
 [[package]]
 name = "mkdocs-material"
-version = "8.4.2"
+version = "8.4.3"
 description = "Documentation that simply works"
 category = "dev"
 optional = false
@@ -1007,7 +1007,7 @@ sanic = ["sanic (>=20.12.2,<22.0.0)"]
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.4.0"
+version = "0.5.0"
 description = "Strawberry GraphQL Django extension"
 category = "main"
 optional = false
@@ -1103,7 +1103,7 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "58d123f2620ad8c7d00c27750434a00486ed25d20cde1d20a00a27855e0c86e7"
+content-hash = "f09b224a7403b528fb066fb792d30e0015d9a708a86b98cedbcc8d4c90abff55"
 
 [metadata.files]
 appnope = [
@@ -1174,8 +1174,8 @@ black = [
     {file = "black-22.8.0.tar.gz", hash = "sha256:792f7eb540ba9a17e8656538701d3eb1afcb134e3b45b71f20b25c77a8db7e6e"},
 ]
 certifi = [
-    {file = "certifi-2022.6.15-py3-none-any.whl", hash = "sha256:fe86415d55e84719d75f8b69414f6438ac3547d2078ab91b67e779ef69378412"},
-    {file = "certifi-2022.6.15.tar.gz", hash = "sha256:84c85a9078b11105f04f3036a9482ae10e4621616db313fe045dd24743a0820d"},
+    {file = "certifi-2022.6.15.1-py3-none-any.whl", hash = "sha256:43dadad18a7f168740e66944e4fa82c6611848ff9056ad910f8f7a3e46ab89e0"},
+    {file = "certifi-2022.6.15.1.tar.gz", hash = "sha256:cffdcd380919da6137f76633531a5817e3a9f268575c128249fb637e4f9e73fb"},
 ]
 charset-normalizer = [
     {file = "charset-normalizer-2.1.1.tar.gz", hash = "sha256:5a3d016c7c547f69d6f81fb0db9449ce888b418b5b9952cc5e6e66843e9dd845"},
@@ -1266,8 +1266,8 @@ django-debug-toolbar = [
     {file = "django_debug_toolbar-3.6.0-py3-none-any.whl", hash = "sha256:fe7fe3f21865218827e2162ecc06eba386dfe8cffe4f3501c49bb4359e06a0e6"},
 ]
 django-extensions = [
-    {file = "django-extensions-3.2.0.tar.gz", hash = "sha256:7dc7cd1da50d83b76447a58f5d7e5c8e6cd83f21e9b7e5f97e6b644f4d4e21a6"},
-    {file = "django_extensions-3.2.0-py3-none-any.whl", hash = "sha256:4c234a7236e9e41c17d9036f6dae7a3a9b212527105b8a0d24b2459b267825f0"},
+    {file = "django-extensions-3.2.1.tar.gz", hash = "sha256:2a4f4d757be2563cd1ff7cfdf2e57468f5f931cc88b23cf82ca75717aae504a4"},
+    {file = "django_extensions-3.2.1-py3-none-any.whl", hash = "sha256:421464be390289513f86cb5e18eb43e5dc1de8b4c27ba9faa3b91261b0d67e09"},
 ]
 django-guardian = [
     {file = "django-guardian-2.4.0.tar.gz", hash = "sha256:c58a68ae76922d33e6bdc0e69af1892097838de56e93e78a8361090bcd9f89a0"},
@@ -1433,8 +1433,8 @@ mkdocs-markdownextradata-plugin = [
     {file = "mkdocs-markdownextradata-plugin-0.2.5.tar.gz", hash = "sha256:9c562e8fe375647d5692d11dfe369a7bdd50302174d35995fce2aeca58036ec6"},
 ]
 mkdocs-material = [
-    {file = "mkdocs-material-8.4.2.tar.gz", hash = "sha256:704c64c3fff126a3923c2961d95f26b19be621342a6a4e49ed039f0bb7a5c540"},
-    {file = "mkdocs_material-8.4.2-py2.py3-none-any.whl", hash = "sha256:166287bb0e4197804906bf0389a852d5ced43182c30127ac8b48a4e497ecd7e5"},
+    {file = "mkdocs-material-8.4.3.tar.gz", hash = "sha256:f39af3234ce0b60024b7712995af0de5b5227ab6504f0b9c8709c9a770bd94bf"},
+    {file = "mkdocs_material-8.4.3-py2.py3-none-any.whl", hash = "sha256:d5cc6f5023061a663514f61810052ad266f5199feafcf15ad23ea4891b21e6bc"},
 ]
 mkdocs-material-extensions = [
     {file = "mkdocs-material-extensions-1.0.3.tar.gz", hash = "sha256:bfd24dfdef7b41c312ede42648f9eb83476ea168ec163b613f9abd12bbfddba2"},
@@ -1595,8 +1595,8 @@ strawberry-graphql = [
     {file = "strawberry_graphql-0.128.0-py3-none-any.whl", hash = "sha256:2b1b694f914bd2f286f2c10ac6244ce14d6a7f83ef6f84ddfcdadcd246c5a473"},
 ]
 strawberry-graphql-django = [
-    {file = "strawberry-graphql-django-0.4.0.tar.gz", hash = "sha256:d321f173834f9156e33cc91a175000ff38e72afa9c7f412b30c678d7f274d014"},
-    {file = "strawberry_graphql_django-0.4.0-py3-none-any.whl", hash = "sha256:9e69ae68be76204a311dd8906b29a7006849e308c749211ea19d6d63aea7ef14"},
+    {file = "strawberry-graphql-django-0.5.0.tar.gz", hash = "sha256:92442669fba8610d985ec85551b040344482dc8a3bff21f3e759063149c646ec"},
+    {file = "strawberry_graphql_django-0.5.0-py3-none-any.whl", hash = "sha256:4e1c5c2abe912037da9cd89493cb36734203603f055d5f542573e1199fda57d4"},
 ]
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},

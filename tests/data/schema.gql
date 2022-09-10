@@ -151,7 +151,7 @@ input IssueInputPartial {
 type IssueType implements Node {
   id: GlobalID!
   name: String!
-  milestone: MilestoneType!
+  milestone(order: MilestoneOrder): MilestoneType!
   priority: Int!
 
   """the kind of the issue"""
@@ -340,7 +340,7 @@ type ProjectType implements Node {
   """This project's status"""
   status: Status!
   dueDate: Date
-  milestones(filters: MilestoneFilter): [MilestoneType!]!
+  milestones(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
   cost: Decimal @isAuthenticated
 }
 
