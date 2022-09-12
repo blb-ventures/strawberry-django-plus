@@ -151,7 +151,7 @@ input IssueInputPartial {
 type IssueType implements Node {
   id: GlobalID!
   name: String!
-  milestone(order: MilestoneOrder): MilestoneType!
+  milestone: MilestoneType!
   priority: Int!
 
   """the kind of the issue"""

@@ -290,6 +290,10 @@ class StrawberryDjangoNodeField(relay.NodeField, StrawberryDjangoField):
 
 
 class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoField):
+    def __init__(self, *args, **kwargs):
+        self._force_is_list_as_true = False
+        super().__init__(*args, **kwargs)
+
     @property
     def arguments(self) -> List[StrawberryArgument]:
         # FIXME: The order/filters/etc arguments will only be added if there's no base_resolver
@@ -297,11 +301,18 @@ class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoFie
         # return value itself. How to handle this in a better way?
         base_resolver = self._base_resolver
         self._base_resolver = None
+        self._force_is_list_as_true = True
         args = super().arguments
         if base_resolver is not None:
             args += base_resolver.arguments
         self._base_resolver = base_resolver
+        self._force_is_list_as_true = False
         return args
+
+    def is_list(self):
+        if self._force_is_list_as_true:
+            return True
+        return super().is_list
 
     def resolve_nodes(
         self,

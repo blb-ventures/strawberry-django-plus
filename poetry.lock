@@ -978,7 +978,7 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.130.0"
+version = "0.130.1"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -1007,7 +1007,7 @@ sanic = ["sanic (>=20.12.2,<22.0.0)"]
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.5.0"
+version = "0.5.1"
 description = "Strawberry GraphQL Django extension"
 category = "main"
 optional = false
@@ -1027,7 +1027,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "traitlets"
-version = "5.3.0"
+version = "5.4.0"
 description = ""
 category = "dev"
 optional = false
@@ -1103,7 +1103,7 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "f09b224a7403b528fb066fb792d30e0015d9a708a86b98cedbcc8d4c90abff55"
+content-hash = "b441cc3c3fcbf12ae8d8b154a5925fc7dfddd9a6090ec756271b4c8766326863"
 
 [metadata.files]
 appnope = [
@@ -1591,20 +1591,20 @@ stack-data = [
     {file = "stack_data-0.5.0.tar.gz", hash = "sha256:715c8855fbf5c43587b141e46cc9d9339cc0d1f8d6e0f98ed0d01c6cb974e29f"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.130.0.tar.gz", hash = "sha256:9d5458900c4b7229cf2a2ca1ce68a6fef0a2b03a591e1b510e89b1e356a4bcd9"},
-    {file = "strawberry_graphql-0.130.0-py3-none-any.whl", hash = "sha256:6aa906b97a7501746fbf818e182aef8783255e68596a80df9243a2b3fc112e85"},
+    {file = "strawberry-graphql-0.130.1.tar.gz", hash = "sha256:4fd68c20c091d2892bc22937ce6833c87f6991350319ffc55084008b75caa12c"},
+    {file = "strawberry_graphql-0.130.1-py3-none-any.whl", hash = "sha256:5b89747ae9eca6016a880bd320ed2b091f2389be11f62e18dc93a506f3213289"},
 ]
 strawberry-graphql-django = [
-    {file = "strawberry-graphql-django-0.5.0.tar.gz", hash = "sha256:92442669fba8610d985ec85551b040344482dc8a3bff21f3e759063149c646ec"},
-    {file = "strawberry_graphql_django-0.5.0-py3-none-any.whl", hash = "sha256:4e1c5c2abe912037da9cd89493cb36734203603f055d5f542573e1199fda57d4"},
+    {file = "strawberry-graphql-django-0.5.1.tar.gz", hash = "sha256:e807492399f1c823c88d82919efb6e5a564edc405f0c72b704beec8d608b5012"},
+    {file = "strawberry_graphql_django-0.5.1-py3-none-any.whl", hash = "sha256:eda8b06218b44ee17c348df78f155a26654699874414cd594a982cbf4760c0fe"},
 ]
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 traitlets = [
-    {file = "traitlets-5.3.0-py3-none-any.whl", hash = "sha256:65fa18961659635933100db8ca120ef6220555286949774b9cfc106f941d1c7a"},
-    {file = "traitlets-5.3.0.tar.gz", hash = "sha256:0bb9f1f9f017aa8ec187d8b1b2a7a6626a2a1d877116baba52a129bfa124f8e2"},
+    {file = "traitlets-5.4.0-py3-none-any.whl", hash = "sha256:93663cc8236093d48150e2af5e2ed30fc7904a11a6195e21bab0408af4e6d6c8"},
+    {file = "traitlets-5.4.0.tar.gz", hash = "sha256:3f2c4e435e271592fe4390f1746ea56836e3a080f84e7833f0f801d9613fec39"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
