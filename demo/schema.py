@@ -206,7 +206,7 @@ class Query:
     node: Optional[gql.Node] = gql.django.node()
 
     issue: Optional[IssueType] = gql.django.node(description="Foobar")
-    milestone: Optional[MilestoneType] = gql.django.node()
+    milestone: Optional[Annotated["MilestoneType", gql.lazy("demo.schema")]] = gql.django.node()
     milestone_mandatory: MilestoneType = gql.django.node()
     milestones: List[MilestoneType] = gql.django.node()
     project: Optional[ProjectType] = gql.django.node()
@@ -248,29 +248,29 @@ class Query:
     )
     # User permission on "demo.view_issue" to resolve
     issue_perm_required: IssueType = gql.django.node(
-        directives=[HasPerm("demo.view_issue")],
+        directives=[HasPerm(perms=["demo.view_issue"])],
     )
     issue_perm_required_optional: Optional[IssueType] = gql.django.node(
-        directives=[HasPerm("demo.view_issue")],
+        directives=[HasPerm(perms=["demo.view_issue"])],
     )
     issue_list_perm_required: List[IssueType] = gql.django.field(
-        directives=[HasPerm("demo.view_issue")],
+        directives=[HasPerm(perms=["demo.view_issue"])],
     )
     issue_conn_perm_required: relay.Connection[IssueType] = gql.django.connection(
-        directives=[HasPerm("demo.view_issue")],
+        directives=[HasPerm(perms=["demo.view_issue"])],
     )
     # User permission on the resolved object for "demo.view_issue"
     issue_obj_perm_required: IssueType = gql.django.node(
-        directives=[HasObjPerm("demo.view_issue")],
+        directives=[HasObjPerm(perms=["demo.view_issue"])],
     )
     issue_obj_perm_required_optional: Optional[IssueType] = gql.django.node(
-        directives=[HasObjPerm("demo.view_issue")],
+        directives=[HasObjPerm(perms=["demo.view_issue"])],
     )
     issue_list_obj_perm_required: List[IssueType] = gql.django.field(
-        directives=[HasObjPerm("demo.view_issue")],
+        directives=[HasObjPerm(perms=["demo.view_issue"])],
     )
     issue_conn_obj_perm_required: relay.Connection[IssueType] = gql.django.connection(
-        directives=[HasObjPerm("demo.view_issue")],
+        directives=[HasObjPerm(perms=["demo.view_issue"])],
     )
 
     @gql.django.field
