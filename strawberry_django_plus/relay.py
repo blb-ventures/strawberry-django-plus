@@ -948,6 +948,9 @@ class ConnectionField(RelayField):
             )
 
         ntype = get_args(resolved)[0]
+        if isinstance(ntype, LazyType):
+            ntype = ntype.resolve_type()
+
         type_override = StrawberryAnnotation(
             ntype.CONNECTION_CLASS[ntype],
             namespace=namespace,
