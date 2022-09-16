@@ -322,7 +322,7 @@ def mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> _T:
@@ -341,7 +341,7 @@ def mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -360,7 +360,7 @@ def mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> DjangoInputMutationField:
@@ -378,13 +378,13 @@ def mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init=None,
+    init: Literal[True, False, None] = None,
 ) -> Any:
     """Annotate a property or a method to create a mutation field.
 
@@ -431,7 +431,7 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> _T:
@@ -451,7 +451,7 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -471,7 +471,7 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> DjangoInputMutationField:
@@ -490,13 +490,13 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init=None,
+    init: Literal[True, False, None] = None,
 ) -> Any:
     """Annotate a property or a method to create an input mutation field.
 
@@ -544,7 +544,7 @@ def create(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -593,7 +593,7 @@ def update(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -640,7 +640,7 @@ def delete(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:

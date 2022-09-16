@@ -1108,12 +1108,12 @@ def node(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init=None,
+    init: Literal[True, False, None] = None,
 ) -> Any:
     """Annotate a property to create a relay query field.
 
@@ -1161,7 +1161,7 @@ def connection(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
 ) -> _T:
     ...
@@ -1177,7 +1177,7 @@ def connection(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
 ) -> Any:
     ...
@@ -1193,7 +1193,7 @@ def connection(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
 ) -> ConnectionField:
     ...
@@ -1208,12 +1208,12 @@ def connection(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init=None,
+    init: Literal[True, False, None] = None,
 ) -> Any:
     """Annotate a property or a method to create a relay connection field.
 
@@ -1293,7 +1293,7 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
 ) -> _T:
     ...
@@ -1309,7 +1309,7 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
 ) -> Any:
     ...
@@ -1325,7 +1325,7 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
 ) -> InputMutationField:
     ...
@@ -1340,12 +1340,12 @@ def input_mutation(
     permission_classes: Optional[List[Type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
-    default_factory: Union[Callable, object] = UNSET,
+    default_factory: Union[Callable[..., object], object] = UNSET,
     directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init=None,
+    init: Literal[True, False, None] = None,
 ) -> Any:
     """Annotate a property or a method to create an input mutation field.
 
