@@ -84,6 +84,10 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         )
         super().__init__(*args, **kwargs)
 
+    @cached_property
+    def is_basic_field(self):
+        return False
+
     @property
     def arguments(self) -> List[StrawberryArgument]:
         if isinstance(self, relay.NodeField):

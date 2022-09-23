@@ -1,9 +1,9 @@
 # This should go to its own module or be contributed back to strawberry
-
 import abc
 import base64
 import dataclasses
 import functools
+from functools import cached_property
 import inspect
 import math
 import sys
@@ -841,6 +841,10 @@ class NodeField(RelayField):
                     description="The ID of the object.",
                 ),
             }
+
+    @cached_property
+    def is_basic_field(self):
+        return False
 
     def __call__(self, resolver):
         raise TypeError("NodeField cannot have a resolver, use a common field instead.")
