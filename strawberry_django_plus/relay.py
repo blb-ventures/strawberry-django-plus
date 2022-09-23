@@ -19,6 +19,7 @@ from typing import (
     Iterable,
     List,
     Literal,
+    Mapping,
     Optional,
     Sequence,
     Set,
@@ -1109,6 +1110,7 @@ def node(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -1146,6 +1148,7 @@ def node(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives or (),
     )
 
@@ -1162,6 +1165,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
 ) -> _T:
     ...
@@ -1178,6 +1182,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
 ) -> Any:
     ...
@@ -1194,6 +1199,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
 ) -> ConnectionField:
     ...
@@ -1209,6 +1215,7 @@ def connection(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -1275,6 +1282,7 @@ def connection(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives or (),
     )
     if resolver is not None:
@@ -1294,6 +1302,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
 ) -> _T:
     ...
@@ -1310,6 +1319,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
 ) -> Any:
     ...
@@ -1326,6 +1336,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
 ) -> InputMutationField:
     ...
@@ -1341,6 +1352,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -1393,6 +1405,7 @@ def input_mutation(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives or (),
     )
     if resolver is not None:

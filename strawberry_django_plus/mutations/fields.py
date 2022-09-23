@@ -6,6 +6,7 @@ from typing import (
     Iterable,
     List,
     Literal,
+    Mapping,
     Optional,
     Sequence,
     Type,
@@ -323,6 +324,7 @@ def mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> _T:
@@ -342,6 +344,7 @@ def mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -361,6 +364,7 @@ def mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> DjangoInputMutationField:
@@ -379,6 +383,7 @@ def mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
@@ -408,6 +413,7 @@ def mutation(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
@@ -432,6 +438,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> _T:
@@ -452,6 +459,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -472,6 +480,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> DjangoInputMutationField:
@@ -491,6 +500,7 @@ def input_mutation(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
@@ -523,6 +533,7 @@ def input_mutation(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
@@ -545,6 +556,7 @@ def create(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -575,6 +587,7 @@ def create(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
@@ -594,6 +607,7 @@ def update(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -622,6 +636,7 @@ def update(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
@@ -641,6 +656,7 @@ def delete(
     deprecation_reason: Optional[str] = None,
     default: Any = UNSET,
     default_factory: Union[Callable[..., object], object] = UNSET,
+    metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
 ) -> Any:
@@ -656,6 +672,7 @@ def delete(
         deprecation_reason=deprecation_reason,
         default=default,
         default_factory=default_factory,
+        metadata=metadata,
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
