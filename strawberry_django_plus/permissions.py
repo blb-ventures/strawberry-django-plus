@@ -386,7 +386,9 @@ class ConditionDirective(AuthDirective):
             self.check_condition(root, info, user, **kwargs),
         )
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(
+        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+    ) -> bool:
         raise NotImplementedError
 
 
@@ -400,7 +402,9 @@ class IsAuthenticated(ConditionDirective):
 
     message: Private[str] = dataclasses.field(default="User is not authenticated.")
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(
+        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+    ) -> bool:
         return user.is_authenticated and user.is_active
 
 
@@ -414,7 +418,9 @@ class IsStaff(ConditionDirective):
 
     message: Private[str] = dataclasses.field(default="User is not a staff member.")
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(
+        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+    ) -> bool:
         return user.is_authenticated and user.is_staff
 
 
@@ -428,7 +434,9 @@ class IsSuperuser(ConditionDirective):
 
     message: Private[str] = dataclasses.field(default="User is not a superuser.")
 
-    def check_condition(self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs):
+    def check_condition(
+        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+    ) -> bool:
         return user.is_authenticated and user.is_superuser
 
 
