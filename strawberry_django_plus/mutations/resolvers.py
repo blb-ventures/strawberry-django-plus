@@ -72,6 +72,9 @@ def _parse_data(info: Info, model: Type[_M], value: Any):
     parsed_data = {}
     if data:
         for k, v in data.items():
+            if callable(v):
+                v = v()
+
             if v is UNSET:
                 continue
 
@@ -143,6 +146,9 @@ def parse_input(info: Info, data: Any):
         return node
     elif isinstance(data, NodeInput):
         pk = cast(Any, parse_input(info, getattr(data, "id", UNSET)))
+        if callable(pk):
+            pk = pk()
+
         parsed = {}
         for field in dataclasses.fields(data):
             if field.name == "id":
@@ -257,6 +263,9 @@ def update(info, instance, data, *, full_clean=True):
 
     for name, value in data.items():
         field = fields.get(name)
+
+        if callable(value):
+            value = value()
 
         if field is None or value is UNSET:
             continue
