@@ -26,6 +26,7 @@ classifiers = [
   "Framework :: Django :: 4.1",
 ]
 packages = [{ include = "strawberry_django_plus" }]
+include = ["strawberry_django_plus/py.typed"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
