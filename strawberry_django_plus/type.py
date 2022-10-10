@@ -66,11 +66,9 @@ def _from_django_type(
 ) -> StrawberryDjangoField:
     origin = django_type.origin
 
-    attr = getattr(origin, name, UNSET)
-    if attr is UNSET:
+    attr = getattr(origin, name, dataclasses.MISSING)
+    if attr is UNSET or attr is dataclasses.MISSING:
         attr = getattr(StrawberryDjangoField, "__dataclass_fields__", {}).get(name, UNSET)
-    if attr is dataclasses.MISSING:
-        attr = UNSET
 
     if type_annotation:
         try:
@@ -100,13 +98,8 @@ def _from_django_type(
     elif isinstance(attr, StrawberryDjangoField) and not attr.origin_django_type:
         field = attr
     elif isinstance(attr, dataclasses.Field):
-        default = getattr(attr, "default", UNSET)
-        if default is dataclasses.MISSING:
-            default = UNSET
-
-        default_factory = getattr(attr, "default_factory", UNSET)
-        if default_factory is dataclasses.MISSING:
-            default_factory = UNSET
+        default = getattr(attr, "default", dataclasses.MISSING)
+        default_factory = getattr(attr, "default_factory", dataclasses.MISSING)
 
         if type_annotation is None:
             type_annotation = getattr(attr, "type_annotation", None)
@@ -200,13 +193,6 @@ def _from_django_type(
 
             if description:
                 field.description = str(description)
-
-    if (
-        django_type.is_input
-        and field.default_value is UNSET
-        and field.default_factory is dataclasses.MISSING
-    ):
-        field.default_factory = lambda: UNSET
 
     return field
 
