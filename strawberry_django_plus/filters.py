@@ -35,9 +35,6 @@ def _build_filter_kwargs(filters):
         field_name = f.name
         field_value = _normalize_value(getattr(filters, field_name))
 
-        if callable(field_value):
-            field_value = field_value()
-
         # Unset means we are not filtering this. None is still acceptable
         if field_value is UNSET:
             continue

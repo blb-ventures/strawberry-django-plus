@@ -19,7 +19,7 @@ repos:
       - id: codespell
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.3
+    rev: v3.0.0
     hooks:
       - id: pyupgrade
         args: ["--py38-plus"]
@@ -31,7 +31,7 @@ repos:
         args: ["-i", "--wrap-summaries", "0", "--blank"]
 
   - repo: https://github.com/myint/autoflake
-    rev: v1.5.3
+    rev: v1.7.1
     hooks:
       - id: autoflake
         args: ["--in-place", "--remove-all-unused-imports"]
@@ -49,7 +49,7 @@ repos:
         types: [pyi]
 
   - repo: https://github.com/psf/black
-    rev: 22.8.0
+    rev: 22.10.0
     hooks:
       - id: black
         args: ["--config", "pyproject.toml"]
@@ -61,9 +61,9 @@ repos:
         args: ["--config=.flake8"]
         additional_dependencies:
           [
-            "flake8-broken-line==0.5.0",
+            "flake8-broken-line==0.6.0",
             "flake8-bugbear==22.9.11",
-            "flake8-builtins==1.5.3",
+            "flake8-builtins==2.0.0",
             "flake8-comprehensions==3.10.0",
             "flake8-polyfill==1.0.2",
             "flake8-return==1.1.3",
