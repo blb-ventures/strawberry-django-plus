@@ -797,6 +797,10 @@ class RelayField(StrawberryField):
         }
         return list(args.values())
 
+    @cached_property
+    def is_basic_field(self):
+        return False
+
     @functools.cached_property
     def is_optional(self):
         return isinstance(self.type, StrawberryOptional)
@@ -840,10 +844,6 @@ class NodeField(RelayField):
                     description="The ID of the object.",
                 ),
             }
-
-    @cached_property
-    def is_basic_field(self):
-        return False
 
     def __call__(self, resolver):
         raise TypeError("NodeField cannot have a resolver, use a common field instead.")
