@@ -108,7 +108,7 @@ def _from_django_type(
 
         store = getattr(attr, "store", None)
         field = StrawberryDjangoField(
-            django_name=getattr(attr, "django_name", attr.name),
+            django_name=getattr(attr, "django_name", None) or attr.name,
             graphql_name=getattr(attr, "graphql_name", None),
             origin=getattr(attr, "origin", None),
             is_subscription=getattr(attr, "is_subscription", False),
@@ -165,11 +165,12 @@ def _from_django_type(
             raise  # field should exist, reraise caught exception
     else:
         field.is_relation = model_field.is_relation
-        field.django_name = resolve_model_field_name(
-            model_field,
-            is_input=django_type.is_input,
-            is_filter=bool(django_type.is_filter),
-        )
+        if not field.django_name:
+            field.django_name = resolve_model_field_name(
+                model_field,
+                is_input=django_type.is_input,
+                is_filter=bool(django_type.is_filter),
+            )
 
         # change relation field type to auto if field is inherited from another
         # type. for example if field is inherited from output type but we are
