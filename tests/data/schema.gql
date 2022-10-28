@@ -607,7 +607,7 @@ type StaffTypeEdge {
   node: StaffType!
 }
 
-"""An enumeration."""
+"""Project status options."""
 enum Status {
   ACTIVE
   INACTIVE

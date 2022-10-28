@@ -17,6 +17,8 @@ class Project(models.Model):
     milestones: "RelatedManager[Milestone]"
 
     class Status(models.TextChoices):
+        """Project status options."""
+
         ACTIVE = "active", "Active"
         INACTIVE = "inactive", "Inactive"
 
@@ -76,6 +78,8 @@ class Issue(models.Model):
     issue_assignees: "RelatedManager[Assignee]"
 
     class Kind(models.TextChoices):
+        """Issue kind options."""
+
         BUG = "b", "Bug"
         FEATURE = "f", "Feature"
 
