@@ -25,7 +25,11 @@ from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
-from strawberry_django.fields.types import get_model_field, resolve_model_field_name
+from strawberry_django.fields.types import (
+    get_model_field,
+    is_optional,
+    resolve_model_field_name,
+)
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations, is_similar_django_type
 from typing_extensions import Annotated
@@ -194,6 +198,9 @@ def _from_django_type(
 
             if description:
                 field.description = str(description)
+
+        if is_optional(model_field, django_type.is_input, django_type.is_partial):
+            field.type_annotation.annotation = Optional[field.type_annotation.annotation]
 
     return field
 
