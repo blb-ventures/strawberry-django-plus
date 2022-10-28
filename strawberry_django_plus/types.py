@@ -23,6 +23,7 @@ from strawberry import UNSET
 from strawberry.custom_scalar import ScalarWrapper
 from strawberry.file_uploads import Upload
 from strawberry.type import StrawberryType
+from strawberry.utils.str_converters import capitalize_first, to_camel_case
 from strawberry_django.fields.types import (
     DjangoModelType,
     ManyToManyInput,
@@ -212,6 +213,17 @@ def resolve_model_field_type(
             doc = field_type.__doc__ and inspect.cleandoc(field_type.__doc__)
             enum_def = strawberry.enum(field_type, description=doc)._enum_definition
         retval = enum_def.wrapped_cls
+
+    elif getattr(field, "choices", None) is not None:
+        enum_class_fields = {c[0]: c[0] for c in field.choices}
+        auto_enum = enum.Enum(
+            f"{field.model._meta.object_name}{capitalize_first(to_camel_case(field.name))}AutoEnum",
+            enum_class_fields,
+        )
+        retval = strawberry.enum(
+            auto_enum, description=f"{field.model._meta.verbose_name} | {field.verbose_name}"
+        )
+
     else:
         retval = _resolve_model_field(field, django_type)
 
