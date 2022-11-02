@@ -45,6 +45,30 @@ and mutations.
 If you want to name it differently, decorate the class with `@gql.enum` with your preferred
 name so that this lib will not try to register it again.
 
+### Standard django choices enums
+
+Convert standard django choices fields into GraphQL enums by dynamically creating an Enum class based on choices
+
+```python
+from django_choices_field import TexChoicesField
+
+class Song(models.Model):
+  GENRE_CHOICES = (
+    ("rock", "Rock'n'Roll"),
+    ("metal", "Metal"),
+    ("others", "Who Cares?"),
+  )
+
+  genre = models.CharField(choices=GENRE_CHOICES)
+```
+
+In that example, a new enum called `AppLabelSongGenreAutoEnum` will be dynamically created and be used for queries
+and mutations.
+
+Have in mind that this approach don't let you re-use the dynamically created enum elsewhere.
+
+This feature can be disabled by defining `STRAWBERRY_DJANGO_GENERATE_ENUMS_FROM_CHOICES` setting to `False`
+
 ### Permissioned resolvers
 
 Permissioning is done using schema directives by applying them to the fields that requires
