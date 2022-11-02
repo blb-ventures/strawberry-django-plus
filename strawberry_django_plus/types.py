@@ -214,14 +214,20 @@ def resolve_model_field_type(
             enum_def = strawberry.enum(field_type, description=doc)._enum_definition
         retval = enum_def.wrapped_cls
 
-    elif getattr(field, "choices", None) is not None:
-        enum_class_fields = {c[0]: c[0] for c in field.choices}
-        auto_enum = enum.Enum(
-            f"{field.model._meta.object_name}{capitalize_first(to_camel_case(field.name))}AutoEnum",
-            enum_class_fields,
+    elif config.GENERATE_ENUMS_FROM_CHOICES and getattr(field, "choices", None) is not None:
+        # Generate automatic Enum class for standard django's "choices" fields
+        auto_enum_class_fields = {c[0]: c[0] for c in field.choices}
+        auto_enum_class_name = "".join(
+            (
+                capitalize_first(to_camel_case(field.model._meta.app_label)),
+                field.model._meta.object_name,
+                capitalize_first(to_camel_case(field.name)),
+                "AutoEnum",
+            )
         )
+        auto_enum_class = enum.Enum(auto_enum_class_name, auto_enum_class_fields)
         retval = strawberry.enum(
-            auto_enum, description=f"{field.model._meta.verbose_name} | {field.verbose_name}"
+            auto_enum_class, description=f"{field.model._meta.verbose_name} | {field.verbose_name}"
         )
 
     else:
