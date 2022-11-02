@@ -187,6 +187,9 @@ def _from_django_type(
             field.type_annotation = StrawberryAnnotation(
                 resolve_model_field_type(model_field, django_type)
             )
+        # Force non-auto filters fields to be optional
+        elif is_optional(model_field, django_type.is_input, django_type.is_partial):
+            field.type_annotation = StrawberryAnnotation(Optional[field.type_annotation.annotation])
 
         if field.description is None:
             if isinstance(model_field, (GenericRel, GenericForeignKey)):
@@ -198,9 +201,6 @@ def _from_django_type(
 
             if description:
                 field.description = str(description)
-
-        if is_optional(model_field, django_type.is_input, django_type.is_partial):
-            field.type_annotation.annotation = Optional[field.type_annotation.annotation]
 
     return field
 
