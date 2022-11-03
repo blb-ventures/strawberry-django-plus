@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import decimal
-from typing import Iterable, List, Optional, Type, cast
+from typing import Iterable, List, Optional, Type, cast, Any, Dict
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
@@ -14,6 +14,7 @@ from typing_extensions import Annotated
 from strawberry_django_plus import gql
 from strawberry_django_plus.directives import SchemaDirectiveExtension
 from strawberry_django_plus.gql import relay
+from strawberry_django_plus.mutations import resolvers
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.permissions import (
     HasObjPerm,
@@ -22,8 +23,9 @@ from strawberry_django_plus.permissions import (
     IsStaff,
     IsSuperuser,
 )
+from strawberry_django_plus.type import FullClean
 
-from .models import Assignee, Issue, Milestone, Project, Tag
+from .models import Assignee, Issue, Milestone, Project, Tag, Quiz
 
 UserModel = cast(Type[AbstractUser], get_user_model())
 
@@ -137,6 +139,12 @@ class IssueType(relay.Node):
 class TagType(relay.Node):
     name: gql.auto
     issues: relay.Connection[IssueType]
+
+
+@gql.django.type(Quiz)
+class QuizType(relay.Node):
+    title: gql.auto
+    sequence: gql.auto
 
 
 @gql.django.partial(Tag)
@@ -318,6 +326,33 @@ class Mutation:
                 due_date=due_date,
             ),
         )
+
+    @gql.django.input_mutation
+    def create_quiz(
+        self,
+        info: Info,
+        title: str,
+    ) -> QuizType:
+        return cast(QuizType, resolvers.create(info, Quiz, {"title": title}))
+
+    @gql.django.input_mutation
+    def create_quiz_with_full_clean(
+            self,
+            info: Info,
+            title: str,
+            with_dict: bool
+    ) -> QuizType:
+        if with_dict:
+            quiz = cast(
+                QuizType,
+                resolvers.create(info, Quiz, {"title": title},
+                                 full_clean={"exclude": ["sequence"]}))
+        else:
+            quiz = cast(
+                QuizType,
+                resolvers.create(info, Quiz, {"title": title},
+                                 full_clean=FullClean(exclude=["sequence"])))
+        return quiz
 
 
 schema = gql.Schema(

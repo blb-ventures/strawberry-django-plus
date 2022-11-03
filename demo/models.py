@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Optional
 
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django_choices_field.fields import TextChoicesField
 
@@ -165,3 +165,18 @@ class Tag(models.Model):
     name = models.CharField(
         max_length=255,
     )
+
+
+class Quiz(models.Model):
+    title = models.CharField("title", max_length=100)
+    sequence = models.PositiveIntegerField("sequence", default=1, unique=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            with transaction.atomic():
+                _max = self.__class__.objects.select_for_update().aggregate(
+                    max=models.Max("sequence")
+                )["max"]
+                if _max is not None:
+                    self.sequence = _max + 1
+        super().save(*args, **kwargs)

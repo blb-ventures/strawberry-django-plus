@@ -678,3 +678,107 @@ def test_input_delete_mutation(db, gql_client: GraphQLTestClient):
 
     with pytest.raises(Issue.DoesNotExist):
         Issue.objects.get(pk=issue.pk)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateQuiz ($input: CreateQuizInput!) {
+      createQuiz (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on QuizType {
+          title
+          sequence
+        }
+      }
+    }
+    """
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+            }
+        },
+    )
+    assert res.data["createQuiz"].get("sequence", None) == 1
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+            }
+        },
+    )
+    assert res.data["createQuiz"].get("sequence", None) is None
+    assert res.data["createQuiz"].get("messages", None) is not None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_mutation_full_clean_with_kwargs(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateQuizWithFullClean ($input: CreateQuizWithFullCleanInput!) {
+      createQuizWithFullClean (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on QuizType {
+          title
+          sequence
+        }
+      }
+    }
+    """
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+                "withDict": True
+            }
+        },
+    )
+    assert res.data["createQuizWithFullClean"].get("sequence", None) == 1
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+                "withDict": True
+            }
+        },
+    )
+    assert res.data["createQuizWithFullClean"].get("sequence", None) == 2
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+                "withDict": False
+            }
+        },
+    )
+    assert res.data["createQuizWithFullClean"].get("sequence", None) == 3
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+                "withDict": False
+            }
+        },
+    )
+    assert res.data["createQuizWithFullClean"].get("sequence", None) == 4
