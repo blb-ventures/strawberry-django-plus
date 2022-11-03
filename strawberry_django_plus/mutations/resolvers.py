@@ -37,6 +37,7 @@ from strawberry_django.fields.types import (
 from typing_extensions import TypeAlias
 
 from strawberry_django_plus import relay
+from strawberry_django_plus.type import FullClean
 from strawberry_django_plus.types import ListInput, NodeInput
 from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_model_fields
@@ -177,7 +178,7 @@ def create(
     model: Type[_M],
     data: Dict[str, Any],
     *,
-    full_clean: Union[bool, Dict[str, Any]] = True,
+    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
 ) -> _M:
     ...
 
@@ -188,7 +189,7 @@ def create(
     model: Type[_M],
     data: List[Dict[str, Any]],
     *,
-    full_clean: Union[bool, Dict[str, Any]] = True,
+    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
 ) -> List[_M]:
     ...
 
@@ -214,7 +215,7 @@ def update(
     instance: _M,
     data: Dict[str, Any],
     *,
-    full_clean: Union[bool, Dict[str, Any]] = True,
+    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
 ) -> _M:
     ...
 
@@ -225,7 +226,7 @@ def update(
     instance: Iterable[_M],
     data: Dict[str, Any],
     *,
-    full_clean: Union[bool, Dict[str, Any]] = True,
+    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
 ) -> List[_M]:
     ...
 
@@ -293,7 +294,9 @@ def update(info, instance, data, *, full_clean=True):
         if isinstance(full_clean, bool) and full_clean:
             instance.full_clean()
         elif isinstance(full_clean, dict):
-            instance.full_clean(**full_clean)
+            instance.full_clean(**FullClean(**full_clean).__dict__)
+        elif isinstance(full_clean, FullClean):
+            instance.full_clean(**full_clean.__dict__)
 
         instance.save()
 
