@@ -343,16 +343,18 @@ class Mutation:
             with_dict: bool
     ) -> QuizType:
         if with_dict:
-            quiz = cast(
-                QuizType,
-                resolvers.create(info, Quiz, {"title": title},
-                                 full_clean={"exclude": ["sequence"]}))
+            full_clean = {"exclude": ["sequence"]}
         else:
-            quiz = cast(
-                QuizType,
-                resolvers.create(info, Quiz, {"title": title},
-                                 full_clean=FullClean(exclude=["sequence"])))
-        return quiz
+            full_clean = FullClean(exclude=["sequence"])
+        return cast(
+            QuizType,
+            resolvers.create(
+                info,
+                Quiz,
+                {"title": title},
+                full_clean=full_clean
+            )
+        )
 
 
 schema = gql.Schema(
