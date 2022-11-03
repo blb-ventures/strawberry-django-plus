@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Optional
 
 from django.contrib.auth import get_user_model
-from django.db import models, transaction
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_choices_field.fields import TextChoicesField
 
@@ -173,10 +173,9 @@ class Quiz(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            with transaction.atomic():
-                _max = self.__class__.objects.select_for_update().aggregate(
-                    max=models.Max("sequence")
-                )["max"]
-                if _max is not None:
-                    self.sequence = _max + 1
+            _max = self.__class__.objects.aggregate(
+                max=models.Max("sequence")
+            )["max"]
+            if _max is not None:
+                self.sequence = _max + 1
         super().save(*args, **kwargs)

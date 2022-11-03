@@ -717,8 +717,13 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
             }
         },
     )
+    expected = {
+        'field': 'sequence',
+        'kind': 'VALIDATION',
+        'message': 'Quiz with this Sequence already exists.'
+    }
     assert res.data["createQuiz"].get("sequence", None) is None
-    assert res.data["createQuiz"].get("messages", None) is not None
+    assert res.data["createQuiz"].get("messages", None) == [expected]
 
 
 @pytest.mark.django_db(transaction=True)
