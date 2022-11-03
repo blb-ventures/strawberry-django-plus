@@ -177,7 +177,7 @@ def create(
     model: Type[_M],
     data: Dict[str, Any],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, Dict[str, Any]] = True,
 ) -> _M:
     ...
 
@@ -188,7 +188,7 @@ def create(
     model: Type[_M],
     data: List[Dict[str, Any]],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, Dict[str, Any]] = True,
 ) -> List[_M]:
     ...
 
@@ -214,7 +214,7 @@ def update(
     instance: _M,
     data: Dict[str, Any],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, Dict[str, Any]] = True,
 ) -> _M:
     ...
 
@@ -225,7 +225,7 @@ def update(
     instance: Iterable[_M],
     data: Dict[str, Any],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, Dict[str, Any]] = True,
 ) -> List[_M]:
     ...
 
@@ -290,8 +290,10 @@ def update(info, instance, data, *, full_clean=True):
         for file_field, value in files:
             file_field.save_form_data(instance, value)
 
-        if full_clean:
+        if isinstance(full_clean, bool) and full_clean:
             instance.full_clean()
+        elif isinstance(full_clean, dict):
+            instance.full_clean(**full_clean)
 
         instance.save()
 
