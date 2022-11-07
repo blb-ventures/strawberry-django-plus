@@ -48,6 +48,7 @@ name so that this lib will not try to register it again.
 ### Standard django choices enums
 
 Convert standard django choices fields into GraphQL enums by dynamically creating an Enum class based on choices
+This feature can be enable by defining `STRAWBERRY_DJANGO_GENERATE_ENUMS_FROM_CHOICES` setting to `True`
 
 ```python
 from django_choices_field import TexChoicesField
@@ -66,8 +67,6 @@ In that example, a new enum called `AppLabelSongGenreAutoEnum` will be dynamical
 and mutations.
 
 Have in mind that this approach don't let you re-use the dynamically created enum elsewhere.
-
-This feature can be disabled by defining `STRAWBERRY_DJANGO_GENERATE_ENUMS_FROM_CHOICES` setting to `False`
 
 ### Permissioned resolvers
 
