@@ -222,7 +222,7 @@ def resolve_model_field_type(
                 capitalize_first(to_camel_case(field.model._meta.app_label)),
                 field.model._meta.object_name,
                 capitalize_first(to_camel_case(field.name)),
-                "AutoEnum",
+                "Enum",
             )
         )
         auto_enum_class = enum.Enum(auto_enum_class_name, auto_enum_class_fields)

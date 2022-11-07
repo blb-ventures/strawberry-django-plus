@@ -61,7 +61,7 @@ class Song(models.Model):
     genre = models.CharField(choices=GENRE_CHOICES)
 ```
 
-In that example, a new enum called `MyAppSongGenreAutoEnum` will be dynamically created and be used for queries
+In that example, a new enum called `MyAppSongGenreEnum` will be dynamically created and be used for queries
 and mutations.
 
 Have in mind that this approach don't let you re-use the dynamically created enum elsewhere.
