@@ -51,19 +51,17 @@ Convert standard django choices fields into GraphQL enums by dynamically creatin
 This feature can be enable by defining `STRAWBERRY_DJANGO_GENERATE_ENUMS_FROM_CHOICES` setting to `True`
 
 ```python
-from django_choices_field import TexChoicesField
-
 class Song(models.Model):
-  GENRE_CHOICES = (
-    ("rock", "Rock'n'Roll"),
-    ("metal", "Metal"),
-    ("others", "Who Cares?"),
-  )
+    GENRE_CHOICES = (
+        ("rock", "Rock'n'Roll"),
+        ("metal", "Metal"),
+        ("others", "Who Cares?"),
+    )
 
-  genre = models.CharField(choices=GENRE_CHOICES)
+    genre = models.CharField(choices=GENRE_CHOICES)
 ```
 
-In that example, a new enum called `AppLabelSongGenreAutoEnum` will be dynamically created and be used for queries
+In that example, a new enum called `MyAppSongGenreAutoEnum` will be dynamically created and be used for queries
 and mutations.
 
 Have in mind that this approach don't let you re-use the dynamically created enum elsewhere.
