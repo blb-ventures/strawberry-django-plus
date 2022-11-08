@@ -545,10 +545,3 @@ def partial(  # noqa:A001
         )
 
     return wrapper
-
-
-@dataclasses.dataclass
-class FullClean:
-    exclude: Optional[list[str]] = None
-    validate_unique: bool = True
-    validate_constraints: bool= True

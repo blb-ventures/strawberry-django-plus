@@ -12,7 +12,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
+    overload, TypedDict,
 )
 
 from django.db import models, transaction
@@ -37,7 +37,6 @@ from strawberry_django.fields.types import (
 from typing_extensions import TypeAlias
 
 from strawberry_django_plus import relay
-from strawberry_django_plus.type import FullClean
 from strawberry_django_plus.types import ListInput, NodeInput
 from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_model_fields
@@ -49,6 +48,12 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 _InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
+
+
+class FullCleanOptions(TypedDict, total=False):
+    exclude: List[str]
+    validate_unique: bool
+    validate_constraints: bool
 
 
 def _parse_pk(
@@ -178,7 +183,7 @@ def create(
     model: Type[_M],
     data: Dict[str, Any],
     *,
-    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> _M:
     ...
 
@@ -189,7 +194,7 @@ def create(
     model: Type[_M],
     data: List[Dict[str, Any]],
     *,
-    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> List[_M]:
     ...
 
@@ -215,7 +220,7 @@ def update(
     instance: _M,
     data: Dict[str, Any],
     *,
-    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> _M:
     ...
 
@@ -226,7 +231,7 @@ def update(
     instance: Iterable[_M],
     data: Dict[str, Any],
     *,
-    full_clean: Union[bool, Dict[str, Any], FullClean] = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> List[_M]:
     ...
 
@@ -291,12 +296,9 @@ def update(info, instance, data, *, full_clean=True):
         for file_field, value in files:
             file_field.save_form_data(instance, value)
 
-        if isinstance(full_clean, bool) and full_clean:
-            instance.full_clean()
-        elif isinstance(full_clean, dict):
-            instance.full_clean(**FullClean(**full_clean).__dict__)
-        elif isinstance(full_clean, FullClean):
-            instance.full_clean(**full_clean.__dict__)
+        full_clean_options = full_clean if isinstance(full_clean, dict) else {}
+        if full_clean:
+            instance.full_clean(**full_clean_options)
 
         instance.save()
 

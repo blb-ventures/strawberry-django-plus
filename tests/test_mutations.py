@@ -729,8 +729,8 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_mutation_full_clean_with_kwargs(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateQuizWithFullClean ($input: CreateQuizWithFullCleanInput!) {
-      createQuizWithFullClean (input: $input) {
+    mutation CreateQuiz ($input: CreateQuizInput!) {
+      createQuiz (input: $input) {
         __typename
         ... on OperationInfo {
           messages {
@@ -751,39 +751,39 @@ def test_mutation_full_clean_with_kwargs(db, gql_client: GraphQLTestClient):
         {
             "input": {
                 "title": "ABC",
-                "withDict": True
+                "fullCleanOptions": True
             }
         },
     )
-    assert res.data["createQuizWithFullClean"].get("sequence", None) == 1
+    assert res.data["createQuiz"].get("sequence", None) == 1
     res = gql_client.query(
         query,
         {
             "input": {
                 "title": "ABC",
-                "withDict": True
+                "fullCleanOptions": True
             }
         },
     )
-    assert res.data["createQuizWithFullClean"].get("sequence", None) == 2
+    assert res.data["createQuiz"].get("sequence", None) == 2
 
     res = gql_client.query(
         query,
         {
             "input": {
                 "title": "ABC",
-                "withDict": False
+                "fullCleanOptions": True
             }
         },
     )
-    assert res.data["createQuizWithFullClean"].get("sequence", None) == 3
+    assert res.data["createQuiz"].get("sequence", None) == 3
     res = gql_client.query(
         query,
         {
             "input": {
                 "title": "ABC",
-                "withDict": False
+                "fullCleanOptions": True
             }
         },
     )
-    assert res.data["createQuizWithFullClean"].get("sequence", None) == 4
+    assert res.data["createQuiz"].get("sequence", None) == 4

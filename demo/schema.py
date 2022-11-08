@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import decimal
-from typing import Iterable, List, Optional, Type, cast, Any, Dict
+from typing import Iterable, List, Optional, Type, cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
@@ -15,6 +15,7 @@ from strawberry_django_plus import gql
 from strawberry_django_plus.directives import SchemaDirectiveExtension
 from strawberry_django_plus.gql import relay
 from strawberry_django_plus.mutations import resolvers
+from strawberry_django_plus.mutations.resolvers import FullCleanOptions
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.permissions import (
     HasObjPerm,
@@ -23,7 +24,6 @@ from strawberry_django_plus.permissions import (
     IsStaff,
     IsSuperuser,
 )
-from strawberry_django_plus.type import FullClean
 
 from .models import Assignee, Issue, Milestone, Project, Tag, Quiz
 
@@ -332,27 +332,15 @@ class Mutation:
         self,
         info: Info,
         title: str,
+        full_clean_options: bool = False
     ) -> QuizType:
-        return cast(QuizType, resolvers.create(info, Quiz, {"title": title}))
-
-    @gql.django.input_mutation
-    def create_quiz_with_full_clean(
-            self,
-            info: Info,
-            title: str,
-            with_dict: bool
-    ) -> QuizType:
-        if with_dict:
-            full_clean = {"exclude": ["sequence"]}
-        else:
-            full_clean = FullClean(exclude=["sequence"])
         return cast(
             QuizType,
             resolvers.create(
                 info,
                 Quiz,
                 {"title": title},
-                full_clean=full_clean
+                full_clean=FullCleanOptions(exclude=["sequence"]) if full_clean_options else True
             )
         )
 
