@@ -20,7 +20,7 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.field import StrawberryField
+from strawberry.field import UNRESOLVED, StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
 from strawberry.utils.typing import __dataclass_transform__
@@ -275,8 +275,8 @@ def _process_type(
     # update annotations and fields
     for f in fields:
         annotation = f.type_annotation.annotation if f.type_annotation is not None else f.type
-        if annotation is None:
-            annotation = StrawberryAnnotation(strawberry.auto)
+        if annotation is UNRESOLVED:
+            annotation = None
 
         cls.__annotations__[f.name] = annotation
         setattr(cls, f.name, f)

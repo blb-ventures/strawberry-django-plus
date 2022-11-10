@@ -139,7 +139,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 if self.pagination is UNSET or self.pagination is None:
                     self.pagination = dj_type.pagination
 
-        self.type_annotation = type_
+        super(StrawberryDjangoField, self.__class__).type.fset(self, type_)  # type:ignore
 
     @cached_property
     def model(self) -> Type[models.Model]:

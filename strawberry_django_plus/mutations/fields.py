@@ -143,9 +143,11 @@ class DjangoMutationField(StrawberryDjangoField):
                 type_ = type_.annotation
 
             types_ = tuple(get_possible_types(type_))
-            type_ = strawberry.union(f"{cap_name}Payload", types_ + (OperationInfo,))
+            if OperationInfo not in types_:
+                types_ = types_ + (OperationInfo,)
+            type_ = strawberry.union(f"{cap_name}Payload", types_)
 
-        self.type_annotation = type_
+        super(DjangoMutationField, self.__class__).type.fset(self, type_)  # type:ignore
 
     def get_result(
         self,
