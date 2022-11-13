@@ -9,10 +9,11 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypedDict,
     TypeVar,
     Union,
     cast,
-    overload, TypedDict,
+    overload,
 )
 
 from django.db import models, transaction
@@ -205,7 +206,7 @@ def create(
     model,
     data,
     *,
-    full_clean=True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ):
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
@@ -237,7 +238,7 @@ def update(
 
 
 @transaction.atomic
-def update(info, instance, data, *, full_clean=True):
+def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = True):
     if isinstance(instance, Iterable):
         many = True
         instances = list(instance)

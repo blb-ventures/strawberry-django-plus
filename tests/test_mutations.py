@@ -708,7 +708,8 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
             }
         },
     )
-    assert res.data["createQuiz"].get("sequence", None) == 1
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 1, "title": "ABC"}}
+    assert res.data == expected
     res = gql_client.query(
         query,
         {
@@ -718,12 +719,18 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
         },
     )
     expected = {
-        "field": "sequence",
-        "kind": "VALIDATION",
-        "message": "Quiz with this Sequence already exists.",
+        "createQuiz": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "field": "sequence",
+                    "kind": "VALIDATION",
+                    "message": "Quiz with this Sequence already exists.",
+                }
+            ],
+        }
     }
-    assert res.data["createQuiz"].get("sequence", None) is None
-    assert res.data["createQuiz"].get("messages", None) == [expected]
+    assert res.data == expected
 
 
 @pytest.mark.django_db(transaction=True)
@@ -750,21 +757,26 @@ def test_mutation_full_clean_with_kwargs(db, gql_client: GraphQLTestClient):
         query,
         {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
-    assert res.data["createQuiz"].get("sequence", None) == 1
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 1, "title": "ABC"}}
+    assert res.data == expected
 
     res = gql_client.query(
         query,
         {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
-    assert res.data["createQuiz"].get("sequence", None) == 2
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 2, "title": "ABC"}}
+    assert res.data == expected
 
     res = gql_client.query(
         query,
         {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
-    assert res.data["createQuiz"].get("sequence", None) == 3
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 3, "title": "ABC"}}
+    assert res.data == expected
+
     res = gql_client.query(
         query,
         {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
-    assert res.data["createQuiz"].get("sequence", None) == 4
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 4, "title": "ABC"}}
+    assert res.data == expected
