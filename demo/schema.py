@@ -15,7 +15,6 @@ from strawberry_django_plus import gql
 from strawberry_django_plus.directives import SchemaDirectiveExtension
 from strawberry_django_plus.gql import relay
 from strawberry_django_plus.mutations import resolvers
-from strawberry_django_plus.mutations.resolvers import FullCleanOptions
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.permissions import (
     HasObjPerm,
@@ -25,7 +24,7 @@ from strawberry_django_plus.permissions import (
     IsSuperuser,
 )
 
-from .models import Assignee, Issue, Milestone, Project, Tag, Quiz
+from .models import Assignee, Issue, Milestone, Project, Quiz, Tag
 
 UserModel = cast(Type[AbstractUser], get_user_model())
 
@@ -328,20 +327,15 @@ class Mutation:
         )
 
     @gql.django.input_mutation
-    def create_quiz(
-        self,
-        info: Info,
-        title: str,
-        full_clean_options: bool = False
-    ) -> QuizType:
+    def create_quiz(self, info: Info, title: str, full_clean_options: bool = False) -> QuizType:
         return cast(
             QuizType,
             resolvers.create(
                 info,
                 Quiz,
                 {"title": title},
-                full_clean=FullCleanOptions(exclude=["sequence"]) if full_clean_options else True
-            )
+                full_clean={"exclude": ["sequence"]} if full_clean_options else True,
+            ),
         )
 
 

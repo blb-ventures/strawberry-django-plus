@@ -718,9 +718,9 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
         },
     )
     expected = {
-        'field': 'sequence',
-        'kind': 'VALIDATION',
-        'message': 'Quiz with this Sequence already exists.'
+        "field": "sequence",
+        "kind": "VALIDATION",
+        "message": "Quiz with this Sequence already exists.",
     }
     assert res.data["createQuiz"].get("sequence", None) is None
     assert res.data["createQuiz"].get("messages", None) == [expected]
@@ -748,42 +748,23 @@ def test_mutation_full_clean_with_kwargs(db, gql_client: GraphQLTestClient):
     """
     res = gql_client.query(
         query,
-        {
-            "input": {
-                "title": "ABC",
-                "fullCleanOptions": True
-            }
-        },
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
     assert res.data["createQuiz"].get("sequence", None) == 1
+
     res = gql_client.query(
         query,
-        {
-            "input": {
-                "title": "ABC",
-                "fullCleanOptions": True
-            }
-        },
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
     assert res.data["createQuiz"].get("sequence", None) == 2
 
     res = gql_client.query(
         query,
-        {
-            "input": {
-                "title": "ABC",
-                "fullCleanOptions": True
-            }
-        },
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
     assert res.data["createQuiz"].get("sequence", None) == 3
     res = gql_client.query(
         query,
-        {
-            "input": {
-                "title": "ABC",
-                "fullCleanOptions": True
-            }
-        },
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
     )
     assert res.data["createQuiz"].get("sequence", None) == 4
