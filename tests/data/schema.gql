@@ -96,6 +96,14 @@ input CreateProjectInput {
 
 union CreateProjectPayload = ProjectType | OperationInfo
 
+"""Input data for `createQuiz` mutation"""
+input CreateQuizInput {
+  title: String!
+  fullCleanOptions: Boolean! = false
+}
+
+union CreateQuizPayload = QuizType | OperationInfo
+
 """Date (isoformat)"""
 scalar Date
 
@@ -252,6 +260,10 @@ type Mutation {
     """Input data for `createProject` mutation"""
     input: CreateProjectInput!
   ): CreateProjectPayload!
+  createQuiz(
+    """Input data for `createQuiz` mutation"""
+    input: CreateQuizInput!
+  ): CreateQuizPayload!
 }
 
 """An object with a Globally Unique ID"""
@@ -563,6 +575,12 @@ type Query {
     last: Int = null
     name: String!
   ): ProjectTypeConnection!
+}
+
+type QuizType implements Node {
+  id: GlobalID!
+  title: String!
+  sequence: Int!
 }
 
 type StaffType implements Node {
