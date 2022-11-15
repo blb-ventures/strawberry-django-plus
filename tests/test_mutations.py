@@ -678,3 +678,105 @@ def test_input_delete_mutation(db, gql_client: GraphQLTestClient):
 
     with pytest.raises(Issue.DoesNotExist):
         Issue.objects.get(pk=issue.pk)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateQuiz ($input: CreateQuizInput!) {
+      createQuiz (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on QuizType {
+          title
+          sequence
+        }
+      }
+    }
+    """
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+            }
+        },
+    )
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 1, "title": "ABC"}}
+    assert res.data == expected
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "title": "ABC",
+            }
+        },
+    )
+    expected = {
+        "createQuiz": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "field": "sequence",
+                    "kind": "VALIDATION",
+                    "message": "Quiz with this Sequence already exists.",
+                }
+            ],
+        }
+    }
+    assert res.data == expected
+
+
+@pytest.mark.django_db(transaction=True)
+def test_mutation_full_clean_with_kwargs(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateQuiz ($input: CreateQuizInput!) {
+      createQuiz (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on QuizType {
+          title
+          sequence
+        }
+      }
+    }
+    """
+    res = gql_client.query(
+        query,
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
+    )
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 1, "title": "ABC"}}
+    assert res.data == expected
+
+    res = gql_client.query(
+        query,
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
+    )
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 2, "title": "ABC"}}
+    assert res.data == expected
+
+    res = gql_client.query(
+        query,
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
+    )
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 3, "title": "ABC"}}
+    assert res.data == expected
+
+    res = gql_client.query(
+        query,
+        {"input": {"title": "ABC", "fullCleanOptions": True}},
+    )
+    expected = {"createQuiz": {"__typename": "QuizType", "sequence": 4, "title": "ABC"}}
+    assert res.data == expected
