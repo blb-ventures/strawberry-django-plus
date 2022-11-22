@@ -1,4 +1,4 @@
 [flake8]
-extend-ignore = E203,E731,SIM106,R504,SIM902
+extend-ignore = E203,E731,SIM106,R504,SIM902,R505,R507
 max-line-length = 100
 exclude = .eggs,.git,.hg,.mypy_cache,.tox,.venv,venv,__pycached__,_build,buck-out,build,dist

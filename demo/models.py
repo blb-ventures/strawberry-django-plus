@@ -17,6 +17,8 @@ class Project(models.Model):
     milestones: "RelatedManager[Milestone]"
 
     class Status(models.TextChoices):
+        """Project status options."""
+
         ACTIVE = "active", "Active"
         INACTIVE = "inactive", "Inactive"
 
@@ -76,6 +78,8 @@ class Issue(models.Model):
     issue_assignees: "RelatedManager[Assignee]"
 
     class Kind(models.TextChoices):
+        """Issue kind options."""
+
         BUG = "b", "Bug"
         FEATURE = "f", "Feature"
 
@@ -165,3 +169,16 @@ class Tag(models.Model):
     name = models.CharField(
         max_length=255,
     )
+
+
+class Quiz(models.Model):
+    title = models.CharField("title", max_length=100)
+    sequence = models.PositiveIntegerField("sequence", default=1, unique=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            _max = self.__class__.objects.aggregate(max=models.Max("sequence"))["max"]
+
+            if _max is not None:
+                self.sequence = _max + 1
+        super().save(*args, **kwargs)

@@ -9,6 +9,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypedDict,
     TypeVar,
     Union,
     cast,
@@ -48,6 +49,12 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 _InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
+
+
+class FullCleanOptions(TypedDict, total=False):
+    exclude: List[str]
+    validate_unique: bool
+    validate_constraints: bool
 
 
 def _parse_pk(
@@ -177,7 +184,7 @@ def create(
     model: Type[_M],
     data: Dict[str, Any],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> _M:
     ...
 
@@ -188,7 +195,7 @@ def create(
     model: Type[_M],
     data: List[Dict[str, Any]],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> List[_M]:
     ...
 
@@ -199,7 +206,7 @@ def create(
     model,
     data,
     *,
-    full_clean=True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ):
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
@@ -214,7 +221,7 @@ def update(
     instance: _M,
     data: Dict[str, Any],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> _M:
     ...
 
@@ -225,13 +232,13 @@ def update(
     instance: Iterable[_M],
     data: Dict[str, Any],
     *,
-    full_clean: bool = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> List[_M]:
     ...
 
 
 @transaction.atomic
-def update(info, instance, data, *, full_clean=True):
+def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = True):
     if isinstance(instance, Iterable):
         many = True
         instances = list(instance)
@@ -290,8 +297,9 @@ def update(info, instance, data, *, full_clean=True):
         for file_field, value in files:
             file_field.save_form_data(instance, value)
 
+        full_clean_options = full_clean if isinstance(full_clean, dict) else {}
         if full_clean:
-            instance.full_clean()
+            instance.full_clean(**full_clean_options)
 
         instance.save()
 

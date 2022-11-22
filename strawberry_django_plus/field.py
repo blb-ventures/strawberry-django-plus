@@ -139,7 +139,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 if self.pagination is UNSET or self.pagination is None:
                     self.pagination = dj_type.pagination
 
-        self.type_annotation = type_
+        super(StrawberryDjangoField, self.__class__).type.fset(self, type_)  # type:ignore
 
     @cached_property
     def model(self) -> Type[models.Model]:
@@ -296,29 +296,21 @@ class StrawberryDjangoNodeField(relay.NodeField, StrawberryDjangoField):
 
 
 class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoField):
-    def __init__(self, *args, **kwargs):
-        self._force_is_list_as_true = False
-        super().__init__(*args, **kwargs)
-
     @property
     def arguments(self) -> List[StrawberryArgument]:
-        # FIXME: The order/filters/etc arguments will only be added if there's no base_resolver
-        # defined, but for Connections the resolver will resolve the iterable and not the field
-        # return value itself. How to handle this in a better way?
-        base_resolver = self._base_resolver
-        self._base_resolver = None
-        self._force_is_list_as_true = True
         args = super().arguments
-        if base_resolver is not None:
-            args += base_resolver.arguments
-        self._base_resolver = base_resolver
-        self._force_is_list_as_true = False
-        return args
 
-    def is_list(self):
-        if self._force_is_list_as_true:
-            return True
-        return super().is_list
+        # NOTE: Because we have a base_resolver defined, our parents will not add
+        # order/filters resolvers in here, so we need to add them by hand (unless they
+        # are somewhat in there). We are not adding pagination because it doesn't make
+        # sense together with a Connection
+        args_names = [a.python_name for a in args]
+        if "order" not in args_names and (order := self.get_order()) not in (None, UNSET):
+            args.append(argument("order", order))
+        if "filters" not in args_names and (filters := self.get_filters()) not in (None, UNSET):
+            args.append(argument("filters", filters))
+
+        return args
 
     def resolve_nodes(
         self,
