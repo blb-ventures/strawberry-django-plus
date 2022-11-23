@@ -239,7 +239,7 @@ class DjangoCreateMutationField(DjangoInputMutationField):
         self,
         source: Any,
         info: Info,
-        data: type,
+        data: object,
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> Any:
@@ -260,7 +260,7 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         self,
         source: Any,
         info: Info,
-        data: type,
+        data: object,
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> Any:
@@ -293,7 +293,7 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
         self,
         source: Any,
         info: Info,
-        data: type,
+        data: object,
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> Any:

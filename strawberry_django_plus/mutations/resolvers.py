@@ -211,7 +211,7 @@ def create(
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
     elif dataclasses.is_dataclass(data):
-        data = vars(data)
+        data = vars(cast(object, data))
     return update(info, model(), data, full_clean=full_clean)
 
 
