@@ -27,6 +27,7 @@ class Config:
         default_factory=lambda: ["Input", "Partial"],
     )
     FIELDS_USE_GLOBAL_ID: bool = dataclasses.field(default=True)
+    GENERATE_ENUMS_FROM_CHOICES: bool = dataclasses.field(default=False)
 
     # Trick type checking into thinking that we only have the defined configs
     if not TYPE_CHECKING:
