@@ -374,6 +374,53 @@ def test_input_update_mutation(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_m2m_not_nullable(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation UpdateProject ($input: ProjectInputPartial!) {
+      updateProject (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          name
+          status
+          dueDate
+          milestones {
+            id
+            name
+          }
+          cost
+        }
+      }
+    }
+    """
+    project = ProjectFactory.create(
+        name="Project Name",
+    )
+    milestone_1 = MilestoneFactory.create(project=project)
+    MilestoneFactory.create(project=project)
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("ProjectType", project.pk),
+                "milestones": [{"id": to_base64("MilestoneType", milestone_1.pk)}],
+            }
+        },
+    )
+    assert res.data and isinstance(res.data["updateProject"], dict)
+
+    assert len(res.data["updateProject"]["milestones"]) == 1
+
+
+@pytest.mark.django_db(transaction=True)
 def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
     query = """
     mutation CreateIssue ($input: IssueInputPartial!) {

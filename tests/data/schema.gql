@@ -205,6 +205,11 @@ input MilestoneInput {
   issues: [MilestoneIssueInput!]
 }
 
+input MilestoneInputPartial {
+  id: GlobalID
+  name: String
+}
+
 input MilestoneIssueInput {
   name: String!
 }
@@ -253,6 +258,7 @@ type Mutation {
     """Input of an object that implements the `Node` interface."""
     input: NodeInput!
   ): DeleteIssuePayload!
+  updateProject(input: ProjectInputPartial!): UpdateProjectPayload!
   createMilestone(input: MilestoneInput!): CreateMilestonePayload!
 
   """Create project documentation."""
@@ -336,6 +342,7 @@ input ProjectInputPartial {
 
   """The name of the project"""
   name: String
+  milestones: [MilestoneInputPartial!]
 }
 
 input ProjectOrder {
@@ -703,6 +710,8 @@ type TagTypeEdge {
 }
 
 union UpdateIssuePayload = IssueType | OperationInfo
+
+union UpdateProjectPayload = ProjectType | OperationInfo
 
 type UserType implements Node {
   id: GlobalID!
