@@ -374,7 +374,7 @@ def test_input_update_mutation(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_input_update_mutation_m2m_not_nullable(db, gql_client: GraphQLTestClient):
+def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClient):
     query = """
     mutation UpdateProject ($input: ProjectInputPartial!) {
       updateProject (input: $input) {
@@ -404,6 +404,7 @@ def test_input_update_mutation_m2m_not_nullable(db, gql_client: GraphQLTestClien
         name="Project Name",
     )
     milestone_1 = MilestoneFactory.create(project=project)
+    milestone_1_id = to_base64("MilestoneType", milestone_1.pk)
     MilestoneFactory.create(project=project)
 
     res = gql_client.query(
@@ -411,13 +412,14 @@ def test_input_update_mutation_m2m_not_nullable(db, gql_client: GraphQLTestClien
         {
             "input": {
                 "id": to_base64("ProjectType", project.pk),
-                "milestones": [{"id": to_base64("MilestoneType", milestone_1.pk)}],
+                "milestones": [{"id": milestone_1_id}],
             }
         },
     )
     assert res.data and isinstance(res.data["updateProject"], dict)
 
     assert len(res.data["updateProject"]["milestones"]) == 1
+    assert res.data["updateProject"]["milestones"][0]["id"] == milestone_1_id
 
 
 @pytest.mark.django_db(transaction=True)
