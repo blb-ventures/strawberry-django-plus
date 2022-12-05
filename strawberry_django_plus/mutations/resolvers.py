@@ -386,6 +386,7 @@ def update_m2m(
             update(info, value, data)
         return
 
+    use_remove = True
     if isinstance(field, ManyToManyField):
         manager = cast("RelatedManager", getattr(instance, field.attname))
     else:
@@ -393,9 +394,13 @@ def update_m2m(
         accessor_name = field.get_accessor_name()
         assert accessor_name
         manager = cast("RelatedManager", getattr(instance, accessor_name))
+        if field.one_to_many:
+            # remove if field is nullable, otherwise delete
+            use_remove = field.remote_field.null is True
 
     to_add = []
     to_remove = []
+    to_delete = []
     need_remove_cache = False
 
     values = value.set if isinstance(value, ParsedObjectList) else value
@@ -447,7 +452,11 @@ def update_m2m(
                 manager.create(**data)
 
         for remaining in existing:
-            to_remove.append(remaining)
+            if use_remove:
+                to_remove.append(remaining)
+            else:
+                to_delete.append(remaining)
+
     else:
         need_remove_cache = need_remove_cache or bool(value.add)
         for v in value.add or []:
@@ -472,6 +481,8 @@ def update_m2m(
         manager.add(*to_add)
     if to_remove:
         manager.remove(*to_remove)
+    if to_delete:
+        manager.filter(pk__in=[item.pk for item in to_delete]).delete()
 
     if need_remove_cache:
         manager._remove_prefetched_objects()  # type:ignore

@@ -197,6 +197,7 @@ class MilestoneIssueInput:
 @gql.django.partial(Project)
 class ProjectInputPartial(gql.NodeInputPartial):
     name: gql.auto
+    milestones: Optional[List["MilestoneInputPartial"]]
 
 
 @gql.django.input(Milestone)
@@ -204,6 +205,11 @@ class MilestoneInput:
     name: gql.auto
     project: ProjectInputPartial
     issues: Optional[List[MilestoneIssueInput]]
+
+
+@gql.django.partial(Milestone)
+class MilestoneInputPartial(gql.NodeInputPartial):
+    name: gql.auto
 
 
 @gql.type
@@ -300,6 +306,8 @@ class Mutation:
     create_issue: IssueType = gql.django.create_mutation(IssueInput)
     update_issue: IssueType = gql.django.update_mutation(IssueInputPartial)
     delete_issue: IssueType = gql.django.delete_mutation(gql.NodeInput)
+
+    update_project: ProjectType = gql.django.update_mutation(ProjectInputPartial)
 
     create_milestone: MilestoneType = gql.django.create_mutation(MilestoneInput)
 
