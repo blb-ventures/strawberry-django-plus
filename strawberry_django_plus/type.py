@@ -249,7 +249,7 @@ def _process_type(
     disable_optimization: bool = False,
     **kwargs,
 ) -> _O:
-    original_annotations = cls.__dict__.get("__annotations__", {})
+    original_annotations = cls.__dict__.get("__annotations__", {})  # type:ignore
 
     django_type = StrawberryDjangoType(
         origin=cls,
@@ -282,7 +282,7 @@ def _process_type(
         setattr(cls, f.name, f)
 
     # Make sure model is also considered a "virtual subclass" of cls
-    if "is_type_of" not in cls.__dict__:
+    if "is_type_of" not in cls.__dict__:  # type:ignore
         cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))  # type:ignore
 
     # Default querying methods for relay
