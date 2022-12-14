@@ -235,7 +235,7 @@ class GlobalID:
         return origin
 
     @overload
-    def resolve_node(  # type:ignore
+    def resolve_node(
         self,
         info: Info,
         *,
