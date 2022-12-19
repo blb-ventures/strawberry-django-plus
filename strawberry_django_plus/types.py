@@ -218,21 +218,25 @@ def resolve_model_field_type(
         and isinstance(field, models.Field)
         and (choices := getattr(field, "choices", None)) is not None
     ):
-        # Generate automatic Enum class for standard django's "choices" fields
-        meta = field.model._meta
-        auto_enum_class_fields = {c[0]: c[0] for c in choices}
-        auto_enum_class_name = "".join(
-            (
-                capitalize_first(to_camel_case(meta.app_label)),
-                str(meta.object_name),
-                capitalize_first(to_camel_case(field.name)),
-                "Enum",
+        strawberry_enum = getattr(field, "_strawberry_enum", None)
+        if strawberry_enum is None:
+            # Generate automatic Enum class for standard django's "choices" fields
+            meta = field.model._meta
+            auto_enum_class_fields = {c[0]: c[0] for c in choices}
+            auto_enum_class_name = "".join(
+                (
+                    capitalize_first(to_camel_case(meta.app_label)),
+                    str(meta.object_name),
+                    capitalize_first(to_camel_case(field.name)),
+                    "Enum",
+                )
             )
-        )
-        retval = strawberry.enum(
-            enum.Enum(auto_enum_class_name, auto_enum_class_fields),
-            description=f"{meta.verbose_name} | {field.verbose_name}",
-        )
+            strawberry_enum = strawberry.enum(
+                enum.Enum(auto_enum_class_name, auto_enum_class_fields),
+                description=f"{meta.verbose_name} | {field.verbose_name}",
+            )
+            field._strawberry_enum = strawberry_enum  # type: ignore
+        retval = strawberry_enum
     else:
         retval = _resolve_model_field(field, django_type)
 
