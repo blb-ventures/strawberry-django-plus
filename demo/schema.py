@@ -154,7 +154,7 @@ class TagInputPartial(gql.NodeInputPartial):
 @gql.django.input(Issue)
 class IssueInput:
     name: gql.auto
-    milestone: gql.auto
+    milestone: "MilestoneInputPartial"
     priority: gql.auto
     kind: gql.auto
     tags: Optional[List[gql.NodeInput]]
