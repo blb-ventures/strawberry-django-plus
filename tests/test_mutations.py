@@ -405,7 +405,7 @@ def test_input_nested_update_mutation(db, gql_client: GraphQLTestClient):
         priority=0,
         kind=Issue.Kind.BUG,
     )
-    milestone = MilestoneFactory.create()
+    milestone = MilestoneFactory.create(name="Something")
 
     res = gql_client.query(
         query,
@@ -419,6 +419,8 @@ def test_input_nested_update_mutation(db, gql_client: GraphQLTestClient):
     )
     assert res.data and isinstance(res.data["updateIssue"], dict)
     assert res.data["updateIssue"]["milestone"]["name"] == "foo"
+    milestone.refresh_from_db()
+    assert milestone.name == "foo"
 
 
 @pytest.mark.django_db(transaction=True)
