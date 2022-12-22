@@ -71,6 +71,6 @@ class AsyncTestClient(TestClient):
 
     @contextlib.asynccontextmanager
     async def login(self, user: AbstractUser):
-        await sync_to_async(self.client.force_login)(user)  # type:ignore
+        await sync_to_async(self.client.force_login)(user)
         yield
-        await sync_to_async(self.client.logout)()  # type:ignore
+        await sync_to_async(self.client.logout)()
