@@ -289,6 +289,8 @@ def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = 
             # If value is None, that means we should create the model
             if value is None:
                 value = field.related_model._default_manager.create(**value_data)
+            else:
+                update(info, value, value_data, full_clean=full_clean)
 
         for instance in instances:
             update_field(info, instance, field, value)

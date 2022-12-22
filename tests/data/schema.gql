@@ -135,7 +135,7 @@ input IssueAssigneePartialListInput {
 
 input IssueInput {
   name: String!
-  milestone: NodeInput
+  milestone: MilestoneInputPartial!
   priority: Int
 
   """the kind of the issue"""
@@ -146,7 +146,7 @@ input IssueInput {
 input IssueInputPartial {
   id: GlobalID!
   name: String
-  milestone: NodeInput
+  milestone: MilestoneInputPartial!
   priority: Int
 
   """the kind of the issue"""
