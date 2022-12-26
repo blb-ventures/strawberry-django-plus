@@ -254,6 +254,7 @@ def _get_model_hints(
                             info=info,
                             config=config,
                         )
+                        print(path, f_store)
                         f_prefetch = Prefetch(path, queryset=f_qs)
                         f_prefetch._optimizer_sentinel = _sentinel  # type:ignore
                         store.prefetch_related.append(f_prefetch)
@@ -505,7 +506,8 @@ class OptimizerStore:
                 # In this case, just replace it.
                 if not existing or isinstance(existing, str):
                     to_prefetch[path] = p
-                    abort_only.add(path)
+                    if isinstance(existing, str):
+                        abort_only.add(path)
                     continue
 
                 p1 = PrefetchInspector(existing)
