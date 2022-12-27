@@ -37,6 +37,7 @@ from strawberry_django.fields.types import (
     resolve_model_field_type as _resolve_model_field,
 )
 from strawberry_django.filters import DjangoModelFilterInput, FilterLookup
+from typing_extensions import Self
 
 from . import relay
 from .settings import config
@@ -109,6 +110,12 @@ class NodeType(relay.Node):
 
     id: relay.GlobalID  # noqa:A003
 
+    def __eq__(self, other: Self):
+        return self.__class__ == other.__class__ and self.id == other.id
+
+    def __hash__(self):
+        return hash((self.__class__, self.id))
+
 
 @strawberry.input(
     description="Input of an object that implements the `Node` interface.",
@@ -123,6 +130,12 @@ class NodeInput:
     """
 
     id: relay.GlobalID  # noqa:A003
+
+    def __eq__(self, other: Self):
+        return self.__class__ == other.__class__ and self.id == other.id
+
+    def __hash__(self):
+        return hash((self.__class__, self.id))
 
 
 @strawberry.input(
@@ -143,6 +156,12 @@ class NodeInputPartial(NodeInput):
         id: Optional[relay.GlobalID]  # noqa:A001
     else:
         id: Optional[relay.GlobalID] = UNSET  # noqa:A001
+
+    def __eq__(self, other: Self):
+        return self.__class__ == other.__class__ and self.id == other.id
+
+    def __hash__(self):
+        return hash((self.__class__, self.id))
 
 
 @strawberry.input(description=("Add/remove/set the selected nodes."))
@@ -165,6 +184,19 @@ class ListInput(Generic[K]):
         set: Optional[List[K]] = UNSET  # noqa:A001
         add: Optional[List[K]] = UNSET
         remove: Optional[List[K]] = UNSET
+
+    def _hash_fields(self):
+        return (
+            tuple(self.set) if isinstance(self.set, list) else self.set,
+            tuple(self.add) if isinstance(self.add, list) else self.add,
+            tuple(self.remove) if isinstance(self.remove, list) else self.remove,
+        )
+
+    def __eq__(self, other: Self):
+        return self.__class__ == other.__class__ and self._hash_fields() == other._hash_fields()
+
+    def __hash__(self):
+        return hash((self.__class__,) + self._hash_fields())
 
 
 @strawberry.type
@@ -191,6 +223,17 @@ class OperationMessage:
         default=None,
     )
 
+    def __eq__(self, other: Self):
+        return (
+            self.__class__ == other.__class__
+            and self.kind == other.kind
+            and self.message == other.message
+            and self.field == other.field
+        )
+
+    def __hash__(self):
+        return hash((self.__class__, self.kind, self.message, self.field))
+
 
 @strawberry.type
 class OperationInfo:
@@ -199,6 +242,12 @@ class OperationInfo:
     messages: List[OperationMessage] = strawberry.field(
         description="List of messages returned by the operation.",
     )
+
+    def __eq__(self, other: Self):
+        return self.__class__ == other.__class__ and self.messages == other.messages
+
+    def __hash__(self):
+        return hash((self.__class__,) + tuple(self.messages))
 
 
 def resolve_model_field_type(
