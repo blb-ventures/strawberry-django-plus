@@ -254,7 +254,6 @@ def _get_model_hints(
                             info=info,
                             config=config,
                         )
-                        print(path, f_store)
                         f_prefetch = Prefetch(path, queryset=f_qs)
                         f_prefetch._optimizer_sentinel = _sentinel  # type:ignore
                         store.prefetch_related.append(f_prefetch)
