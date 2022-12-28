@@ -366,7 +366,7 @@ def optimize(
                     config=config,
                 )
                 if new_store is not None:
-                    store |= new_store  # type:ignore
+                    store |= new_store
 
     # Nothing found do optimize, just skip this...
     if not store:
