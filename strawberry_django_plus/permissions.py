@@ -670,9 +670,12 @@ class HasPermDirective(AuthDirective):
         if key in cache:
             return cache[key]
 
-        f = any if self.any else all
-        checker = self.obj_perm_checker(info, user)
-        has_perm = f(checker(p, obj) for p in self.permissions)
+        if isinstance(obj, OperationInfo):
+            has_perm = True
+        else:
+            f = any if self.any else all
+            checker = self.obj_perm_checker(info, user)
+            has_perm = f(checker(p, obj) for p in self.permissions)
 
         cache[key] = has_perm
         return has_perm
@@ -719,7 +722,11 @@ class HasPermDirective(AuthDirective):
             if key in cache:
                 return cache[key]
 
-            has_perm = f(checker(p, obj) for p in self.permissions)
+            if isinstance(obj, OperationInfo):
+                has_perm = True
+            else:
+                has_perm = f(checker(p, obj) for p in self.permissions)
+
             cache[key] = has_perm
 
             return has_perm
