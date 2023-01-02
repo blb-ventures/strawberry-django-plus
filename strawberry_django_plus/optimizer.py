@@ -300,7 +300,7 @@ def optimize(
             The current field execution info
         config:
             Optional config to use when doing the optimization
-        config:
+        store:
             Optional initial store to use for the optimization
 
     Returns:
