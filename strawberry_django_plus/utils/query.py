@@ -4,6 +4,7 @@ from typing import List, Optional, Set, Type, TypeVar
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Exists, F, Model, Q, QuerySet
+from django.db.models.functions import Cast
 from strawberry_django.utils import is_async
 
 from .typing import TypeOrIterable, UserType
@@ -153,7 +154,7 @@ def filter_for_user(
         else:
             user_qs = user_qs.annotate(object_pk=F("content_object"))
 
-        obj_qs = user_qs.values_list("object_pk", flat=True).distinct()
+        obj_qs = user_qs.values_list(Cast("object_pk", model._meta.pk), flat=True).distinct()
 
         if with_groups:
             group_model = perm_models.group
@@ -174,7 +175,9 @@ def filter_for_user(
             else:
                 group_qs = group_qs.annotate(object_pk=F("content_object"))
 
-            obj_qs = obj_qs.union(group_qs.values_list("object_pk", flat=True).distinct())
+            obj_qs = obj_qs.union(
+                group_qs.values_list(Cast("object_pk", model._meta.pk), flat=True).distinct()
+            )
 
         q |= Q(pk__in=obj_qs)
 
