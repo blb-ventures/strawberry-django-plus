@@ -234,6 +234,10 @@ class DjangoCreateMutationField(DjangoInputMutationField):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        self.full_clean: bool = kwargs.pop("full_clean", True)
+        super().__init__(*args, **kwargs)
+
     @async_safe
     def resolver(
         self,
@@ -244,7 +248,9 @@ class DjangoCreateMutationField(DjangoInputMutationField):
         kwargs: Dict[str, Any],
     ) -> Any:
         assert data is not None
-        return resolvers.create(info, self.model, resolvers.parse_input(info, vars(data)))
+        return resolvers.create(
+            info, self.model, resolvers.parse_input(info, vars(data)), full_clean=self.full_clean
+        )
 
 
 class DjangoUpdateMutationField(DjangoInputMutationField):
@@ -254,6 +260,10 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
     `@gql.django.update_mutation`
 
     """
+
+    def __init__(self, full_clean=True, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.full_clean = full_clean
 
     @async_safe
     def resolver(
@@ -275,7 +285,9 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
             instance = get_with_perms(pk, info, required=True, model=self.model)
-            return resolvers.update(info, instance, resolvers.parse_input(info, vdata))
+            return resolvers.update(
+                info, instance, resolvers.parse_input(info, vdata), full_clean=self.full_clean
+            )
         finally:
             DjangoOptimizerExtension.enabled.reset(token)
 
@@ -562,6 +574,7 @@ def create(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
+    full_clean: bool = True,
 ) -> Any:
     """Create mutation for django input fields.
 
@@ -594,6 +607,7 @@ def create(
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
+        full_clean=full_clean,
     )
 
 
@@ -613,6 +627,7 @@ def update(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     handle_django_errors: bool = True,
+    full_clean: bool = True,
 ) -> Any:
     """Update mutation for django input fields.
 
@@ -643,6 +658,7 @@ def update(
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
+        full_clean=full_clean,
     )
 
 
