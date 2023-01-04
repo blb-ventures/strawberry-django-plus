@@ -234,9 +234,9 @@ class DjangoCreateMutationField(DjangoInputMutationField):
 
     """
 
-    def __init__(self, full_clean=True, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        self.full_clean: bool = kwargs.pop("full_clean", True)
         super().__init__(*args, **kwargs)
-        self.full_clean = full_clean
 
     @async_safe
     def resolver(
