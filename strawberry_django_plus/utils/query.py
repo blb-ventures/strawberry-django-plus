@@ -55,7 +55,7 @@ def _filter(
     return qs.filter(q)
 
 
-def filter_for_user(
+def filter_for_user_q(
     qs: QuerySet,
     user: UserType,
     perms: TypeOrIterable[str],
@@ -107,11 +107,9 @@ def filter_for_user(
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")
 
     # Small optimization if the user's permissions are cached
-    if hasattr(user, "_perm_cache"):  # pragma:nocover
+    if (perm_cache := getattr(user, "_perm_cache", None)) is not None:  # pragma:nocover
         f = any if any_perm else all
-        user_perms: Set[str] = {
-            p.codename for p in user._perm_cache  # type:ignore
-        }
+        user_perms: Set[str] = {p.codename for p in perm_cache}
         if f(p in user_perms for p in perms_list):
             return qs
 
@@ -181,4 +179,25 @@ def filter_for_user(
 
         q |= Q(pk__in=obj_qs)
 
-    return qs.filter(q)
+    return q
+
+
+def filter_for_user(
+    qs: QuerySet,
+    user: UserType,
+    perms: TypeOrIterable[str],
+    *,
+    any_perm: bool = True,
+    with_groups: bool = True,
+    with_superuser: bool = False,
+):
+    return qs & qs.filter(
+        filter_for_user_q(
+            qs,
+            user,
+            perms,
+            any_perm=any_perm,
+            with_groups=with_groups,
+            with_superuser=with_superuser,
+        )
+    )
