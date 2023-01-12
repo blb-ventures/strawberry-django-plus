@@ -8,6 +8,8 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_args,
+    get_origin,
     overload,
 )
 
@@ -84,8 +86,11 @@ async def resolve_async(
     while is_awaitable(ret, info=info):
         ret = await cast(Awaitable, ret)
 
-    if ensure_type is not None and not isinstance(ret, ensure_type):
-        raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
+    if ensure_type is not None:
+        if (origin := get_origin(ensure_type)) and origin is Union:
+            ensure_type = tuple(get_args(ensure_type))
+        if not isinstance(ret, ensure_type):
+            raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
 
     # FIXME: Remove cast once pyright resolves the negative TypeGuard form
     ret = cast(_R, ret)
@@ -95,33 +100,23 @@ async def resolve_async(
 
 @overload
 def resolve(
+    value: Awaitable[_T],
+    resolver: Callable[[_T], AwaitableOrValue[_R]],
+    *,
+    ensure_type: Optional[Type[_R]] = None,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
+) -> Awaitable[_R]:
+    ...
+
+
+@overload
+def resolve(
     value: _T,
     resolver: Callable[[_T], _R],
     *,
     ensure_type: Optional[Type[_R]] = None,
+    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
 ) -> _R:
-    ...
-
-
-@overload
-def resolve(
-    value: AwaitableOrValue[_T],
-    resolver: Callable[[_T], Awaitable[_R]],
-    *,
-    ensure_type: Optional[Type[_R]] = None,
-    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
-) -> AwaitableOrValue[_R]:
-    ...
-
-
-@overload
-def resolve(
-    value: AwaitableOrValue[_T],
-    resolver: Callable[[_T], _R],
-    *,
-    ensure_type: Optional[Type[_R]] = None,
-    info: Optional[Union[Info, GraphQLResolveInfo]] = None,
-) -> AwaitableOrValue[_R]:
     ...
 
 
@@ -154,8 +149,11 @@ def resolve(value, resolver, *, ensure_type=None, info=None):
         return resolve_async(value, resolver, info=info, ensure_type=ensure_type)
 
     ret = resolver(value)
-    if ensure_type is not None and not isinstance(ret, ensure_type):
-        raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
+    if ensure_type is not None:
+        if (origin := get_origin(ensure_type)) and origin is Union:
+            ensure_type = tuple(get_args(ensure_type))
+        if not isinstance(ret, ensure_type):
+            raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
 
     return ret
 
