@@ -368,7 +368,17 @@ class Node(abc.ABC):
         if isinstance(root, Node):
             resolve_id = root.__class__.resolve_id
         else:
-            resolve_id = cls.resolve_id
+            # Try to use a custom resolve_id from the type itself. If it doesn't define one,
+            # fallback to cls.resolve_id
+            try:
+                parent_type = info._raw_info.parent_type
+                type_def = info.schema.get_type_by_name(parent_type.name)
+                if not isinstance(type_def, TypeDefinition):
+                    raise RuntimeError
+
+                resolve_id = type_def.origin.resolve_id
+            except (RuntimeError, AttributeError):
+                resolve_id = cls.resolve_id
 
         node_id = resolve_id(root, info=info)
         resolve_typename = (
