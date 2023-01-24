@@ -238,6 +238,12 @@ class DjangoCreateMutationField(DjangoInputMutationField):
         self.full_clean: bool = kwargs.pop("full_clean", True)
         super().__init__(*args, **kwargs)
 
+    @property
+    def arguments(self) -> List[StrawberryArgument]:
+        # FIXME: We don't have a base_resolve in this case. Make sure StrawberryDjangoFieldFilters
+        # doesn't add a opk argument in here...
+        return [a for a in super().arguments if a.python_name == "input"]
+
     @async_safe
     def resolver(
         self,
@@ -261,9 +267,15 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
 
     """
 
-    def __init__(self, full_clean=True, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        self.full_clean: bool = kwargs.pop("full_clean", True)
         super().__init__(*args, **kwargs)
-        self.full_clean = full_clean
+
+    @property
+    def arguments(self) -> List[StrawberryArgument]:
+        # FIXME: We don't have a base_resolve in this case. Make sure StrawberryDjangoFieldFilters
+        # doesn't add a opk argument in here...
+        return [a for a in super().arguments if a.python_name == "input"]
 
     @async_safe
     def resolver(
@@ -299,6 +311,12 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
     `@gql.django.delete_mutation`
 
     """
+
+    @property
+    def arguments(self) -> List[StrawberryArgument]:
+        # FIXME: We don't have a base_resolve in this case. Make sure StrawberryDjangoFieldFilters
+        # doesn't add a opk argument in here...
+        return [a for a in super().arguments if a.python_name == "input"]
 
     @async_safe
     def resolver(
