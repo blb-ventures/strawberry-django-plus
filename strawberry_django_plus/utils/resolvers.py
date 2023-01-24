@@ -26,9 +26,10 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.utils import is_async
 from typing_extensions import ParamSpec
 
-from strawberry_django_plus.relay import Connection, GlobalID, Node, NodeType
+from strawberry_django_plus import relay
+from strawberry_django_plus.relay import GlobalID, Node
 
-from .aio import is_awaitable, resolve, resolve_async
+from .aio import is_awaitable, resolve_async
 from .inspect import get_django_type
 
 _T = TypeVar("_T")
@@ -323,6 +324,7 @@ def resolve_model_nodes(
 
     """
     # avoid circular import
+    from strawberry_django_plus import optimizer
     from strawberry_django_plus.permissions import filter_with_perms
 
     if issubclass(source, Model):
@@ -347,7 +349,21 @@ def resolve_model_nodes(
         assert info
         qs = filter_with_perms(qs, info)
 
-    return resolve_result(qs, info=info)
+    qs_resolver = resolve_qs
+    if info is not None:
+        ext = optimizer.optimizer.get()
+        if ext is not None:
+            # If optimizer extension is enabled, optimize this queryset
+            qs = ext.optimize(qs, info=info)
+        # Connection will filter the results when its is being resolved. We don't want to
+        # fetch everything before it does that
+        if isinstance(return_type := info.return_type, type) and issubclass(
+            return_type,
+            relay.Connection,
+        ):
+            qs_resolver = lambda qs: qs
+
+    return resolve_result(qs, info=info, qs_resolver=qs_resolver)
 
 
 @overload
@@ -443,105 +459,3 @@ def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> Awaita
         return str(root.__dict__[id_attr])
     except KeyError:
         return getattr_str_async_safe(root, id_attr)
-
-
-def resolve_connection(
-    source: Union[Type[NodeType], Type[_M]],
-    *,
-    info: Optional[Info] = None,
-    nodes: Optional[AwaitableOrValue[QuerySet[_M]]] = None,
-    total_count: Optional[int] = None,
-    before: Optional[str] = None,
-    after: Optional[str] = None,
-    first: Optional[int] = None,
-    last: Optional[int] = None,
-    filter_perms: bool = False,
-) -> AwaitableOrValue[Connection[NodeType]]:
-    """Resolve model connection, ensuring those are prefetched in a sync context.
-
-    Args:
-        source:
-            The source model or the model type that implements the `Node` interface
-        info:
-            Optional gql execution info. Make sure to always provide this or
-            otherwise, the queryset cannot be optimized in case DjangoOptimizerExtension
-            is enabled. This will also be used for `is_awaitable` check.
-        nodes:
-            An iterable of already filtered queryset to use in the connection.
-            If not provided, `model.objects.all()` will be used
-        total_count:
-            Optionally provide a total count so that the connection. This will
-            avoid having to call `qs.count()` later.
-        before:
-            Returns the items in the list that come before the specified cursor
-        after:
-            Returns the items in the list that come after the specified cursor
-        first:
-            Returns the first n items from the list
-        last:
-            Returns the items in the list that come after the specified cursor
-
-    Returns:
-        The resolved connection
-
-    """
-    # avoid circular import
-    from strawberry_django_plus import optimizer
-    from strawberry_django_plus.permissions import filter_with_perms
-
-    if nodes is None:
-        if issubclass(source, Model):
-            origin = None
-        else:
-            origin = source
-            django_type = get_django_type(source, ensure_type=True)
-            source = cast(Type[_M], django_type.model)
-
-        nodes = source._default_manager.all()
-        assert isinstance(nodes, QuerySet)
-
-        if origin and hasattr(origin, "get_queryset"):
-            nodes = origin.get_queryset(nodes, info)  # type:ignore
-
-    if is_awaitable(nodes, info=info):
-        return resolve_async(
-            nodes,
-            lambda resolved: resolve_connection(
-                source,
-                info=info,
-                nodes=resolved,
-                total_count=total_count,
-                before=before,
-                after=after,
-                first=first,
-                last=last,
-                filter_perms=filter_perms,
-            ),
-        )
-
-    # FIXME: Remove cast once pyright resolves the negative TypeGuard form
-    nodes = cast(QuerySet[_M], nodes)
-
-    if filter_perms:
-        assert info
-        nodes = filter_with_perms(nodes, info)
-
-    if info is not None:
-        ext = optimizer.optimizer.get()
-        if ext is not None:
-            # If optimizer extension is enabled, optimize this queryset
-            nodes = ext.optimize(nodes, info=info)
-
-    return resolve(
-        nodes,
-        async_safe(
-            functools.partial(
-                Connection.from_nodes,
-                total_count=total_count,
-                before=before,
-                after=after,
-                first=first,
-                last=last,
-            )
-        ),
-    )

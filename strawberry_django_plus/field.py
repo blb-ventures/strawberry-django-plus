@@ -312,25 +312,9 @@ class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoFie
 
         return args
 
-    def resolve_nodes(
-        self,
-        source: Any,
-        info: Info,
-        args: List[Any],
-        kwargs: Dict[str, Any],
-        *,
-        nodes: Optional[QuerySet[Any]] = None,
-    ):
-        if nodes is None:
-            nodes = self.model._default_manager.all()
-
-            if self.origin_django_type and hasattr(self.origin_django_type.origin, "get_queryset"):
-                nodes = cast(
-                    QuerySet[Any],
-                    self.origin_django_type.origin.get_queryset(nodes, info),
-                )
-
-        return self.get_queryset_as_list(nodes, info, kwargs, skip_fetch=True)
+    @resolvers.async_safe
+    def resolve_connection(self, *args, **kwargs):
+        return super().resolve_connection(*args, **kwargs)
 
 
 @overload

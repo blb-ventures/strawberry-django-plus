@@ -7,7 +7,6 @@ import inspect
 import math
 import sys
 from typing import (
-    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -44,12 +43,7 @@ from strawberry.field import StrawberryField
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
-from strawberry.type import (
-    StrawberryList,
-    StrawberryOptional,
-    StrawberryType,
-    StrawberryTypeVar,
-)
+from strawberry.type import StrawberryContainer, StrawberryList, StrawberryOptional
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import TypeDefinition
@@ -355,11 +349,6 @@ class Node(abc.ABC):
 
     """
 
-    # We can't do CONNECTION_CLASS = Connection because it is not defined yet.
-    # We will define it below though as the default one.
-    if TYPE_CHECKING:
-        CONNECTION_CLASS: ClassVar[Type["Connection"]]
-
     @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
     def id(cls, root: "Node", info: Info) -> GlobalID:  # noqa:A003
@@ -431,75 +420,6 @@ class Node(abc.ABC):
     @classmethod
     def resolve_typename(cls: Type[NodeType], root: NodeType, info: Info):
         return info.path.typename
-
-    @classmethod
-    def resolve_connection(
-        cls: Type[NodeType],
-        *,
-        info: Optional[Info] = None,
-        nodes: Optional[AwaitableOrValue[Iterable[NodeType]]] = None,
-        total_count: Optional[int] = None,
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-        first: Optional[int] = None,
-        last: Optional[int] = None,
-    ) -> AwaitableOrValue["Connection[NodeType]"]:
-        """Resolve a connection for this node.
-
-        By default this will call `cls.resolve_nodes` if None were provided,
-        and them the connection will be generated from `Connection.from_nodes`.
-
-        Args:
-            info:
-                The strawberry execution info resolve the type name from
-            nodes:
-                An iterable of nodes to transform to a connection
-            total_count:
-                Optionally provide a total count so that the connection
-                doesn't have to calculate it. Might be useful for some ORMs
-                for performance reasons.
-            before:
-                Returns the items in the list that come before the specified cursor
-            after:
-                Returns the items in the list that come after the specified cursor
-            first:
-                Returns the first n items from the list
-            last:
-                Returns the items in the list that come after the specified cursor
-
-        Returns:
-            The resolved `Connection`
-
-        """
-        if nodes is None:
-            nodes = cls.resolve_nodes(info=info)
-
-        if aio.is_awaitable(nodes, info=info):
-            return aio.resolve_async(
-                nodes,
-                lambda resolved: cls.resolve_connection(
-                    info=info,
-                    nodes=resolved,
-                    total_count=total_count,
-                    before=before,
-                    after=after,
-                    first=first,
-                    last=last,
-                ),
-                info=info,
-            )
-
-        # FIXME: Remove cast once pyright resolves the negative TypeGuard form
-        nodes = cast(Iterable[NodeType], nodes)
-
-        return cls.CONNECTION_CLASS.from_nodes(
-            nodes,
-            total_count=total_count,
-            before=before,
-            after=after,
-            first=first,
-            last=last,
-        )
 
     @classmethod
     @abc.abstractmethod
@@ -648,8 +568,6 @@ class Connection(Generic[NodeType]):
 
     """
 
-    EDGE_CLASS: ClassVar[Type["Edge"]] = Edge
-
     page_info: PageInfo = strawberry.field(
         description="Pagination data for this connection",
     )
@@ -664,8 +582,9 @@ class Connection(Generic[NodeType]):
     @classmethod
     def from_nodes(
         cls,
-        nodes: Iterable[Any],
+        nodes: Iterable[NodeType],
         *,
+        info: Optional[Info] = None,
         total_count: Optional[int] = None,
         before: Optional[str] = None,
         after: Optional[str] = None,
@@ -760,8 +679,17 @@ class Connection(Generic[NodeType]):
             expected = end - start
 
         # Overfetch by 1 to check if we have a next result
+        type_def = cast(TypeDefinition, cls._type_definition)  # type:ignore
+        field_def = type_def.get_field("edges")
+        assert field_def
+
+        field = field_def.type
+        while isinstance(field, StrawberryContainer):
+            field = field.of_type
+
+        edge_class = cast(Edge[NodeType], field)
         edges = [
-            cls.EDGE_CLASS.from_node(v, cursor=start + i)
+            edge_class.from_node(v, cursor=start + i)
             for i, v in enumerate(cast(Sequence, nodes)[start : end + 1])  # noqa:E203
         ]
 
@@ -784,9 +712,6 @@ class Connection(Generic[NodeType]):
             page_info=page_info,
             total_count=total_count,
         )
-
-
-Node.CONNECTION_CLASS = Connection
 
 
 class RelayField(StrawberryField):
@@ -950,49 +875,33 @@ class ConnectionField(RelayField):
     }
 
     def __call__(self, resolver: Callable[..., Iterable[Node]]):
-        namespace = sys.modules[resolver.__module__].__dict__
-        nodes_type = resolver.__annotations__.get("return")
-        if not nodes_type:
-            raise TypeError("Connection nodes resolver needs a return type decoration.")
+        if (nodes_type := resolver.__annotations__.get("return")) is not None:
+            namespace = sys.modules[resolver.__module__].__dict__
+            if isinstance(nodes_type, str):
+                nodes_type = ForwardRef(nodes_type, is_argument=False)
 
-        if isinstance(nodes_type, str):
-            nodes_type = ForwardRef(nodes_type, is_argument=False)
-        resolved = _eval_type(nodes_type, namespace, None)
-        origin = get_origin(resolved)
-        if not origin or (not isinstance(origin, type) and not issubclass(origin, Iterable)):
-            raise TypeError(
-                "Connection nodes resolver needs a decoration that is a subclass of Iterable, "
-                "like `Iterable[<NodeType>]`, `List[<NodeType>]`, etc"
-            )
+            resolved = _eval_type(nodes_type, namespace, None)
+            origin = get_origin(resolved)
 
-        ntype = get_args(resolved)[0]
-        if isinstance(ntype, LazyType):
-            ntype = ntype.resolve_type()
+            is_connection = origin and isinstance(origin, type) and issubclass(origin, Connection)
+            is_iterable = origin and isinstance(origin, type) and issubclass(origin, Iterable)
+            if not is_connection and not is_iterable:
+                raise TypeError(
+                    "Connection nodes resolver needs to return either a `Connection[<NodeType]` "
+                    "or an Iterable like `Iterable[<NodeType>]`, `List[<NodeType>]`, etc"
+                )
 
-        type_override = StrawberryAnnotation(
-            ntype.CONNECTION_CLASS[ntype],
-            namespace=namespace,
-        ).resolve()
+            if is_iterable and not is_connection and self.type_annotation is None:
+                ntype = get_args(resolved)[0]
+                if isinstance(ntype, LazyType):
+                    ntype = ntype.resolve_type()
 
-        resolver = StrawberryResolver(resolver, type_override=type_override)
+                self.type_annotation = StrawberryAnnotation(
+                    Connection[ntype],
+                    namespace=namespace,
+                )
+
         return super().__call__(resolver)
-
-    @property
-    def type(self) -> Union[StrawberryType, type]:  # noqa:A003
-        # Strawberry 0.139+ resolves the field annotation first, but we need to use the resolver's
-        # type here because it gets modified by us in the __call__ method
-        if (
-            self.base_resolver is not None
-            and self.base_resolver.type is not None
-            and not isinstance(self.base_resolver.type, StrawberryTypeVar)
-        ):
-            return self.base_resolver.type
-
-        return super().type
-
-    @type.setter
-    def type(self, type_: Any) -> None:  # noqa:A003
-        super(ConnectionField, self.__class__).type.fset(self, type_)  # type:ignore
 
     @functools.cached_property
     def resolver_args(self) -> Set[str]:
@@ -1035,22 +944,56 @@ class ConnectionField(RelayField):
         else:
             nodes = None
 
-        nodes = self.resolve_nodes(source, info, args, kwargs, nodes=nodes)
-        # This will be passed to the field cconnection resolver
-        kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
+        return self.resolver(source, info, args, kwargs, nodes=nodes)
 
-        return cast(Node, field_type).resolve_connection(info=info, nodes=nodes, **kwargs)
-
-    def resolve_nodes(
+    def resolver(
         self,
         source: Any,
         info: Info,
         args: List[Any],
         kwargs: Dict[str, Any],
         *,
-        nodes: Optional[Iterable[Node]] = None,
-    ) -> Optional[AwaitableOrValue[Iterable[Node]]]:
-        return nodes
+        nodes: AwaitableOrValue[Optional[Union[Iterable[Node], Connection[Node]]]] = None,
+    ):
+        # The base_resolver might have resolved to a Connection directly
+        if isinstance(nodes, Connection):
+            return nodes
+
+        return_type = cast(Connection[Node], info.return_type)
+        type_def = return_type._type_definition  # type:ignore
+        assert isinstance(type_def, TypeDefinition)
+
+        field_type = type_def.type_var_map[NodeType]
+        if isinstance(field_type, LazyType):
+            field_type = field_type.resolve_type()
+
+        if nodes is None:
+            nodes = cast(Node, field_type).resolve_nodes(info=info)
+
+        if aio.is_awaitable(nodes, info=info):
+            return aio.resolve_async(
+                nodes,
+                lambda resolved: self.resolver(
+                    source,
+                    info,
+                    args,
+                    kwargs,
+                    nodes=resolved,
+                ),
+                info=info,
+            )
+
+        return self.resolve_connection(cast(Iterable[Node], nodes), info, **kwargs)
+
+    def resolve_connection(
+        self,
+        nodes: Iterable[Node],
+        info: Info,
+        **kwargs,
+    ):
+        return_type = cast(Connection[Node], info.return_type)
+        kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
+        return return_type.from_nodes(nodes, info=info, **kwargs)
 
 
 class InputMutationField(RelayField):
@@ -1195,6 +1138,7 @@ def connection(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
 ) -> _T:
     ...
 
@@ -1212,6 +1156,7 @@ def connection(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
 ) -> Any:
     ...
 
@@ -1229,6 +1174,7 @@ def connection(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
 ) -> ConnectionField:
     ...
 
@@ -1245,6 +1191,7 @@ def connection(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1304,7 +1251,7 @@ def connection(
         python_name=None,
         graphql_name=name,
         type_annotation=None,
-        description=description,
+        description=StrawberryAnnotation.from_annotation(graphql_type),
         is_subscription=is_subscription,
         permission_classes=permission_classes or [],
         deprecation_reason=deprecation_reason,
