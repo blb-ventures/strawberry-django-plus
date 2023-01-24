@@ -359,6 +359,7 @@ def mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> _T:
     ...
@@ -379,6 +380,7 @@ def mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> Any:
     ...
@@ -399,6 +401,7 @@ def mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> DjangoInputMutationField:
     ...
@@ -418,6 +421,7 @@ def mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -439,7 +443,7 @@ def mutation(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
-        type_annotation=None,
+        type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
         is_subscription=is_subscription,
         permission_classes=permission_classes or [],
@@ -473,6 +477,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> _T:
     ...
@@ -494,6 +499,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> Any:
     ...
@@ -515,6 +521,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> DjangoInputMutationField:
     ...
@@ -535,6 +542,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -559,7 +567,7 @@ def input_mutation(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
-        type_annotation=None,
+        type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
         is_subscription=is_subscription,
         permission_classes=permission_classes or [],
@@ -591,6 +599,7 @@ def create(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
     full_clean: bool = True,
 ) -> Any:
@@ -614,7 +623,7 @@ def create(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
-        type_annotation=None,
+        type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
         is_subscription=is_subscription,
         permission_classes=permission_classes or [],
@@ -644,6 +653,7 @@ def update(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
     full_clean: bool = True,
 ) -> Any:
@@ -665,7 +675,7 @@ def update(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
-        type_annotation=None,
+        type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
         is_subscription=is_subscription,
         permission_classes=permission_classes or [],
@@ -695,6 +705,7 @@ def delete(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> Any:
     return DjangoDeleteMutationField(
@@ -702,7 +713,7 @@ def delete(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
-        type_annotation=None,
+        type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
         is_subscription=is_subscription,
         permission_classes=permission_classes or [],

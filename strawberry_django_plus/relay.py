@@ -1250,8 +1250,8 @@ def connection(
     f = ConnectionField(
         python_name=None,
         graphql_name=name,
-        type_annotation=None,
-        description=StrawberryAnnotation.from_annotation(graphql_type),
+        description=description,
+        type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         is_subscription=is_subscription,
         permission_classes=permission_classes or [],
         deprecation_reason=deprecation_reason,
