@@ -38,12 +38,7 @@ from .descriptors import ModelProperty
 from .field import StrawberryDjangoField, connection, node
 from .relay import Connection, ConnectionField, Node
 from .types import resolve_model_field_type
-from .utils.resolvers import (
-    resolve_connection,
-    resolve_model_id,
-    resolve_model_node,
-    resolve_model_nodes,
-)
+from .utils.resolvers import resolve_model_id, resolve_model_node, resolve_model_nodes
 
 __all = [
     "StrawberryDjangoType",
@@ -293,16 +288,6 @@ def _process_type(
         if not _has_own_node_resolver(cls, "resolve_nodes"):
             cls.resolve_nodes = types.MethodType(
                 lambda *args, **kwargs: resolve_model_nodes(
-                    *args,
-                    filter_perms=True,
-                    **kwargs,
-                ),
-                cls,
-            )
-
-        if not _has_own_node_resolver(cls, "resolve_connection"):
-            cls.resolve_connection = types.MethodType(
-                lambda *args, **kwargs: resolve_connection(
                     *args,
                     filter_perms=True,
                     **kwargs,
