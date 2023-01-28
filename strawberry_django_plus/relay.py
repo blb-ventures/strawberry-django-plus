@@ -4,6 +4,7 @@ import base64
 import dataclasses
 import functools
 import inspect
+import itertools
 import math
 import sys
 from typing import (
@@ -663,15 +664,25 @@ class Connection(Generic[NodeType]):
                 raise ValueError(f"Argument 'last' cannot be higher than {max_results}.")
 
             if end == math.inf:
-                raise ValueError("Cannot use last with unlimited results")
+                # This is the worst case, someone is asking for last without specifying an
+                # after argument. We basically want the total_count - last in here. If we don't
+                # have the total_count (e.g. because nodes is a generator), the slice below
+                # will have to iterate over it all, so we can transform it to a list here to
+                # retrieve that total_count right now
+                if total_count is None:
+                    nodes = list(nodes)
+                    total_count = len(nodes)
 
-            start = max(start, end - last)
+                start = max(start, total_count - last)
+                end = None
+            else:
+                start = max(start, end - last)
 
         # If at this point end is still inf, consider it to be start + max_results
         if end == math.inf:
             end = start + max_results
 
-        expected = end - start
+        expected = end - start if end is not None else abs(start)
         # If no parameters are given, end could be total_results at this point.
         # Make sure we don't exceed max_results in here
         if expected > max_results:
@@ -688,9 +699,15 @@ class Connection(Generic[NodeType]):
             field = field.of_type
 
         edge_class = cast(Edge[NodeType], field)
+        iterator = (
+            cast(Sequence, nodes)[start : end + 1 if end is not None else None]
+            if hasattr(nodes, "__getitem__")
+            else itertools.islice(
+                nodes, cast(int, start), cast(int, end + 1) if end is not None else None
+            )
+        )
         edges = [
-            edge_class.from_node(v, cursor=start + i)
-            for i, v in enumerate(cast(Sequence, nodes)[start : end + 1])  # noqa:E203
+            edge_class.from_node(v, cursor=start + i) for i, v in enumerate(iterator)  # noqa:E203
         ]
 
         # Remove the overfetched result
@@ -944,6 +961,7 @@ class ConnectionField(RelayField):
         else:
             nodes = None
 
+        kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
         return self.resolver(source, info, args, kwargs, nodes=nodes)
 
     def resolver(
@@ -992,7 +1010,6 @@ class ConnectionField(RelayField):
         **kwargs,
     ):
         return_type = cast(Connection[Node], info.return_type)
-        kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
         return return_type.from_nodes(nodes, info=info, **kwargs)
 
 

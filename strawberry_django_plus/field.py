@@ -318,7 +318,6 @@ class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoFie
         *args,
         **kwargs,
     ):
-        kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
         return super().resolve_connection(*args, **kwargs)
 
 

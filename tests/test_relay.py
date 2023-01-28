@@ -1,6 +1,7 @@
 import pathlib
 from typing import Iterable, List, Optional
 
+import pytest
 import strawberry
 from strawberry.types import Info
 from typing_extensions import Self
@@ -118,6 +119,26 @@ class Query:
     fruits: relay.Connection[Fruit] = relay.connection()
     fruits_custom_pagination: CustomPaginationConnection[Fruit] = relay.connection()
 
+    @relay.connection
+    def fruits_custom_resolver(
+        self,
+        info: Info,
+        name_endswith: Optional[str] = None,
+    ) -> Iterable[Fruit]:
+        for f in fruits.values():
+            if name_endswith is None or f.name.endswith(name_endswith):
+                yield f
+
+    @relay.connection
+    def fruits_custom_resolver_returning_list(
+        self,
+        info: Info,
+        name_endswith: Optional[str] = None,
+    ) -> List[Fruit]:
+        return [
+            f for f in fruits.values() if name_endswith is None or f.name.endswith(name_endswith)
+        ]
+
 
 schema = strawberry.Schema(query=Query)
 
@@ -206,40 +227,43 @@ query TestQuery (
     $last: Int = null
     $before: String = null,
     $after: String = null,
-) {
-    fruits (
+) {{
+    {} (
         first: $first
         last: $last
         before: $before
         after: $after
-    ) {
-        pageInfo {
+    ) {{
+        pageInfo {{
             hasNextPage
             hasPreviousPage
             startCursor
             endCursor
-        }
-        edges {
+        }}
+        edges {{
             cursor
-            node {
+            node {{
                 id
                 name
                 color
-            }
-        }
-    }
-}
+            }}
+        }}
+    }}
+}}
 """
 
 
-def test_query_connection():
+@pytest.mark.parametrize(
+    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection(query_attr: str):
     result = schema.execute_sync(
-        fruits_query,
+        fruits_query.format(query_attr),
         variable_values={},
     )
     assert result.errors is None
     assert result.data == {
-        "fruits": {
+        query_attr: {
             "edges": [
                 {
                     "cursor": "YXJyYXljb25uZWN0aW9uOjA=",
@@ -292,14 +316,17 @@ def test_query_connection():
     }
 
 
-def test_query_connection_filtering_first():
+@pytest.mark.parametrize(
+    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_filtering_first(query_attr: str):
     result = schema.execute_sync(
-        fruits_query,
+        fruits_query.format(query_attr),
         variable_values={"first": 2},
     )
     assert result.errors is None
     assert result.data == {
-        "fruits": {
+        query_attr: {
             "edges": [
                 {
                     "cursor": "YXJyYXljb25uZWN0aW9uOjA=",
@@ -328,14 +355,17 @@ def test_query_connection_filtering_first():
     }
 
 
-def test_query_connection_filtering_first_with_after():
+@pytest.mark.parametrize(
+    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_filtering_first_with_after(query_attr: str):
     result = schema.execute_sync(
-        fruits_query,
+        fruits_query.format(query_attr),
         variable_values={"first": 2, "after": relay.to_base64("arrayconnection", "1")},
     )
     assert result.errors is None
     assert result.data == {
-        "fruits": {
+        query_attr: {
             "edges": [
                 {
                     "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
@@ -364,14 +394,17 @@ def test_query_connection_filtering_first_with_after():
     }
 
 
-def test_query_connection_filtering_last():
+@pytest.mark.parametrize(
+    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_filtering_last(query_attr: str):
     result = schema.execute_sync(
-        fruits_query,
+        fruits_query.format(query_attr),
         variable_values={"last": 2},
     )
     assert result.errors is None
     assert result.data == {
-        "fruits": {
+        query_attr: {
             "edges": [
                 {
                     "cursor": "YXJyYXljb25uZWN0aW9uOjM=",
@@ -400,14 +433,17 @@ def test_query_connection_filtering_last():
     }
 
 
-def test_query_connection_filtering_last_with_before():
+@pytest.mark.parametrize(
+    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_filtering_last_with_before(query_attr: str):
     result = schema.execute_sync(
-        fruits_query,
+        fruits_query.format(query_attr),
         variable_values={"last": 2, "before": relay.to_base64("arrayconnection", "4")},
     )
     assert result.errors is None
     assert result.data == {
-        "fruits": {
+        query_attr: {
             "edges": [
                 {
                     "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
@@ -673,6 +709,259 @@ def test_query_custom_connection_filtering_first_with_before():
                 "hasPreviousPage": True,
                 "startCursor": relay.to_base64("fruit_name", "Grape"),
                 "endCursor": relay.to_base64("fruit_name", "Orange"),
+            },
+        }
+    }
+
+
+fruits_query_custom_resolver = """
+query TestQuery (
+    $first: Int = null
+    $last: Int = null
+    $before: String = null,
+    $after: String = null,
+    $nameEndswith: String = null
+) {{
+    {} (
+        first: $first
+        last: $last
+        before: $before
+        after: $after
+        nameEndswith: $nameEndswith
+    ) {{
+        pageInfo {{
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+        }}
+        edges {{
+            cursor
+            node {{
+                id
+                name
+                color
+            }}
+        }}
+    }}
+}}
+"""
+
+
+@pytest.mark.parametrize(
+    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_custom_resolver(query_attr: str):
+    result = schema.execute_sync(
+        fruits_query_custom_resolver.format(query_attr),
+        variable_values={"nameEndswith": "e"},
+    )
+    assert result.errors is None
+    assert result.data == {
+        query_attr: {
+            "edges": [
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjA=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 2),
+                        "color": "red",
+                        "name": "Apple",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjE=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 3),
+                        "color": "yellow",
+                        "name": "Pineapple",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 4),
+                        "color": "purple",
+                        "name": "Grape",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjM=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 5),
+                        "color": "orange",
+                        "name": "Orange",
+                    },
+                },
+            ],
+            "pageInfo": {
+                "hasNextPage": False,
+                "hasPreviousPage": False,
+                "startCursor": relay.to_base64("arrayconnection", "0"),
+                "endCursor": relay.to_base64("arrayconnection", "3"),
+            },
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_custom_resolver_filtering_first(query_attr: str):
+    result = schema.execute_sync(
+        fruits_query_custom_resolver.format(query_attr),
+        variable_values={"first": 2, "nameEndswith": "e"},
+    )
+    assert result.errors is None
+    assert result.data == {
+        query_attr: {
+            "edges": [
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjA=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 2),
+                        "color": "red",
+                        "name": "Apple",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjE=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 3),
+                        "color": "yellow",
+                        "name": "Pineapple",
+                    },
+                },
+            ],
+            "pageInfo": {
+                "hasNextPage": True,
+                "hasPreviousPage": False,
+                "startCursor": relay.to_base64("arrayconnection", "0"),
+                "endCursor": relay.to_base64("arrayconnection", "1"),
+            },
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_custom_resolver_filtering_first_with_after(query_attr: str):
+    result = schema.execute_sync(
+        fruits_query_custom_resolver.format(query_attr),
+        variable_values={
+            "first": 2,
+            "after": relay.to_base64("arrayconnection", "1"),
+            "nameEndswith": "e",
+        },
+    )
+    assert result.errors is None
+    assert result.data == {
+        query_attr: {
+            "edges": [
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 4),
+                        "color": "purple",
+                        "name": "Grape",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjM=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 5),
+                        "color": "orange",
+                        "name": "Orange",
+                    },
+                },
+            ],
+            "pageInfo": {
+                "hasNextPage": False,
+                "hasPreviousPage": True,
+                "startCursor": relay.to_base64("arrayconnection", "2"),
+                "endCursor": relay.to_base64("arrayconnection", "3"),
+            },
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_custom_resolver_filtering_last(query_attr: str):
+    result = schema.execute_sync(
+        fruits_query_custom_resolver.format(query_attr),
+        variable_values={"last": 2, "nameEndswith": "e"},
+    )
+    assert result.errors is None
+    assert result.data == {
+        query_attr: {
+            "edges": [
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 4),
+                        "color": "purple",
+                        "name": "Grape",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjM=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 5),
+                        "color": "orange",
+                        "name": "Orange",
+                    },
+                },
+            ],
+            "pageInfo": {
+                "hasNextPage": False,
+                "hasPreviousPage": True,
+                "startCursor": relay.to_base64("arrayconnection", "2"),
+                "endCursor": relay.to_base64("arrayconnection", "3"),
+            },
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+)
+def test_query_connection_custom_resolver_filtering_last_with_before(query_attr: str):
+    result = schema.execute_sync(
+        fruits_query_custom_resolver.format(query_attr),
+        variable_values={
+            "last": 2,
+            "before": relay.to_base64("arrayconnection", "3"),
+            "nameEndswith": "e",
+        },
+    )
+    assert result.errors is None
+    assert result.data == {
+        query_attr: {
+            "edges": [
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjE=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 3),
+                        "color": "yellow",
+                        "name": "Pineapple",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 4),
+                        "color": "purple",
+                        "name": "Grape",
+                    },
+                },
+            ],
+            "pageInfo": {
+                "hasNextPage": True,
+                "hasPreviousPage": True,
+                "startCursor": relay.to_base64("arrayconnection", "1"),
+                "endCursor": relay.to_base64("arrayconnection", "2"),
             },
         }
     }
