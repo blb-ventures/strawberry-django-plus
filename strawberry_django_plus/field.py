@@ -315,10 +315,15 @@ class StrawberryDjangoConnectionField(relay.ConnectionField, StrawberryDjangoFie
     @resolvers.async_safe
     def resolve_connection(
         self,
-        *args,
+        nodes: QuerySet,
+        info: Info,
         **kwargs,
     ):
-        return super().resolve_connection(*args, **kwargs)
+        return super().resolve_connection(
+            cast(QuerySet, self.get_queryset_as_list(nodes, info, kwargs, skip_fetch=True)),
+            info,
+            **kwargs,
+        )
 
 
 @overload

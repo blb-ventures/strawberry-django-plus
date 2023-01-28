@@ -416,3 +416,220 @@ def test_connection_queryset(db, gql_client: GraphQLTestClient):
             ]
         }
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_connection_queryset_with_filter(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($first: Int = null $filters: MilestoneFilter $order: MilestoneOrder) {
+        milestoneConn (
+          first: $first
+          filters: $filters
+          order: $order
+        ) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    m1 = MilestoneFactory.create(name="Foo")
+    MilestoneFactory.create(name="Bar")
+    m3 = MilestoneFactory.create(name="FooBar")
+
+    res = gql_client.query(
+        query,
+        variables={
+            "filters": {
+                "name": {
+                    "startsWith": "Foo",
+                }
+            }
+        },
+    )
+    assert res.data == {
+        "milestoneConn": {
+            "edges": [
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m1.pk),
+                        "name": "Foo",
+                    }
+                },
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m3.pk),
+                        "name": "FooBar",
+                    }
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_connection_queryset_with_order(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($first: Int = null $filters: MilestoneFilter $order: MilestoneOrder) {
+        milestoneConn (
+          first: $first
+          filters: $filters
+          order: $order
+        ) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    m1 = MilestoneFactory.create(name="Foo")
+    m2 = MilestoneFactory.create(name="Bar")
+    m3 = MilestoneFactory.create(name="FooBar")
+
+    res = gql_client.query(
+        query,
+        variables={
+            "order": {
+                "name": "DESC",
+            },
+        },
+    )
+    assert res.data == {
+        "milestoneConn": {
+            "edges": [
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m3.pk),
+                        "name": "FooBar",
+                    }
+                },
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m1.pk),
+                        "name": "Foo",
+                    }
+                },
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m2.pk),
+                        "name": "Bar",
+                    }
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_connection_queryset_with_filter_and_order(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($first: Int = null $filters: MilestoneFilter $order: MilestoneOrder) {
+        milestoneConn (
+          first: $first
+          filters: $filters
+          order: $order
+        ) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    m1 = MilestoneFactory.create(name="Foo")
+    MilestoneFactory.create(name="Bar")
+    m3 = MilestoneFactory.create(name="FooBar")
+
+    res = gql_client.query(
+        query,
+        variables={
+            "filters": {
+                "name": {
+                    "startsWith": "Foo",
+                }
+            },
+            "order": {
+                "name": "DESC",
+            },
+        },
+    )
+    assert res.data == {
+        "milestoneConn": {
+            "edges": [
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m3.pk),
+                        "name": "FooBar",
+                    }
+                },
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m1.pk),
+                        "name": "Foo",
+                    }
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_connection_queryset_with_filter_order_and_first(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($first: Int = null $filters: MilestoneFilter $order: MilestoneOrder) {
+        milestoneConn (
+          first: $first
+          filters: $filters
+          order: $order
+        ) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    MilestoneFactory.create(name="Foo")
+    MilestoneFactory.create(name="Bar")
+    m3 = MilestoneFactory.create(name="FooBar")
+
+    res = gql_client.query(
+        query,
+        variables={
+            "first": 1,
+            "filters": {
+                "name": {
+                    "startsWith": "Foo",
+                }
+            },
+            "order": {
+                "name": "DESC",
+            },
+        },
+    )
+    assert res.data == {
+        "milestoneConn": {
+            "edges": [
+                {
+                    "node": {
+                        "id": to_base64("MilestoneType", m3.pk),
+                        "name": "FooBar",
+                    }
+                },
+            ]
+        }
+    }

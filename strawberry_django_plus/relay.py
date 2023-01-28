@@ -591,6 +591,7 @@ class Connection(Generic[NodeType]):
         after: Optional[str] = None,
         first: Optional[int] = None,
         last: Optional[int] = None,
+        **kwargs,
     ):
         """Resolve a connection from the list of nodes.
 
@@ -961,7 +962,6 @@ class ConnectionField(RelayField):
         else:
             nodes = None
 
-        kwargs = {k: v for k, v in kwargs.items() if k in self.default_args}
         return self.resolver(source, info, args, kwargs, nodes=nodes)
 
     def resolver(
@@ -1001,6 +1001,8 @@ class ConnectionField(RelayField):
                 info=info,
             )
 
+        # Avoid info being passed twice in case the custom resolver has one
+        kwargs.pop("info", None)
         return self.resolve_connection(cast(Iterable[Node], nodes), info, **kwargs)
 
     def resolve_connection(
@@ -1010,7 +1012,7 @@ class ConnectionField(RelayField):
         **kwargs,
     ):
         return_type = cast(Connection[Node], info.return_type)
-        return return_type.from_nodes(nodes, info=info, **kwargs)
+        return return_type.from_nodes(nodes, **kwargs)
 
 
 class InputMutationField(RelayField):
