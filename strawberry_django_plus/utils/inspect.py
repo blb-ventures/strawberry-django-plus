@@ -263,7 +263,7 @@ class PrefetchInspector:
         return frozenset(self.query.deferred_loading[0])
 
     @only.setter
-    def only(self, value: Optional[Iterable[str]]):
+    def only(self, value: Optional[Iterable[Optional[str]]]):
         value = frozenset(v for v in (value or []) if v is not None)
         self.query.deferred_loading = (value, len(value) == 0)
 
@@ -274,7 +274,7 @@ class PrefetchInspector:
         return frozenset(self.query.deferred_loading[0])
 
     @defer.setter
-    def defer(self, value: Optional[Iterable[str]]):
+    def defer(self, value: Optional[Iterable[Optional[str]]]):
         value = frozenset(v for v in (value or []) if v is not None)
         self.query.deferred_loading = (value, True)
 

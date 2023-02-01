@@ -646,9 +646,6 @@ class Connection(Generic[NodeType]):
             assert before_type == connection_typename
             end = int(before_parsed)
 
-        if end is None:
-            end = max_results
-
         if isinstance(first, int):
             if first < 0:
                 raise ValueError("Argument 'first' must be a non-negative integer.")
