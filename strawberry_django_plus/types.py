@@ -164,7 +164,7 @@ class NodeInputPartial(NodeInput):
         return hash((self.__class__, self.id))
 
 
-@strawberry.input(description=("Add/remove/set the selected nodes."))
+@strawberry.input(description="Add/remove/set the selected nodes.")
 class ListInput(Generic[K]):
     """Add/remove/set the selected nodes.
 

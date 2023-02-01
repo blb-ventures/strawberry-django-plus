@@ -5,7 +5,6 @@ from strawberry.utils.importer import import_module_symbol
 
 
 class Command(BaseCommand):
-
     help = "Export the graphql schema"  # noqa:A003
 
     def add_arguments(self, parser):

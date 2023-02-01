@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("demo", "0003_quiz_assignee_issue_assignees"),
     ]
