@@ -200,6 +200,7 @@ def _from_django_type(
 def _get_fields(django_type: "StrawberryDjangoType"):
     origin = django_type.origin
     fields = {}
+    seen_fields = set()
 
     # collect all annotated fields
     for name, annotation in get_annotations(origin).items():
@@ -211,10 +212,11 @@ def _get_fields(django_type: "StrawberryDjangoType"):
             )
         except PrivateStrawberryFieldError:
             pass
+        seen_fields.add(name)
 
     # collect non-annotated strawberry fields
     for name in dir(origin):
-        if name in fields:
+        if name in seen_fields:
             continue
 
         attr = getattr(origin, name, None)
