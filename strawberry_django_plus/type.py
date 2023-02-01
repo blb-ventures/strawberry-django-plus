@@ -22,7 +22,9 @@ from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import UNRESOLVED, StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
+from strawberry.exceptions import PrivateStrawberryFieldError
 from strawberry.unset import UnsetType
+from strawberry.private import is_private
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import get_model_field, resolve_model_field_name
@@ -71,6 +73,8 @@ def _from_django_type(
             is_connection = issubclass(type_origin, Connection) if type_origin else False
         except Exception:
             is_connection = False
+        if is_private(type_annotation.annotation):
+            raise PrivateStrawberryFieldError(name, django_type.origin)
     else:
         is_connection = False
 
@@ -199,11 +203,14 @@ def _get_fields(django_type: "StrawberryDjangoType"):
 
     # collect all annotated fields
     for name, annotation in get_annotations(origin).items():
-        fields[name] = _from_django_type(
-            django_type,
-            name,
-            type_annotation=annotation,
-        )
+        try:
+            fields[name] = _from_django_type(
+                django_type,
+                name,
+                type_annotation=annotation,
+            )
+        except PrivateStrawberryFieldError:
+            pass
 
     # collect non-annotated strawberry fields
     for name in dir(origin):
