@@ -20,11 +20,11 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.field import UNRESOLVED, StrawberryField
-from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.exceptions import PrivateStrawberryFieldError
-from strawberry.unset import UnsetType
+from strawberry.field import UNRESOLVED, StrawberryField
 from strawberry.private import is_private
+from strawberry.types.fields.resolver import StrawberryResolver
+from strawberry.unset import UnsetType
 from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import get_model_field, resolve_model_field_name
