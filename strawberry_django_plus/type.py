@@ -1,3 +1,4 @@
+from contextlib import suppress
 import dataclasses
 import types
 from typing import (
@@ -204,14 +205,12 @@ def _get_fields(django_type: "StrawberryDjangoType"):
 
     # collect all annotated fields
     for name, annotation in get_annotations(origin).items():
-        try:
+        with suppress(PrivateStrawberryFieldError):
             fields[name] = _from_django_type(
                 django_type,
                 name,
                 type_annotation=annotation,
             )
-        except PrivateStrawberryFieldError:
-            pass
         seen_fields.add(name)
 
     # collect non-annotated strawberry fields
