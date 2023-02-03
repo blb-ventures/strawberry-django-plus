@@ -1,3 +1,4 @@
+from contextlib import suppress
 import dataclasses
 import types
 from typing import (
@@ -20,7 +21,9 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.exceptions import PrivateStrawberryFieldError
 from strawberry.field import UNRESOLVED, StrawberryField
+from strawberry.private import is_private
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
 from strawberry.utils.typing import __dataclass_transform__
@@ -71,6 +74,8 @@ def _from_django_type(
             is_connection = issubclass(type_origin, Connection) if type_origin else False
         except Exception:
             is_connection = False
+        if is_private(type_annotation.annotation):
+            raise PrivateStrawberryFieldError(name, django_type.origin)
     else:
         is_connection = False
 
@@ -196,18 +201,21 @@ def _from_django_type(
 def _get_fields(django_type: "StrawberryDjangoType"):
     origin = django_type.origin
     fields = {}
+    seen_fields = set()
 
     # collect all annotated fields
     for name, annotation in get_annotations(origin).items():
-        fields[name] = _from_django_type(
-            django_type,
-            name,
-            type_annotation=annotation,
-        )
+        with suppress(PrivateStrawberryFieldError):
+            fields[name] = _from_django_type(
+                django_type,
+                name,
+                type_annotation=annotation,
+            )
+        seen_fields.add(name)
 
     # collect non-annotated strawberry fields
     for name in dir(origin):
-        if name in fields:
+        if name in seen_fields:
             continue
 
         attr = getattr(origin, name, None)
