@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
 try:
     # Try to use the smaller/faster cache decorator if available
-    _cache = functools.cache  # type:ignore
+    _cache = functools.cache  # type: ignore
 except AttributeError:  # pragma:nocover
     _cache = functools.lru_cache
 
@@ -103,10 +103,12 @@ def get_django_type(type_, *, ensure_type=False):
             If we should ensure that the type is indeed a django type.
             If this is false, the result might be None.
 
-    Returns:
+    Returns
+    -------
         The retrieved StrawberryDjangoType
 
-    Raises:
+    Raises
+    ------
         TypeError:
             If the type ensuring fails
 
@@ -133,7 +135,8 @@ def get_possible_types(
             Optional type definition to use to resolve type vars. This is
             mostly used internally, no need to pass this.
 
-    Yields:
+    Yields
+    ------
         All possibilities for the type
 
     """
@@ -167,7 +170,7 @@ def get_possible_types(
 
 
 def get_possible_type_definitions(
-    gql_type: Union[TypeDefinition, StrawberryType, type]
+    gql_type: Union[TypeDefinition, StrawberryType, type],
 ) -> Generator[TypeDefinition, None, None]:
     """Resolve all possible type definitions for gql_type.
 
@@ -175,7 +178,8 @@ def get_possible_type_definitions(
         gql_type:
             The type to retrieve possibilities from.
 
-    Yields:
+    Yields
+    ------
         All possibilities for the type
 
     """
@@ -187,7 +191,7 @@ def get_possible_type_definitions(
         if isinstance(t, TypeDefinition):
             yield t
         elif hasattr(t, "_type_definition"):
-            yield t._type_definition  # type:ignore
+            yield t._type_definition  # type: ignore
 
 
 def get_selections(
@@ -203,7 +207,8 @@ def get_selections(
         typename:
             Only resolve fragments for that typename
 
-    Yields:
+    Yields
+    ------
         All possibilities for the type
 
     """
@@ -235,7 +240,7 @@ def get_selections(
                         {
                             **get_selections(existing),
                             **get_selections(f),
-                        }.values()
+                        }.values(),
                     )
                 ret[f.name] = f
         else:  # pragma:nocover
@@ -253,7 +258,7 @@ class PrefetchInspector:
     query: Query = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self):
-        self.qs = cast(QuerySet, self.prefetch.queryset)  # type:ignore
+        self.qs = cast(QuerySet, self.prefetch.queryset)  # type: ignore
         self.query = self.qs.query
 
     @property
@@ -290,11 +295,11 @@ class PrefetchInspector:
 
     @property
     def prefetch_related(self) -> List[Union[Prefetch, str]]:
-        return list(self.qs._prefetch_related_lookups)  # type:ignore
+        return list(self.qs._prefetch_related_lookups)  # type: ignore
 
     @prefetch_related.setter
     def prefetch_related(self, value: Optional[Iterable[Union[Prefetch, str]]]):
-        self.qs._prefetch_related_lookups = tuple(value or [])  # type:ignore
+        self.qs._prefetch_related_lookups = tuple(value or [])  # type: ignore
 
     @property
     def annotations(self) -> Dict[str, Expression]:
@@ -302,7 +307,7 @@ class PrefetchInspector:
 
     @annotations.setter
     def annotations(self, value: Optional[Dict[str, Expression]]):
-        self.query.annotations = value or {}  # type:ignore
+        self.query.annotations = value or {}  # type: ignore
 
     @property
     def extra(self) -> DictTree:
@@ -310,7 +315,7 @@ class PrefetchInspector:
 
     @extra.setter
     def extra(self, value: Optional[DictTree]):
-        self.query.extra = value or {}  # type:ignore
+        self.query.extra = value or {}  # type: ignore
 
     @property
     def where(self) -> WhereNode:
@@ -323,8 +328,10 @@ class PrefetchInspector:
     def merge(self, other: "PrefetchInspector", allow_unsafe_ops=False):
         if not allow_unsafe_ops and self.where != other.where:
             raise ValueError(
-                "Tried to prefetch 2 queries with different filters to the "
-                "same attribute. Use `to_attr` in this case..."
+                (
+                    "Tried to prefetch 2 queries with different filters to the "
+                    "same attribute. Use `to_attr` in this case..."
+                ),
             )
 
         # Merge select_related
@@ -333,8 +340,10 @@ class PrefetchInspector:
         # Merge only/deferred
         if not allow_unsafe_ops and (self.defer is None) != (other.defer is None):
             raise ValueError(
-                "Tried to prefetch 2 queries with different deferred "
-                "operations. Use only `only` or `deferred`, not both..."
+                (
+                    "Tried to prefetch 2 queries with different deferred "
+                    "operations. Use only `only` or `deferred`, not both..."
+                ),
             )
         if self.only is not None and other.only is not None:
             self.only = self.only | other.only

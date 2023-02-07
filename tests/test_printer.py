@@ -1,4 +1,4 @@
-import os
+import pathlib
 
 from strawberry.printer import print_schema
 
@@ -7,12 +7,12 @@ def test_printer():
     from demo.schema import schema
 
     schema_output = print_schema(schema).strip("\n").strip(" ")
-    output = os.path.join(os.path.dirname(__file__), "data", "schema.gql")
-    if not os.path.exists(output):  # pragma:nocover
-        with open(output, "w") as f:
+    output = pathlib.Path(__file__).parent / "data" / "schema.gql"
+    if not output.exists():
+        with output.open("w") as f:
             f.write(schema_output + "\n")
 
-    with open(output) as f:
+    with output.open() as f:
         expected = f.read().strip("\n").strip(" ")
 
     assert schema_output == expected

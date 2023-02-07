@@ -1,5 +1,6 @@
 import functools
 import inspect
+import warnings
 from typing import (
     Any,
     Awaitable,
@@ -15,7 +16,6 @@ from typing import (
     cast,
     overload,
 )
-import warnings
 
 from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Model, QuerySet
@@ -64,7 +64,7 @@ def async_safe(
 
 
 def async_safe(func=None, /, *, thread_sensitive=True):
-    """Decorates a function to be async safe, ensuring it is called in a sync context always.
+    """Decorate a function to be async safe, ensuring it is called in a sync context always.
 
     - If `f` is a coroutine function, this is a noop.
     - When running, if an asyncio loop is running, the function will
@@ -77,7 +77,8 @@ def async_safe(func=None, /, *, thread_sensitive=True):
             If the sync function should run in the same thread as all other
             thread_sensitive functions
 
-    Returns:
+    Returns
+    -------
         The wrapped function
 
     .. _asgi.sync_to_async:
@@ -97,10 +98,7 @@ def async_safe(func=None, /, *, thread_sensitive=True):
 
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            if is_async():
-                resolver = async_resolver
-            else:
-                resolver = f
+            resolver = async_resolver if is_async() else f
 
             return resolver(*args, **kwargs)
 
@@ -119,13 +117,14 @@ def async_unsafe(*args, **kwargs):
 
 @_async_to_sync
 async def resolve_sync(value: Awaitable[_T]) -> _T:
-    """Resolves the given value, resolving any returned awaitable.
+    """Resolve the given value, resolving any returned awaitable.
 
     Args:
         value:
             The awaitable to be resolved
 
-    Returns:
+    Returns
+    -------
         The resolved value.
 
     """
@@ -171,7 +170,8 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:
             of `is_awaitable`, which might have some optimizations. Otherwise
             will fallback to `inspect.is_awaitable`
 
-    Returns:
+    Returns
+    -------
         The wrapped function
 
     .. _asgi.sync_to_async:
@@ -191,7 +191,8 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:
     if resolver is None:
         # This is what QuerySet does internally to fetch results.
         # After this, iterating over the queryset should be async safe
-        resolver = lambda r: r._fetch_all() or r
+        def resolver(r):
+            return r._fetch_all() or r
 
     if is_async() and not (
         inspect.iscoroutinefunction(resolver) or inspect.isasyncgenfunction(resolver)
@@ -270,7 +271,8 @@ def resolve_result(res, *, info=None, qs_resolver=None):
             `resolve_qs` will be used, which by default returns the queryset
             already prefetched from the database.
 
-    Returns:
+    Returns
+    -------
         The resolved result.
 
     """
@@ -319,7 +321,8 @@ def resolve_model_nodes(
         node_ids:
             Optional filter by those node_ids instead of retrieving everything
 
-    Returns:
+    Returns
+    -------
         The resolved queryset, already prefetched from the database
 
     """
@@ -337,12 +340,12 @@ def resolve_model_nodes(
     qs = source._default_manager.all()
 
     if origin and hasattr(origin, "get_queryset"):
-        qs = origin.get_queryset(qs, info)  # type:ignore
+        qs = origin.get_queryset(qs, info)  # type: ignore
 
     if node_ids is not None:
         id_attr = getattr(origin, "id_attr", "pk")
         qs = qs.filter(
-            **{f"{id_attr}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]}
+            **{f"{id_attr}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]},
         )
 
     if filter_perms:
@@ -361,7 +364,9 @@ def resolve_model_nodes(
             return_type,
             relay.Connection,
         ):
-            qs_resolver = lambda qs: qs
+
+            def qs_resolver(qs):
+                return qs
 
     return resolve_result(qs, info=info, qs_resolver=qs_resolver)
 
@@ -405,7 +410,8 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
             used, which might raise `model.DoesNotExist` error if the node doesn't exist.
             Otherwise, `qs.first()` will be used, which might return None.
 
-    Returns:
+    Returns
+    -------
         The resolved node, already prefetched from the database
 
     """
@@ -443,7 +449,8 @@ def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> Awaita
         root:
             The source model object.
 
-    Returns:
+    Returns
+    -------
         The resolved object id
 
     """

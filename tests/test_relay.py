@@ -150,7 +150,7 @@ def test_schema():
         with output.open("w") as f:
             f.write(schema_output + "\n")
 
-    with open(output) as f:
+    with output.open() as f:
         expected = f.read().strip("\n").strip(" ")
 
     assert schema_output == expected
@@ -254,7 +254,8 @@ query TestQuery (
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection(query_attr: str):
     result = schema.execute_sync(
@@ -312,12 +313,13 @@ def test_query_connection(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "0"),
                 "endCursor": relay.to_base64("arrayconnection", "4"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_filtering_first(query_attr: str):
     result = schema.execute_sync(
@@ -351,12 +353,13 @@ def test_query_connection_filtering_first(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "0"),
                 "endCursor": relay.to_base64("arrayconnection", "1"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_filtering_first_with_after(query_attr: str):
     result = schema.execute_sync(
@@ -390,12 +393,13 @@ def test_query_connection_filtering_first_with_after(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "2"),
                 "endCursor": relay.to_base64("arrayconnection", "3"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_filtering_last(query_attr: str):
     result = schema.execute_sync(
@@ -429,12 +433,13 @@ def test_query_connection_filtering_last(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "3"),
                 "endCursor": relay.to_base64("arrayconnection", "4"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruits", "fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_filtering_last_with_before(query_attr: str):
     result = schema.execute_sync(
@@ -468,7 +473,7 @@ def test_query_connection_filtering_last_with_before(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "2"),
                 "endCursor": relay.to_base64("arrayconnection", "3"),
             },
-        }
+        },
     }
 
 
@@ -562,7 +567,7 @@ def test_query_custom_connection():
                 "hasNextPage": False,
                 "hasPreviousPage": False,
             },
-        }
+        },
     }
 
 
@@ -599,7 +604,7 @@ def test_query_custom_connection_filtering_first():
                 "hasNextPage": True,
                 "hasPreviousPage": False,
             },
-        }
+        },
     }
 
 
@@ -636,7 +641,7 @@ def test_query_custom_connection_filtering_first_with_after():
                 "startCursor": relay.to_base64("fruit_name", "Grape"),
                 "endCursor": relay.to_base64("fruit_name", "Orange"),
             },
-        }
+        },
     }
 
 
@@ -673,7 +678,7 @@ def test_query_custom_connection_filtering_last():
                 "startCursor": relay.to_base64("fruit_name", "Orange"),
                 "endCursor": relay.to_base64("fruit_name", "Pineapple"),
             },
-        }
+        },
     }
 
 
@@ -710,7 +715,7 @@ def test_query_custom_connection_filtering_first_with_before():
                 "startCursor": relay.to_base64("fruit_name", "Grape"),
                 "endCursor": relay.to_base64("fruit_name", "Orange"),
             },
-        }
+        },
     }
 
 
@@ -749,7 +754,8 @@ query TestQuery (
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_custom_resolver(query_attr: str):
     result = schema.execute_sync(
@@ -799,12 +805,13 @@ def test_query_connection_custom_resolver(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "0"),
                 "endCursor": relay.to_base64("arrayconnection", "3"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_custom_resolver_filtering_first(query_attr: str):
     result = schema.execute_sync(
@@ -838,12 +845,13 @@ def test_query_connection_custom_resolver_filtering_first(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "0"),
                 "endCursor": relay.to_base64("arrayconnection", "1"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_custom_resolver_filtering_first_with_after(query_attr: str):
     result = schema.execute_sync(
@@ -881,12 +889,13 @@ def test_query_connection_custom_resolver_filtering_first_with_after(query_attr:
                 "startCursor": relay.to_base64("arrayconnection", "2"),
                 "endCursor": relay.to_base64("arrayconnection", "3"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_custom_resolver_filtering_last(query_attr: str):
     result = schema.execute_sync(
@@ -920,12 +929,13 @@ def test_query_connection_custom_resolver_filtering_last(query_attr: str):
                 "startCursor": relay.to_base64("arrayconnection", "2"),
                 "endCursor": relay.to_base64("arrayconnection", "3"),
             },
-        }
+        },
     }
 
 
 @pytest.mark.parametrize(
-    "query_attr", ["fruitsCustomResolver", "fruitsCustomResolverReturningList"]
+    "query_attr",
+    ["fruitsCustomResolver", "fruitsCustomResolverReturningList"],
 )
 def test_query_connection_custom_resolver_filtering_last_with_before(query_attr: str):
     result = schema.execute_sync(
@@ -963,5 +973,5 @@ def test_query_connection_custom_resolver_filtering_last_with_before(query_attr:
                 "startCursor": relay.to_base64("arrayconnection", "1"),
                 "endCursor": relay.to_base64("arrayconnection", "2"),
             },
-        }
+        },
     }

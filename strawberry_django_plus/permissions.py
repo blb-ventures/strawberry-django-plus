@@ -19,11 +19,11 @@ from typing import (
     overload,
 )
 
+import strawberry
 from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Model, QuerySet
 from graphql.type.definition import GraphQLResolveInfo
-import strawberry
 from strawberry.django.context import StrawberryDjangoContext
 from strawberry.private import Private
 from strawberry.schema_directive import Location
@@ -40,7 +40,7 @@ from .utils.typing import UserType
 
 try:
     # Try to use the smaller/faster cache decorator if available
-    _cache = functools.cache  # type:ignore
+    _cache = functools.cache  # type: ignore
 except AttributeError:
     _cache = functools.lru_cache
 
@@ -67,7 +67,11 @@ When the condition fails, the following can happen (following this priority):
 4) If the field is not mandatory and any scalar or object (e.g. `String`), `null` will be returned.
 5) If the field is a relay `Connection`, an empty connection will be returned.
 """
-_desc = lambda desc: f"{desc}\n\n{_return_condition.strip()}"
+
+
+def _desc(desc):
+    return f"{desc}\n\n{_return_condition.strip()}"
+
 
 perm_safe: contextvars.ContextVar[Optional[List[bool]]] = contextvars.ContextVar(
     "perm_safe",
@@ -112,7 +116,7 @@ def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
         return qs
 
     # Do not do anything is results are cached, the target is the the retval
-    if qs._result_cache is not None:  # type:ignore
+    if qs._result_cache is not None:  # type: ignore
         set_perm_safe(False)
         return qs
 
@@ -323,7 +327,7 @@ class AuthDirective(SchemaDirectiveWithResolver):
                             kind=OperationMessage.Kind.PERMISSION,
                             message=self.message,
                             field=info.field_name,
-                        )
+                        ),
                     ],
                 )
 
@@ -387,7 +391,11 @@ class ConditionDirective(AuthDirective):
         )
 
     def check_condition(
-        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+        self,
+        root: Any,
+        info: GraphQLResolveInfo,
+        user: UserType,
+        **kwargs,
     ) -> bool:
         raise NotImplementedError
 
@@ -403,7 +411,11 @@ class IsAuthenticated(ConditionDirective):
     message: Private[str] = dataclasses.field(default="User is not authenticated.")
 
     def check_condition(
-        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+        self,
+        root: Any,
+        info: GraphQLResolveInfo,
+        user: UserType,
+        **kwargs,
     ) -> bool:
         return user.is_authenticated and user.is_active
 
@@ -419,7 +431,11 @@ class IsStaff(ConditionDirective):
     message: Private[str] = dataclasses.field(default="User is not a staff member.")
 
     def check_condition(
-        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+        self,
+        root: Any,
+        info: GraphQLResolveInfo,
+        user: UserType,
+        **kwargs,
     ) -> bool:
         return user.is_authenticated and user.is_staff
 
@@ -435,7 +451,11 @@ class IsSuperuser(ConditionDirective):
     message: Private[str] = dataclasses.field(default="User is not a superuser.")
 
     def check_condition(
-        self, root: Any, info: GraphQLResolveInfo, user: UserType, **kwargs
+        self,
+        root: Any,
+        info: GraphQLResolveInfo,
+        user: UserType,
+        **kwargs,
     ) -> bool:
         return user.is_authenticated and user.is_superuser
 
@@ -445,7 +465,8 @@ class IsSuperuser(ConditionDirective):
 class PermDefinition:
     """Permission definition.
 
-    Attributes:
+    Attributes
+    ----------
         resource:
             The resource to which we are requiring permission.
         permission:
@@ -471,7 +492,7 @@ class PermDefinition:
         parts = perm.split(".")
         if len(parts) != 2:
             raise TypeError(
-                "Permissions need to be defined as `app_label.perm`, `app_label.` or `.perm`"
+                "Permissions need to be defined as `app_label.perm`, `app_label.` or `.perm`",
             )
         return cls(
             resource=parts[0].strip() or None,
@@ -503,7 +524,7 @@ class HasPermDirective(AuthDirective):
         description="Required perms to access this resource.",
         default_factory=list,
     )
-    any: bool = strawberry.field(  # noqa:A003
+    any: bool = strawberry.field(  # noqa: A003
         description="If any or all perms listed are required.",
         default=True,
     )
@@ -560,7 +581,7 @@ class HasPermDirective(AuthDirective):
                 self.any,
                 self.perm_checker,
                 self.obj_perm_checker,
-            )
+            ),
         )
 
     def __eq__(self, other: Self):
@@ -633,7 +654,7 @@ class HasPermDirective(AuthDirective):
                 )
             return self._resolve_obj_perms(helper, root, info, user, ret)
         else:
-            assert_never(self.target)  # noqa:R503
+            assert_never(self.target)
 
     @resolvers.async_safe
     def _has_perm_safe(
@@ -746,7 +767,8 @@ class HasPerm(HasPermDirective):
     Given a `resource` name, the user can access the decorated object/field
     if he has any of the permissions defined in this directive.
 
-    Examples:
+    Examples
+    --------
         To indicate that a mutation can only be done by someone who
         has "product.add_product" perm in the django system:
 
@@ -756,7 +778,8 @@ class HasPerm(HasPermDirective):
         ...     def create_product(self, name: str) -> ProductType:
         ...         ...
 
-    Attributes:
+    Attributes
+    ----------
         perms:
             Perms required to access this resource.
         any:
@@ -780,8 +803,10 @@ class HasPerm(HasPermDirective):
 @strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc(
-        "Will check if the user has any/all permissions for the parent "
-        "of this field to resolve this."
+        (
+            "Will check if the user has any/all permissions for the parent "
+            "of this field to resolve this."
+        ),
     ),
 )
 @final
@@ -794,7 +819,8 @@ class HasRootPerm(HasPermDirective):
     is defined) to resolve the field, which means that this cannot be used for root
     queries and types.
 
-    Examples:
+    Examples
+    --------
         To indicate that a field inside a `ProductType` can only be accessed if
         the user has "product.view_field" in it in the django system:
 
@@ -804,7 +830,8 @@ class HasRootPerm(HasPermDirective):
         ...         directives=[RootPermRequired(".add_product")],
         ...     )
 
-    Attributes:
+    Attributes
+    ----------
         perms:
             Perms required to access this resource.
         any:
@@ -831,8 +858,10 @@ class HasRootPerm(HasPermDirective):
 @strawberry.schema_directive(
     locations=[Location.FIELD_DEFINITION],
     description=_desc(
-        "Will check if the user has any/all permissions for the resolved "
-        "value of this field before returning it."
+        (
+            "Will check if the user has any/all permissions for the resolved "
+            "value of this field before returning it."
+        ),
     ),
 )
 @final
@@ -845,7 +874,8 @@ class HasObjPerm(HasPermDirective):
     Note that this depends on resolving the object to check the permissions
     specifically for that object, unlike `PermRequired` which checks it before resolving.
 
-    Examples:
+    Examples
+    --------
         To indicate that a field that returns a `ProductType` can only be accessed
         by someone who has "product.view_product"
         has "product.view_product" perm in the django system:
@@ -856,7 +886,8 @@ class HasObjPerm(HasPermDirective):
         ...         directives=[ObjPermRequired(".add_product")],
         ...     )
 
-    Attributes:
+    Attributes
+    ----------
         perms:
             Perms required to access this resource.
         any:

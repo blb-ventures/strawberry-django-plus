@@ -1,8 +1,8 @@
 from typing import List, Literal
 
+import pytest
 from django.contrib.auth.models import Permission
 from guardian.shortcuts import assign_perm
-import pytest
 from typing_extensions import TypeAlias
 
 from strawberry_django_plus.relay import to_base64
@@ -38,7 +38,7 @@ def test_is_authenticated(db, gql_client: GraphQLTestClient):
             "message": "User is not authenticated.",
             "locations": [{"line": 3, "column": 9}],
             "path": ["issueLoginRequired"],
-        }
+        },
     ]
 
     user = UserFactory.create()
@@ -48,7 +48,7 @@ def test_is_authenticated(db, gql_client: GraphQLTestClient):
             "issueLoginRequired": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -74,7 +74,7 @@ def test_is_authenticated_optional(db, gql_client: GraphQLTestClient):
             "issueLoginRequiredOptional": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -97,7 +97,7 @@ def test_staff_required(db, gql_client: GraphQLTestClient):
             "message": "User is not a staff member.",
             "locations": [{"line": 3, "column": 9}],
             "path": ["issueStaffRequired"],
-        }
+        },
     ]
 
     user = UserFactory.create()
@@ -108,7 +108,7 @@ def test_staff_required(db, gql_client: GraphQLTestClient):
                 "message": "User is not a staff member.",
                 "locations": [{"line": 3, "column": 9}],
                 "path": ["issueStaffRequired"],
-            }
+            },
         ]
 
     staff = StaffUserFactory.create()
@@ -118,7 +118,7 @@ def test_staff_required(db, gql_client: GraphQLTestClient):
             "issueStaffRequired": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -149,7 +149,7 @@ def test_staff_required_optional(db, gql_client: GraphQLTestClient):
             "issueStaffRequiredOptional": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -172,7 +172,7 @@ def test_superuser_required(db, gql_client: GraphQLTestClient):
             "message": "User is not a superuser.",
             "locations": [{"line": 3, "column": 9}],
             "path": ["issueSuperuserRequired"],
-        }
+        },
     ]
 
     user = UserFactory.create()
@@ -183,7 +183,7 @@ def test_superuser_required(db, gql_client: GraphQLTestClient):
                 "message": "User is not a superuser.",
                 "locations": [{"line": 3, "column": 9}],
                 "path": ["issueSuperuserRequired"],
-            }
+            },
         ]
 
     superuser = SuperuserUserFactory.create()
@@ -193,7 +193,7 @@ def test_superuser_required(db, gql_client: GraphQLTestClient):
             "issueSuperuserRequired": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -224,7 +224,7 @@ def test_superuser_required_optional(db, gql_client: GraphQLTestClient):
             "issueSuperuserRequiredOptional": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -248,7 +248,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
             "message": "You don't have permission to access this resource.",
             "locations": [{"line": 3, "column": 9}],
             "path": ["issuePermRequired"],
-        }
+        },
     ]
 
     user = UserFactory.create()
@@ -264,7 +264,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
                 "message": "You don't have permission to access this resource.",
                 "locations": [{"line": 3, "column": 9}],
                 "path": ["issuePermRequired"],
-            }
+            },
         ]
 
     if kind == "user":
@@ -286,7 +286,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
             "issuePermRequired": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -330,7 +330,7 @@ def test_perm_required_optional(db, gql_client: GraphQLTestClient, kind: PermKin
             "issuePermRequiredOptional": {
                 "id": to_base64("IssueType", issue.pk),
                 "name": issue.name,
-            }
+            },
         }
 
 
@@ -375,8 +375,8 @@ def test_list_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
                 {
                     "id": to_base64("IssueType", issue.pk),
                     "name": issue.name,
-                }
-            ]
+                },
+            ],
         }
 
 
@@ -429,10 +429,10 @@ def test_conn_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
                             "id": to_base64("IssueType", issue.pk),
                             "name": issue.name,
                         },
-                    }
+                    },
                 ],
                 "totalCount": 1,
-            }
+            },
         }
 
 
@@ -477,7 +477,7 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
                 "message": "You don't have permission to access this resource.",
                 "locations": [{"line": 3, "column": 9}],
                 "path": ["issueObjPermRequired"],
-            }
+            },
         ]
 
     for u in [user, user_with_perm]:
@@ -497,7 +497,7 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
                     "message": "You don't have permission to access this resource.",
                     "locations": [{"line": 3, "column": 9}],
                     "path": ["issueObjPermRequired"],
-                }
+                },
             ]
 
     with gql_client.login(user_with_perm):
@@ -506,7 +506,7 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
             "issueObjPermRequired": {
                 "id": to_base64("IssueType", issue_with_perm.pk),
                 "name": issue_with_perm.name,
-            }
+            },
         }
 
 
@@ -551,7 +551,7 @@ def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermK
                 "message": "You don't have permission to access this resource.",
                 "locations": [{"line": 3, "column": 9}],
                 "path": ["issueObjPermRequired"],
-            }
+            },
         ]
 
         with gql_client.login(user):
@@ -566,7 +566,7 @@ def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermK
                     "message": "You don't have permission to access this resource.",
                     "locations": [{"line": 3, "column": 9}],
                     "path": ["issueObjPermRequired"],
-                }
+                },
             ]
 
         with gql_client.login(user_with_perm):
@@ -575,7 +575,7 @@ def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermK
                 "issueObjPermRequired": {
                     "id": to_base64("IssueType", issue_with_perm.pk),
                     "name": issue_with_perm.name,
-                }
+                },
             }
 
 
@@ -633,7 +633,7 @@ def test_obj_perm_required_optional(db, gql_client: GraphQLTestClient, kind: Per
             "issueObjPermRequiredOptional": {
                 "id": to_base64("IssueType", issue_with_perm.pk),
                 "name": issue_with_perm.name,
-            }
+            },
         }
 
 
@@ -687,8 +687,8 @@ def test_list_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
                     {
                         "id": to_base64("IssueType", issue_with_perm.pk),
                         "name": issue_with_perm.name,
-                    }
-                ]
+                    },
+                ],
             }
 
 
@@ -750,8 +750,8 @@ def test_conn_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
                                 "id": to_base64("IssueType", issue_with_perm.pk),
                                 "name": issue_with_perm.name,
                             },
-                        }
+                        },
                     ],
                     "totalCount": 1,
-                }
+                },
             }

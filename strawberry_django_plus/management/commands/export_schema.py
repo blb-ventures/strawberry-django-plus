@@ -1,3 +1,6 @@
+import pathlib
+import sys
+
 from django.core.management.base import BaseCommand, CommandError
 from strawberry import Schema
 from strawberry.printer import print_schema
@@ -5,7 +8,7 @@ from strawberry.utils.importer import import_module_symbol
 
 
 class Command(BaseCommand):
-    help = "Export the graphql schema"  # noqa:A003
+    help = "Export the graphql schema"  # noqa: A003
 
     def add_arguments(self, parser):
         parser.add_argument("schema", nargs=1, type=str, help="The schema location")
@@ -15,7 +18,7 @@ class Command(BaseCommand):
         try:
             schema_symbol = import_module_symbol(options["schema"][0], default_symbol_name="schema")
         except (ImportError, AttributeError) as e:
-            raise CommandError(str(e))
+            raise CommandError(str(e)) from e
 
         if not isinstance(schema_symbol, Schema):
             raise CommandError("The `schema` must be an instance of strawberry.Schema")
@@ -23,7 +26,7 @@ class Command(BaseCommand):
         schema_output = print_schema(schema_symbol)
         path = options.get("path")
         if path:
-            with open(path, "w") as f:
+            with pathlib.Path(path).open("w") as f:
                 f.write(schema_output)
         else:
-            print(schema_output)
+            sys.stdout.write(schema_output)

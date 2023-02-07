@@ -5,13 +5,12 @@ import collections
 import contextlib
 import inspect
 import json
-from typing import Optional
 import weakref
+from typing import Optional
 
 from asgiref.sync import sync_to_async
+from debug_toolbar.middleware import _HTML_TYPES, show_toolbar
 from debug_toolbar.middleware import DebugToolbarMiddleware as _DebugToolbarMiddleware
-from debug_toolbar.middleware import _HTML_TYPES
-from debug_toolbar.middleware import show_toolbar
 from debug_toolbar.panels.sql.panel import SQLPanel
 from debug_toolbar.panels.templates import TemplatesPanel
 from debug_toolbar.toolbar import DebugToolbar
@@ -44,7 +43,8 @@ def _debug_toolbar_init(self, request, *args, **kwargs):
     _debug_toolbar_map[request] = self
     _original_debug_toolbar_init(self, request, *args, **kwargs)
     self.config["RENDER_PANELS"] = False
-    self.config["SKIP_TEMPLATE_PREFIXES"] = tuple(self.config.get("SKIP_TEMPLATE_PREFIXES", [])) + (
+    self.config["SKIP_TEMPLATE_PREFIXES"] = (
+        *tuple(self.config.get("SKIP_TEMPLATE_PREFIXES", [])),
         "graphql/",
     )
 
@@ -78,10 +78,7 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
         if p.panel_id == "TemplatesPanel":
             continue
 
-        if p.has_content:
-            title = p.title
-        else:
-            title = None
+        title = p.title if p.has_content else None
 
         sub = p.nav_subtitle
         payload["debugToolbar"]["panels"][p.panel_id] = {
@@ -93,7 +90,7 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
 
 
 DebugToolbar.__init__ = _debug_toolbar_init
-DebugToolbar.store = _store  # type:ignore
+DebugToolbar.store = _store  # type: ignore
 TemplatesPanel._store_template_info = _store_template_info
 
 
@@ -105,7 +102,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         self._original_get_response = get_response
 
         if inspect.iscoroutinefunction(get_response):
-            self._is_coroutine = asyncio.coroutines._is_coroutine  # type:ignore
+            self._is_coroutine = asyncio.coroutines._is_coroutine  # type: ignore
 
             def _get_response(request):
                 toolbar = _debug_toolbar_map.pop(request, None)
@@ -179,4 +176,4 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
 
     def process_view(self, request: HttpRequest, view_func, *args, **kwargs):
         view = getattr(view_func, "view_class", None)
-        request._is_graphiql = bool(view and issubclass(view, BaseView))  # type:ignore
+        request._is_graphiql = bool(view and issubclass(view, BaseView))  # type: ignore

@@ -1,7 +1,6 @@
 import dataclasses
 from functools import cached_property
 from typing import (
-    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -19,6 +18,7 @@ from typing import (
     overload,
 )
 
+import strawberry
 from django.db import models
 from django.db.models import QuerySet
 from django.db.models.fields.related_descriptors import (
@@ -27,7 +27,6 @@ from django.db.models.fields.related_descriptors import (
     ReverseOneToOneDescriptor,
 )
 from django.db.models.query_utils import DeferredAttribute
-import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
@@ -39,9 +38,7 @@ from strawberry.types.info import Info
 from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry_django.arguments import argument
-from strawberry_django.fields.field import (
-    StrawberryDjangoField as _StrawberryDjangoField,
-)
+from strawberry_django.fields.field import StrawberryDjangoField as _StrawberryDjangoField
 from strawberry_django.utils import get_django_model, unwrap_type
 
 from . import relay
@@ -50,9 +47,6 @@ from .optimizer import OptimizerStore, PrefetchType
 from .permissions import filter_with_perms
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
-
-if TYPE_CHECKING:
-    pass
 
 __all__ = [
     "StrawberryDjangoField",
@@ -112,11 +106,11 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         ]
 
     @property
-    def type(self) -> Union[StrawberryType, type]:  # noqa:A003
+    def type(self) -> Union[StrawberryType, type]:  # noqa: A003
         return super().type
 
     @type.setter
-    def type(self, type_: Any) -> None:  # noqa:A003
+    def type(self, type_: Any) -> None:  # noqa: A003
         if type_ is not None and self.origin_django_type is None:
             resolved = type_
             if isinstance(resolved, StrawberryAnnotation):
@@ -139,7 +133,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 if self.pagination is UNSET or self.pagination is None:
                     self.pagination = dj_type.pagination
 
-        super(StrawberryDjangoField, self.__class__).type.fset(self, type_)  # type:ignore
+        super(StrawberryDjangoField, self.__class__).type.fset(self, type_)  # type: ignore
 
     @cached_property
     def model(self) -> Type[models.Model]:
@@ -150,7 +144,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         tdef = cast(Optional[TypeDefinition], getattr(type_, "_type_definition", None))
         if tdef and tdef.concrete_of and issubclass(tdef.concrete_of.origin, relay.Connection):
-            n_type = tdef.type_var_map[relay.NodeType]  # type:ignore
+            n_type = tdef.type_var_map[relay.NodeType]  # type: ignore
             if isinstance(n_type, LazyType):
                 n_type = n_type.resolve_type()
 
@@ -210,7 +204,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                     result = getattr(source, attr.field.attname)
                 elif isinstance(attr, ForwardManyToOneDescriptor):
                     # This will raise KeyError if it is not cached
-                    result = attr.field.get_cached_value(source)  # type:ignore
+                    result = attr.field.get_cached_value(source)  # type: ignore
                 elif isinstance(attr, ReverseOneToOneDescriptor):
                     # This will raise KeyError if it is not cached
                     result = attr.related.get_cached_value(source)
@@ -223,9 +217,14 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 result = resolvers.getattr_async_safe(source, attname)
 
         if self.is_list:
-            qs_resolver = lambda qs: self.get_queryset_as_list(qs, info, kwargs)
+
+            def qs_resolver(qs):
+                return self.get_queryset_as_list(qs, info, kwargs)
+
         else:
-            qs_resolver = lambda qs: self.get_queryset_one(qs, info, kwargs)
+
+            def qs_resolver(qs):
+                return self.get_queryset_one(qs, info, kwargs)
 
         return resolvers.resolve_result(result, info=info, qs_resolver=qs_resolver)
 
@@ -262,7 +261,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         if not skip_fetch and not isinstance(self, relay.ConnectionField):
             # This is what QuerySet does internally to fetch results.
             # After this, iterating over the queryset should be async safe
-            qs._fetch_all()  # type:ignore
+            qs._fetch_all()  # type: ignore
         return qs
 
     @resolvers.async_safe
@@ -433,7 +432,8 @@ def field(
 ) -> Any:
     """Annotate a method or property as a Django GraphQL field.
 
-    Examples:
+    Examples
+    --------
         It can be used both as decorator and as a normal function:
 
         >>> @gql.type
@@ -494,7 +494,8 @@ def node(
 ) -> Any:
     """Annotate a property to create a relay query field.
 
-    Examples:
+    Examples
+    --------
         Annotating something like this:
 
         >>> @strawberry.type
@@ -641,7 +642,8 @@ def connection(
     case for this is to provide a filtered iterable of nodes by using some custom
     filter arguments.
 
-    Examples:
+    Examples
+    --------
         Annotating something like this:
 
         >>> @strawberry.type

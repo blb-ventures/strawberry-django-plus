@@ -173,10 +173,12 @@ def model_cached_property(
         prefetch_related:
             Optional sequence of values to optimize using `QuerySet.prefetch_related`
 
-    Returns:
+    Returns
+    -------
         The decorated method.
 
-    Examples:
+    Examples
+    --------
         In a model, define it like this to have the hintings defined in
         `col_b_formatted` automatically optimized.
 

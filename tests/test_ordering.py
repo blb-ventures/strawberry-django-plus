@@ -37,5 +37,5 @@ def test_ordering(db, gql_client: GraphQLTestClient):
                 "project": {"id": to_base64("ProjectType", i.project.pk), "name": i.project.name},
             }
             for i in [milestone_1, milestone_2, milestone_3]
-        ]
+        ],
     }

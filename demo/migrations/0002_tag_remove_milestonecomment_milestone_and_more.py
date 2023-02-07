@@ -30,7 +30,9 @@ class Migration(migrations.Migration):
             model_name="issue",
             name="tags",
             field=models.ManyToManyField(
-                related_name="issues", related_query_name="issue", to="demo.Tag"
+                related_name="issues",
+                related_query_name="issue",
+                to="demo.Tag",
             ),
         ),
     ]

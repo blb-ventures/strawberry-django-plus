@@ -14,11 +14,11 @@ from typing import (
     get_origin,
 )
 
+import strawberry
 from django.db import models
 from django.db.models.fields import NOT_PROVIDED
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ForeignObjectRel
-import strawberry
 from strawberry import UNSET
 from strawberry.custom_scalar import ScalarWrapper
 from strawberry.file_uploads import Upload
@@ -33,9 +33,7 @@ from strawberry_django.fields.types import (
     field_type_map,
     input_field_type_map,
 )
-from strawberry_django.fields.types import (
-    resolve_model_field_type as _resolve_model_field,
-)
+from strawberry_django.fields.types import resolve_model_field_type as _resolve_model_field
 from strawberry_django.filters import DjangoModelFilterInput, FilterLookup
 from typing_extensions import Self
 
@@ -59,10 +57,10 @@ K = TypeVar("K")
 D = TypeVar("D")
 
 input_field_type_map.update(
-    {  # type:ignore
+    {  # type: ignore
         models.FileField: Upload,
         models.ImageField: Upload,
-    }
+    },
 )
 
 
@@ -80,7 +78,8 @@ def register(
         for_input:
             If the type should be used for input only.
 
-    Examples:
+    Examples
+    --------
         To define a type that should be used for `ImageField`:
 
         >>> @register(ImageField)
@@ -108,7 +107,7 @@ def register(
 class NodeType(relay.Node):
     """Set the value to the selected node."""
 
-    id: relay.GlobalID  # noqa:A003
+    id: relay.GlobalID  # noqa: A003
 
     def __eq__(self, other: Self):
         return self.__class__ == other.__class__ and self.id == other.id
@@ -123,13 +122,14 @@ class NodeType(relay.Node):
 class NodeInput:
     """Set the value to the selected node.
 
-    Notes:
+    Notes
+    -----
         This can be used as a base class for input types that receive an
         `id` of type `GlobalID` when inheriting from it.
 
     """
 
-    id: relay.GlobalID  # noqa:A003
+    id: relay.GlobalID  # noqa: A003
 
     def __eq__(self, other: Self):
         return self.__class__ == other.__class__ and self.id == other.id
@@ -144,7 +144,8 @@ class NodeInput:
 class NodeInputPartial(NodeInput):
     """Set the value to the selected node.
 
-    Notes:
+    Notes
+    -----
         This can be used as a base class for input types that receive an
         `id` of type `GlobalID` when inheriting from it.
 
@@ -153,9 +154,9 @@ class NodeInputPartial(NodeInput):
     # FIXME: Without this pyright will not let any class inheric from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        id: Optional[relay.GlobalID]  # noqa:A001
+        id: Optional[relay.GlobalID]  # noqa: A003
     else:
-        id: Optional[relay.GlobalID] = UNSET  # noqa:A001
+        id: Optional[relay.GlobalID] = UNSET  # noqa: A003
 
     def __eq__(self, other: Self):
         return self.__class__ == other.__class__ and self.id == other.id
@@ -168,7 +169,8 @@ class NodeInputPartial(NodeInput):
 class ListInput(Generic[K]):
     """Add/remove/set the selected nodes.
 
-    Notes:
+    Notes
+    -----
         To pass data to an intermediate model, type the input in a
         `throught_defaults` key inside the input object.
 
@@ -177,11 +179,11 @@ class ListInput(Generic[K]):
     # FIXME: Without this pyright will not let any class inheric from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        set: Optional[List[K]]  # noqa:A001
+        set: Optional[List[K]]  # noqa: A003
         add: Optional[List[K]]
         remove: Optional[List[K]]
     else:
-        set: Optional[List[K]] = UNSET  # noqa:A001
+        set: Optional[List[K]] = UNSET  # noqa: A003
         add: Optional[List[K]] = UNSET
         remove: Optional[List[K]] = UNSET
 
@@ -196,7 +198,7 @@ class ListInput(Generic[K]):
         return self.__class__ == other.__class__ and self._hash_fields() == other._hash_fields()
 
     def __hash__(self):
-        return hash((self.__class__,) + self._hash_fields())
+        return hash((self.__class__, *self._hash_fields()))
 
 
 @strawberry.type
@@ -247,7 +249,7 @@ class OperationInfo:
         return self.__class__ == other.__class__ and self.messages == other.messages
 
     def __hash__(self):
-        return hash((self.__class__,) + tuple(self.messages))
+        return hash((self.__class__, *tuple(self.messages)))
 
 
 def resolve_model_field_type(
@@ -278,7 +280,7 @@ def resolve_model_field_type(
                     str(meta.object_name),
                     capitalize_first(to_camel_case(field.name)),
                     "Enum",
-                )
+                ),
             )
             strawberry_enum = strawberry.enum(
                 enum.Enum(auto_enum_class_name, auto_enum_class_fields),

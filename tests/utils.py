@@ -5,8 +5,10 @@ import inspect
 from typing import Any, Dict, Optional, Union
 
 from django.db import DEFAULT_DB_ALIAS, connections
-from django.test.client import AsyncClient  # type:ignore
-from django.test.client import Client
+from django.test.client import (
+    AsyncClient,  # type: ignore
+    Client,
+)
 from django.test.utils import CaptureQueriesContext
 from strawberry.test.client import Response
 

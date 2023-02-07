@@ -1,7 +1,7 @@
 import contextlib
 import dataclasses
-from typing import Optional, Union, cast
 import weakref
+from typing import Optional, Union, cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group

@@ -42,7 +42,7 @@ def _filter(
             **{
                 f"{ctype_attr}__app_label": meta.app_label,
                 f"{ctype_attr}__model": meta.model_name,
-            }
+            },
         )
 
     if len(perms) == 1:
@@ -83,7 +83,7 @@ def filter_for_user_q(
     ctype: Optional[ContentType] = None
     try:
         meta = model._meta
-        ctype = ContentType.objects._get_from_cache(meta)  # type:ignore
+        ctype = ContentType.objects._get_from_cache(meta)  # type: ignore
     except KeyError:  # pragma:nocover
         # If we are not running async, retrieve it
         if not is_async():
@@ -101,7 +101,7 @@ def filter_for_user_q(
         app_label = app_labels.pop()
         if app_label != ctype.app_label:  # pragma:nocover
             raise ValueError(
-                f"Given perms must have same app label ({app_label!r} != {ctype.app_label!r})"
+                f"Given perms must have same app label ({app_label!r} != {ctype.app_label!r})",
             )
     elif len(app_labels) > 1:  # pragma:nocover
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")
@@ -120,8 +120,8 @@ def filter_for_user_q(
                 perms_list,
                 model=model,
                 ctype=ctype,
-            )
-        )
+            ),
+        ),
     )
     if with_groups:
         q |= Q(
@@ -132,8 +132,8 @@ def filter_for_user_q(
                     lookup="permissions",
                     model=model,
                     ctype=ctype,
-                )
-            )
+                ),
+            ),
         )
 
     if has_guardian:
@@ -160,7 +160,7 @@ def filter_for_user_q(
             group_qs = _filter(
                 group_model.objects.filter(
                     **{
-                        f"group__{groups_field.related_query_name()}": user,  # type:ignore
+                        f"group__{groups_field.related_query_name()}": user,  # type: ignore
                     },
                 ),
                 perms_list,
@@ -174,7 +174,7 @@ def filter_for_user_q(
                 group_qs = group_qs.annotate(object_pk=F("content_object"))
 
             obj_qs = obj_qs.union(
-                group_qs.values_list(Cast("object_pk", model._meta.pk), flat=True).distinct()
+                group_qs.values_list(Cast("object_pk", model._meta.pk), flat=True).distinct(),
             )
 
         q |= Q(pk__in=obj_qs)
@@ -199,5 +199,5 @@ def filter_for_user(
             any_perm=any_perm,
             with_groups=with_groups,
             with_superuser=with_superuser,
-        )
+        ),
     )

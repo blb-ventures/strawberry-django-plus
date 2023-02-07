@@ -16,7 +16,7 @@ def dicttree_merge(dict1: Mapping[_K, _V], dict2: Mapping[_K, _V]) -> Dict[_K, _
 
         v2 = dict2.get(k)
         if isinstance(v2, Mapping):
-            new[k] = dicttree_merge(v1, v2)  # type:ignore
+            new[k] = dicttree_merge(v1, v2)  # type: ignore
 
     for k, v2 in dict2.items():
         if not isinstance(v2, dict):
@@ -24,7 +24,7 @@ def dicttree_merge(dict1: Mapping[_K, _V], dict2: Mapping[_K, _V]) -> Dict[_K, _
 
         v1 = dict1.get(k)
         if isinstance(v1, Mapping):
-            new[k] = dicttree_merge(v1, v2)  # type:ignore
+            new[k] = dicttree_merge(v1, v2)  # type: ignore
 
     return new
 

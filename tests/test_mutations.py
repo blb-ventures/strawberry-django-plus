@@ -33,7 +33,7 @@ def test_input_mutation(db, gql_client: GraphQLTestClient):
                     "name": "Some Project",
                     "cost": "12.50",
                     "dueDate": "2030-01-01",
-                }
+                },
             },
         )
         assert res.data == {
@@ -42,7 +42,7 @@ def test_input_mutation(db, gql_client: GraphQLTestClient):
                 # This is set, but will not be displayed because the user is not authenticated
                 "cost": None,
                 "dueDate": "2030-01-01T00:00:00",
-            }
+            },
         }
 
 
@@ -74,9 +74,9 @@ def test_input_mutation_with_errors(db, gql_client: GraphQLTestClient):
                         "field": "cost",
                         "kind": "VALIDATION",
                         "message": "Cost cannot be higher than 500",
-                    }
-                ]
-            }
+                    },
+                ],
+            },
         }
 
 
@@ -121,10 +121,11 @@ def test_input_create_mutation(db, gql_client: GraphQLTestClient):
                 "priority": 5,
                 "kind": Issue.Kind.FEATURE.value,
                 "tags": [{"id": to_base64("TagType", t.pk)} for t in tags],
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["createIssue"], dict)
+    assert res.data
+    assert isinstance(res.data["createIssue"], dict)
 
     typename, pk = from_base64(res.data["createIssue"].pop("id"))
     assert typename == "IssueType"
@@ -142,7 +143,7 @@ def test_input_create_mutation(db, gql_client: GraphQLTestClient):
             },
             "priority": 5,
             "kind": "f",
-        }
+        },
     }
     issue = Issue.objects.get(pk=pk)
     assert issue.name == "Some Issue"
@@ -186,10 +187,11 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
                 "project": {
                     "name": "New Project",
                 },
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["createMilestone"], dict)
+    assert res.data
+    assert isinstance(res.data["createMilestone"], dict)
 
     typename, pk = from_base64(res.data["createMilestone"].pop("id"))
     assert typename == "MilestoneType"
@@ -204,7 +206,7 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
                 "id": to_base64("ProjectType", project.pk),
                 "name": project.name,
             },
-        }
+        },
     }
 
 
@@ -254,10 +256,11 @@ def test_input_create_with_m2m_mutation(db, gql_client: GraphQLTestClient):
                         "name": "Milestone Issue 2",
                     },
                 ],
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["createMilestone"], dict)
+    assert res.data
+    assert isinstance(res.data["createMilestone"], dict)
 
     typename, pk = from_base64(res.data["createMilestone"].pop("id"))
     assert typename == "MilestoneType"
@@ -273,7 +276,7 @@ def test_input_create_with_m2m_mutation(db, gql_client: GraphQLTestClient):
                 "id": to_base64("ProjectType", project.pk),
                 "name": project.name,
             },
-        }
+        },
     }
 
     milestone = Milestone.objects.get(pk=pk)
@@ -338,10 +341,11 @@ def test_input_update_mutation(db, gql_client: GraphQLTestClient):
                     "add": [{"id": to_base64("TagType", t.pk)} for t in add_tags],
                     "remove": [{"id": to_base64("TagType", t.pk)} for t in remove_tags],
                 },
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["updateIssue"], dict)
+    assert res.data
+    assert isinstance(res.data["updateIssue"], dict)
 
     expected_tags = tags + add_tags
     for removed in remove_tags:
@@ -362,7 +366,7 @@ def test_input_update_mutation(db, gql_client: GraphQLTestClient):
             },
             "priority": 5,
             "kind": "f",
-        }
+        },
     }
 
     issue.refresh_from_db()
@@ -414,10 +418,11 @@ def test_input_nested_update_mutation(db, gql_client: GraphQLTestClient):
                 "id": to_base64("IssueType", issue.pk),
                 "name": "New name",
                 "milestone": {"id": to_base64("MilestoneType", milestone.pk), "name": "foo"},
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["updateIssue"], dict)
+    assert res.data
+    assert isinstance(res.data["updateIssue"], dict)
     assert res.data["updateIssue"]["milestone"]["name"] == "foo"
     milestone.refresh_from_db()
     assert milestone.name == "foo"
@@ -463,10 +468,11 @@ def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClien
             "input": {
                 "id": to_base64("ProjectType", project.pk),
                 "milestones": [{"id": milestone_1_id}],
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["updateProject"], dict)
+    assert res.data
+    assert isinstance(res.data["updateProject"], dict)
 
     assert len(res.data["updateProject"]["milestones"]) == 1
     assert res.data["updateProject"]["milestones"][0]["id"] == milestone_1_id
@@ -557,10 +563,11 @@ def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
                         },
                     ],
                 },
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["updateIssue"], dict)
+    assert res.data
+    assert isinstance(res.data["updateIssue"], dict)
 
     tags = res.data["updateIssue"].pop("tags")
     assert len(tags) == 2
@@ -585,7 +592,7 @@ def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
             },
             "priority": 5,
             "kind": "f",
-        }
+        },
     }
 
     issue.refresh_from_db()
@@ -684,10 +691,11 @@ def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient
                         },
                     ],
                 },
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["updateIssue"], dict)
+    assert res.data
+    assert isinstance(res.data["updateIssue"], dict)
 
     tags = res.data["updateIssue"].pop("tags")
     assert len(tags) == 2
@@ -712,7 +720,7 @@ def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient
             },
             "priority": 5,
             "kind": "f",
-        }
+        },
     }
 
     issue.refresh_from_db()
@@ -757,10 +765,11 @@ def test_input_delete_mutation(db, gql_client: GraphQLTestClient):
         {
             "input": {
                 "id": to_base64("IssueType", issue.pk),
-            }
+            },
         },
     )
-    assert res.data and isinstance(res.data["deleteIssue"], dict)
+    assert res.data
+    assert isinstance(res.data["deleteIssue"], dict)
     assert res.data == {
         "deleteIssue": {
             "__typename": "IssueType",
@@ -771,8 +780,8 @@ def test_input_delete_mutation(db, gql_client: GraphQLTestClient):
                 "name": issue.milestone.name,
             },
             "priority": issue.priority,
-            "kind": issue.kind.value,  # type:ignore
-        }
+            "kind": issue.kind.value,  # type: ignore
+        },
     }
 
     with pytest.raises(Issue.DoesNotExist):
@@ -804,7 +813,7 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
         {
             "input": {
                 "title": "ABC",
-            }
+            },
         },
     )
     expected = {"createQuiz": {"__typename": "QuizType", "sequence": 1, "title": "ABC"}}
@@ -814,7 +823,7 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
         {
             "input": {
                 "title": "ABC",
-            }
+            },
         },
     )
     expected = {
@@ -825,9 +834,9 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
                     "field": "sequence",
                     "kind": "VALIDATION",
                     "message": "Quiz with this Sequence already exists.",
-                }
+                },
             ],
-        }
+        },
     }
     assert res.data == expected
 

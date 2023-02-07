@@ -16,13 +16,13 @@ from typing import (
     overload,
 )
 
+import strawberry
 from django.core.exceptions import (
     NON_FIELD_ERRORS,
     ObjectDoesNotExist,
     PermissionDenied,
     ValidationError,
 )
-import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
@@ -125,16 +125,16 @@ class DjangoMutationField(StrawberryDjangoField):
             types_ = tuple(get_possible_types(annotation.resolve()))
             resolver.__annotations__["return"] = strawberry.union(
                 f"{cap_name}Payload",
-                types_ + (OperationInfo,),
+                (*types_, OperationInfo),
             )
         return super().__call__(resolver)
 
     @property
-    def type(self) -> Union[StrawberryType, type]:  # noqa:A003
+    def type(self) -> Union[StrawberryType, type]:  # noqa: A003
         return super().type
 
     @type.setter
-    def type(self, type_: Any) -> None:  # noqa:A003
+    def type(self, type_: Any) -> None:  # noqa: A003
         if type_ is not None and self._handle_errors:
             name = to_camel_case(self.python_name)
             cap_name = name[0].upper() + name[1:]
@@ -144,10 +144,10 @@ class DjangoMutationField(StrawberryDjangoField):
 
             types_ = tuple(get_possible_types(type_))
             if OperationInfo not in types_:
-                types_ = types_ + (OperationInfo,)
+                types_ = (*types_, OperationInfo)
             type_ = strawberry.union(f"{cap_name}Payload", types_)
 
-        super(DjangoMutationField, self.__class__).type.fset(self, type_)  # type:ignore
+        super(DjangoMutationField, self.__class__).type.fset(self, type_)  # type: ignore
 
     def get_result(
         self,
@@ -255,7 +255,10 @@ class DjangoCreateMutationField(DjangoInputMutationField):
     ) -> Any:
         assert data is not None
         return resolvers.create(
-            info, self.model, resolvers.parse_input(info, vars(data)), full_clean=self.full_clean
+            info,
+            self.model,
+            resolvers.parse_input(info, vars(data)),
+            full_clean=self.full_clean,
         )
 
 
@@ -298,7 +301,10 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         try:
             instance = get_with_perms(pk, info, required=True, model=self.model)
             return resolvers.update(
-                info, instance, resolvers.parse_input(info, vdata), full_clean=self.full_clean
+                info,
+                instance,
+                resolvers.parse_input(info, vdata),
+                full_clean=self.full_clean,
             )
         finally:
             DjangoOptimizerExtension.enabled.reset(token)
@@ -607,7 +613,8 @@ def create(
 
     Automatically create data for django input fields.
 
-    Examples:
+    Examples
+    --------
         >>> @gql.django.input
         ... class ProductInput:
         ...     name: gql.auto
@@ -659,7 +666,8 @@ def update(
 ) -> Any:
     """Update mutation for django input fields.
 
-    Examples:
+    Examples
+    --------
         >>> @gql.django.input
         ... class ProductInput(IdInput):
         ...     name: gql.auto

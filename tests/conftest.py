@@ -1,8 +1,10 @@
 from typing import Dict, Tuple, Type, Union, cast
 
-from django.test.client import AsyncClient  # type:ignore
-from django.test.client import Client
 import pytest
+from django.test.client import (
+    AsyncClient,  # type: ignore
+    Client,
+)
 
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from tests.utils import GraphQLTestClient

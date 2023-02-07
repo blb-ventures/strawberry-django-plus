@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import strawberry_django
 from strawberry import (
     ID,
     UNSET,
@@ -24,7 +25,6 @@ from strawberry import (
     type,
     union,
 )
-import strawberry_django
 
 from strawberry_django_plus import relay
 from strawberry_django_plus.descriptors import model_cached_property, model_property
@@ -48,7 +48,7 @@ from strawberry_django_plus.utils import aio, resolvers
 from . import django
 
 if TYPE_CHECKING:
-    auto = strawberry_django.auto  # noqa:F811
+    auto = strawberry_django.auto  # noqa: F811
 
 __all__ = [
     # strawberry

@@ -46,7 +46,8 @@ def is_awaitable(
             of `is_awaitable`, which might have some optimizations. Otherwise
             will fallback to `inspect.is_awaitable`
 
-    Returns:
+    Returns
+    -------
         `True` if the value is awaitable, `False` otherwise
 
     """
@@ -74,10 +75,12 @@ async def resolve_async(
         ensure_type:
             Optional type to ensure that the retval is an instance of it.
 
-    Returns:
+    Returns
+    -------
         An `Awaitable` with the return value of `resolver(await value)`
 
-    Raises:
+    Raises
+    ------
         TypeError: If ensure_type was passed and the return value
         is not an instance of it (checked using `instance(retval, ensyure_type)`).
 
@@ -135,12 +138,14 @@ def resolve(value, resolver, *, ensure_type=None, info=None):
             of `is_awaitable`, which might have some optimizations. Otherwise
             will fallback to `inspect.is_awaitable`
 
-    Returns:
+    Returns
+    -------
         If the value is not awaitable, it will simply return `resolver(value)`.
         Otherwise, an `Awaitable` will be returned that, when awaited will return
         the return value of `resolver(await value)`.
 
-    Raises:
+    Raises
+    ------
         TypeError: If ensure_type was passed and the return value
         is not an instance of it (checked using `instance(retval, ensyure_type)`).
 
@@ -207,7 +212,7 @@ def resolver(func, *, on_result=None, on_error=None, info=None) -> Any:
     def wrapped(*args, **kwargs):
         try:
             retval = func(*args, **kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             if on_error is None:
                 raise
 

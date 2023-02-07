@@ -1,6 +1,6 @@
-from contextlib import suppress
 import dataclasses
 import types
+from contextlib import suppress
 from typing import (
     Callable,
     Literal,
@@ -14,11 +14,11 @@ from typing import (
     get_origin,
 )
 
+import strawberry
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
-import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import PrivateStrawberryFieldError
@@ -72,7 +72,7 @@ def _from_django_type(
         try:
             type_origin = get_origin(type_annotation.annotation)
             is_connection = issubclass(type_origin, Connection) if type_origin else False
-        except Exception:
+        except Exception:  # noqa: BLE001
             is_connection = False
         if is_private(type_annotation.annotation):
             raise PrivateStrawberryFieldError(name, django_type.origin)
@@ -147,7 +147,8 @@ def _from_django_type(
     # is used to access the field data in resolvers
     try:
         model_field = get_model_field(
-            django_type.model, getattr(field, "django_name", None) or name
+            django_type.model,
+            getattr(field, "django_name", None) or name,
         )
     except FieldDoesNotExist:
         model_attr = getattr(django_type.model, name, None)
@@ -181,7 +182,7 @@ def _from_django_type(
         # resolve type of auto field
         if field.is_auto:
             field.type_annotation = StrawberryAnnotation(
-                resolve_model_field_type(model_field, django_type)
+                resolve_model_field_type(model_field, django_type),
             )
 
         if field.description is None:
@@ -190,7 +191,7 @@ def _from_django_type(
             elif isinstance(model_field, (ManyToOneRel, ManyToManyRel)):
                 description = model_field.field.help_text
             else:
-                description = getattr(model_field, "help_text")  # noqa:B009
+                description = getattr(model_field, "help_text")  # noqa: B009
 
             if description:
                 field.description = str(description)
@@ -286,7 +287,7 @@ def _process_type(
 
     # Make sure model is also considered a "virtual subclass" of cls
     if "is_type_of" not in cls.__dict__:
-        cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))  # type:ignore
+        cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))  # type: ignore
 
     # Default querying methods for relay
     if issubclass(cls, Node):
@@ -313,7 +314,7 @@ def _process_type(
 
     # restore original annotations for further use
     cls.__annotations__ = original_annotations
-    cls._django_type = django_type  # type:ignore
+    cls._django_type = django_type  # type: ignore
 
     return cls
 
@@ -342,7 +343,7 @@ class StrawberryDjangoType(_StraberryDjangoType[_O, _M]):
         field.connection,
     ),
 )
-def type(  # noqa:A001
+def type(  # noqa: A001
     model: Type[Model],
     *,
     name: Optional[str] = None,
@@ -363,7 +364,8 @@ def type(  # noqa:A001
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
 
-    Examples:
+    Examples
+    --------
         It can be used like this:
 
         >>> @gql.django.type(SomeModel)
@@ -419,7 +421,8 @@ def interface(
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL interface.
 
-    Examples:
+    Examples
+    --------
         It can be used like this:
 
         >>> @gql.django.interface(SomeModel)
@@ -455,7 +458,7 @@ def interface(
         field.connection,
     ),
 )
-def input(  # noqa:A001
+def input(  # noqa: A001
     model: Type[Model],
     *,
     name: Optional[str] = None,
@@ -467,7 +470,8 @@ def input(  # noqa:A001
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL input.
 
-    Examples:
+    Examples
+    --------
         It can be used like this:
 
         >>> @gql.django.input(SomeModel)
@@ -505,7 +509,7 @@ def input(  # noqa:A001
         field.connection,
     ),
 )
-def partial(  # noqa:A001
+def partial(
     model: Type[Model],
     *,
     name: Optional[str] = None,
@@ -515,7 +519,8 @@ def partial(  # noqa:A001
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.
 
-    Examples:
+    Examples
+    --------
         It can be used like this:
 
         >>> @gql.django.partial(SomeModel)

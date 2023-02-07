@@ -1,6 +1,6 @@
-from collections import defaultdict
 import contextvars
 import dataclasses
+from collections import defaultdict
 from typing import (
     Any,
     Callable,
@@ -92,13 +92,13 @@ def _get_model_hints(
         if isinstance(n_type, LazyType):
             n_type = n_type.resolve_type()
 
-        n_type_def = cast(TypeDefinition, n_type._type_definition)  # type:ignore
+        n_type_def = cast(TypeDefinition, n_type._type_definition)  # type: ignore
 
         for edges in get_selections(selection, typename=typename).values():
             if edges.name != "edges":
                 continue
 
-            e_type = Edge._type_definition.resolve_generic(Edge[n_type])  # type:ignore
+            e_type = Edge._type_definition.resolve_generic(Edge[n_type])  # type: ignore
             e_typename = schema.config.name_converter.from_object(e_type._type_definition)
             for node in get_selections(edges, typename=e_typename).values():
                 if node.name != "node":
@@ -196,7 +196,8 @@ def _get_model_hints(
                 # only/select_related because they can be anything. Just prefetch_related them
                 store.prefetch_related.append(model_fieldname)
             elif isinstance(
-                model_field, (models.ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)
+                model_field,
+                (models.ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation),
             ):
                 f_types = list(get_possible_type_definitions(field.type))
                 if len(f_types) > 1:
@@ -250,12 +251,12 @@ def _get_model_hints(
                         # We need to use _base_manager here instead of _default_manager because we
                         # are getting related objects, and not querying it directly
                         f_qs = f_store.apply(
-                            remote_model._base_manager.all(),  # type:ignore
+                            remote_model._base_manager.all(),  # type: ignore
                             info=info,
                             config=config,
                         )
                         f_prefetch = Prefetch(path, queryset=f_qs)
-                        f_prefetch._optimizer_sentinel = _sentinel  # type:ignore
+                        f_prefetch._optimizer_sentinel = _sentinel  # type: ignore
                         store.prefetch_related.append(f_prefetch)
             else:
                 store.only.append(path)
@@ -303,7 +304,8 @@ def optimize(
         store:
             Optional initial store to use for the optimization
 
-    Returns:
+    Returns
+    -------
         The optimized queryset
 
     .. _QuerySet:
@@ -317,14 +319,14 @@ def optimize(
     if getattr(qs, "_gql_optimized", False):
         return qs
     # If the queryset already has cached results, just return it
-    if qs._result_cache is not None:  # type:ignore
+    if qs._result_cache is not None:  # type: ignore
         return qs
 
     if isinstance(info, Info):
         info = info._raw_info
     config = config or OptimizerConfig()
     store = store or OptimizerStore()
-    schema = cast(Schema, info.schema._strawberry_schema)  # type:ignore
+    schema = cast(Schema, info.schema._strawberry_schema)  # type: ignore
 
     field_name = info.field_name
     gql_type = get_named_type(info.return_type)
@@ -373,7 +375,7 @@ def optimize(
         return qs
 
     qs = store.apply(qs, info=info, config=config)
-    qs._gql_optimized = True  # type:ignore
+    qs._gql_optimized = True  # type: ignore
     return qs
 
 
@@ -381,7 +383,8 @@ def optimize(
 class OptimizerConfig:
     """Django optimization configuration.
 
-    Attributes:
+    Attributes
+    ----------
         enable_only:
             Enable `QuerySet.only` optimizations
         enable_select_related:
@@ -400,7 +403,8 @@ class OptimizerConfig:
 class OptimizerStore:
     """Django optimization store.
 
-    Attributes:
+    Attributes
+    ----------
         only:
             Set of values to optimize using `QuerySet.only`
         selected:
@@ -499,7 +503,7 @@ class OptimizerStore:
                     assert_type(p, PrefetchCallable)
                     p = p(info)
 
-                path = cast(str, p.prefetch_to)  # type:ignore
+                path = cast(str, p.prefetch_to)  # type: ignore
                 existing = to_prefetch.get(path)
                 # The simplest case. The prefetch doesn't exist or is a string.
                 # In this case, just replace it.
@@ -523,7 +527,7 @@ class OptimizerStore:
 
             # Abort only optimization if one prefetch related was made for everything
             for ao in abort_only:
-                to_prefetch[ao].queryset.query.deferred_loading = ([], True)  # type:ignore
+                to_prefetch[ao].queryset.query.deferred_loading = ([], True)  # type: ignore
 
             qs = qs.prefetch_related(*to_prefetch.values())
 
@@ -545,7 +549,8 @@ optimizer: contextvars.ContextVar[Optional["DjangoOptimizerExtension"]] = contex
 class DjangoOptimizerExtension(Extension):
     """Automatically optimize returned querysets from internal resolvers.
 
-    Attributes:
+    Attributes
+    ----------
         enable_only_optimization:
             Enable `QuerySet.only` optimizations
         enable_select_related_optimization:
@@ -553,7 +558,8 @@ class DjangoOptimizerExtension(Extension):
         enable_prefetch_related_optimization:
             Enable `QuerySet.prefetch_related` optimizations
 
-    Examples:
+    Examples
+    --------
         Add the following to your schema configuration.
 
         >>> import strawberry
@@ -581,7 +587,7 @@ class DjangoOptimizerExtension(Extension):
         enable_prefetch_related_optimization: bool = True,
         execution_context: Optional[ExecutionContext] = None,
     ):
-        super().__init__(execution_context=execution_context)  # type:ignore
+        super().__init__(execution_context=execution_context)  # type: ignore
         self._enable_ony = enable_only_optimization
         self._enable_select_related = enable_select_related_optimization
         self._enable_prefetch_related = enable_prefetch_related_optimization
@@ -610,7 +616,7 @@ class DjangoOptimizerExtension(Extension):
         if isinstance(ret, (BaseManager, QuerySet)):
             if isinstance(ret, BaseManager):
                 ret = ret.all()
-            if ret._result_cache is None:  # type:ignore
+            if ret._result_cache is None:  # type: ignore
                 config = OptimizerConfig(
                     enable_only=(
                         self._enable_ony and info.operation.operation == OperationType.QUERY

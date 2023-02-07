@@ -7,6 +7,7 @@ import inspect
 import itertools
 import math
 import sys
+import uuid
 from typing import (
     Any,
     Awaitable,
@@ -27,16 +28,15 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    _eval_type,  # type: ignore
     cast,
     get_args,
     get_origin,
     overload,
 )
-from typing import _eval_type  # type:ignore
-import uuid
 
-from graphql import GraphQLID
 import strawberry
+from graphql import GraphQLID
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.custom_scalar import ScalarDefinition
@@ -86,17 +86,19 @@ def from_base64(value: str) -> Tuple[str, str]:
         value:
             The value to be parsed
 
-    Returns:
+    Returns
+    -------
         A tuple of (TypeName, NodeID).
 
-    Raises:
+    Raises
+    ------
         ValueError:
             If the value is not in the expected format
 
     """
     try:
         res = base64.b64decode(value.encode()).decode().split(":", 1)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise ValueError(str(e)) from e
 
     if len(res) != 2:
@@ -114,10 +116,12 @@ def to_base64(type_: Union[str, type, TypeDefinition], node_id: Any) -> str:
         node_id:
             The node id itself
 
-    Returns:
+    Returns
+    -------
         A tuple of (TypeName, NodeID).
 
-    Raises:
+    Raises
+    ------
         ValueError:
             If the value is not a valid GraphQL type or name
 
@@ -128,8 +132,8 @@ def to_base64(type_: Union[str, type, TypeDefinition], node_id: Any) -> str:
         elif isinstance(type_, TypeDefinition):
             type_name = type_.name
         elif isinstance(type_, type):
-            type_name = type_._type_definition.name  # type:ignore
-    except Exception as e:
+            type_name = type_._type_definition.name  # type: ignore
+    except Exception as e:  # noqa: BLE001
         raise ValueError(f"{type_} is not a valid GraphQL type or name") from e
 
     return base64.b64encode(f"{type_name}:{node_id}".encode()).decode()
@@ -150,7 +154,8 @@ class GlobalID:
     This object contains helpers to work with that, including method to retrieve
     the python object type or even the encoded node itself.
 
-    Attributes:
+    Attributes
+    ----------
         type_name:
             The type name part of the id
         node_id:
@@ -169,11 +174,11 @@ class GlobalID:
     def __post_init__(self):
         if not isinstance(self.type_name, str):
             raise GlobalIDValueError(
-                f"type_name is expected to be a string, found {repr(self.type_name)}"
+                f"type_name is expected to be a string, found {repr(self.type_name)}",
             )
         if not isinstance(self.node_id, str):
             raise GlobalIDValueError(
-                f"node_id is expected to be a string, found {repr(self.node_id)}"
+                f"node_id is expected to be a string, found {repr(self.node_id)}",
             )
 
     def __str__(self):
@@ -187,10 +192,12 @@ class GlobalID:
             value:
                 The value to be parsed, as a base64 string in the "TypeName:NodeID" format
 
-        Returns:
+        Returns
+        -------
             An instance of GLobalID
 
-        Raises:
+        Raises
+        ------
             GlobalIDValueError:
                 If the value is not in a GLobalID format
 
@@ -209,7 +216,8 @@ class GlobalID:
             info:
                 The strawberry execution info resolve the type name from
 
-        Returns:
+        Returns
+        -------
             The resolved GraphQL type for the execution info
 
         """
@@ -287,10 +295,12 @@ class GlobalID:
                 Optionally check if the returned node is really an instance
                 of this type.
 
-        Returns:
+        Returns
+        -------
             The resolved node
 
-        Raises:
+        Raises
+        ------
             TypeError:
                 If ensure_type was provided and the type is not an instance of it
 
@@ -317,7 +327,9 @@ DEFAULT_SCALAR_REGISTRY[GlobalID] = ScalarDefinition(
     # specs expect this type to be "ID".
     name="GlobalID",
     description=GraphQLID.description,
-    parse_literal=lambda v, vars=None: GlobalID.from_id(GraphQLID.parse_literal(v, vars)),
+    parse_literal=lambda v, vars=None: GlobalID.from_id(  # noqa: A002
+        GraphQLID.parse_literal(v, vars),
+    ),
     parse_value=GlobalID.from_id,
     serialize=str,
     specified_by_url="https://relay.dev/graphql/objectidentification.htm",
@@ -331,11 +343,13 @@ class Node(abc.ABC):
     All types that are relay ready should inherit from this interface and
     implement the following methods.
 
-    Attributes:
+    Attributes
+    ----------
         id_attr:
             (Optional) Define id field of node
 
-    Methods:
+    Methods
+    -------
         resolve_id:
             (Optional) Called to resolve the node's id.
             By default it returns `getattr(node, getattr(node, 'id_attr'. 'id'))`
@@ -352,7 +366,7 @@ class Node(abc.ABC):
 
     @strawberry.field(description="The Globally Unique ID of this object")
     @classmethod
-    def id(cls, root: "Node", info: Info) -> GlobalID:  # noqa:A003
+    def id(cls, root: "Node", info: Info) -> GlobalID:  # noqa: A003
         # FIXME: We want to support both integration objects that doesn't define a resolve_id
         # and also the ones that does override it. Is there a better way of handling this?
         if isinstance(root, Node):
@@ -364,7 +378,7 @@ class Node(abc.ABC):
                 parent_type = info._raw_info.parent_type
                 type_def = info.schema.get_type_by_name(parent_type.name)
                 if not isinstance(type_def, TypeDefinition):
-                    raise RuntimeError
+                    raise TypeError
 
                 resolve_id = type_def.origin.resolve_id
             except (RuntimeError, AttributeError):
@@ -384,7 +398,7 @@ class Node(abc.ABC):
             # those are very common ids and are safe to convert to str
             return GlobalID(type_name=type_name, node_id=str(node_id))
         elif aio.is_awaitable(node_id, info=info):
-            return aio.resolve_async(  # type:ignore
+            return aio.resolve_async(  # type: ignore
                 node_id,
                 lambda resolved: GlobalID(type_name=type_name, node_id=resolved),
                 info=info,
@@ -411,7 +425,8 @@ class Node(abc.ABC):
             root:
                 The node to resolve
 
-        Returns:
+        Returns
+        -------
             The resolved id (which is expected to be str)
 
         """
@@ -442,7 +457,8 @@ class Node(abc.ABC):
                 the results to only contain the nodes of those ids. When empty,
                 all nodes of this type shall be returned.
 
-        Returns:
+        Returns
+        -------
             An iterable of resolved nodes.
 
         """
@@ -494,7 +510,8 @@ class Node(abc.ABC):
                 if the node is required or not to exist. If not, then None should
                 be returned if it doesn't exist. Otherwise an exception should be raised.
 
-        Returns:
+        Returns
+        -------
             The resolved node or None if it was not found
 
         """
@@ -505,7 +522,8 @@ class Node(abc.ABC):
 class PageInfo:
     """Information to aid in pagination.
 
-    Attributes:
+    Attributes
+    ----------
         has_next_page:
             When paginating forwards, are there more items?
         has_previous_page:
@@ -535,7 +553,8 @@ class PageInfo:
 class Edge(Generic[NodeType]):
     """An edge in a connection.
 
-    Attributes:
+    Attributes
+    ----------
         cursor:
             A cursor for use in pagination
         node:
@@ -559,7 +578,8 @@ class Edge(Generic[NodeType]):
 class Connection(Generic[NodeType]):
     """A connection to a list of items.
 
-    Attributes:
+    Attributes
+    ----------
         page_info:
             Pagination data for this connection
         edges:
@@ -615,7 +635,8 @@ class Connection(Generic[NodeType]):
             last:
                 Returns the items in the list that come after the specified cursor
 
-        Returns:
+        Returns
+        -------
             The resolved `Connection`
 
         .. _Relay Pagination algorithm:
@@ -625,7 +646,7 @@ class Connection(Generic[NodeType]):
         if total_count is None:
             # Support ORMs that define .count() (e.g. django)
             try:
-                total_count = int(nodes.count())  # type:ignore
+                total_count = int(nodes.count())  # type: ignore
             except (AttributeError, ValueError, TypeError):
                 if isinstance(nodes, Sized):
                     total_count = len(nodes)
@@ -688,7 +709,7 @@ class Connection(Generic[NodeType]):
             expected = end - start
 
         # Overfetch by 1 to check if we have a next result
-        type_def = cast(TypeDefinition, cls._type_definition)  # type:ignore
+        type_def = cast(TypeDefinition, cls._type_definition)  # type: ignore
         field_def = type_def.get_field("edges")
         assert field_def
 
@@ -701,12 +722,12 @@ class Connection(Generic[NodeType]):
             cast(Sequence, nodes)[start : end + 1 if end is not None else None]
             if hasattr(nodes, "__getitem__")
             else itertools.islice(
-                nodes, cast(int, start), cast(int, end + 1) if end is not None else None
+                nodes,
+                cast(int, start),
+                cast(int, end + 1) if end is not None else None,
             )
         )
-        edges = [
-            edge_class.from_node(v, cursor=start + i) for i, v in enumerate(iterator)  # noqa:E203
-        ]
+        edges = [edge_class.from_node(v, cursor=start + i) for i, v in enumerate(iterator)]
 
         # Remove the overfetched result
         if len(edges) == expected + 1:
@@ -902,8 +923,10 @@ class ConnectionField(RelayField):
             is_iterable = origin and isinstance(origin, type) and issubclass(origin, Iterable)
             if not is_connection and not is_iterable:
                 raise TypeError(
-                    "Connection nodes resolver needs to return either a `Connection[<NodeType]` "
-                    "or an Iterable like `Iterable[<NodeType>]`, `List[<NodeType>]`, etc"
+                    (
+                        "Connection nodes resolver needs to return either a `Connection[<NodeType]`"
+                        " or an Iterable like `Iterable[<NodeType>]`, `List[<NodeType>]`, etc"
+                    ),
                 )
 
             if is_iterable and not is_connection and self.type_annotation is None:
@@ -936,7 +959,7 @@ class ConnectionField(RelayField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
-        type_def = info.return_type._type_definition  # type:ignore
+        type_def = info.return_type._type_definition  # type: ignore
         assert isinstance(type_def, TypeDefinition)
 
         field_type = type_def.type_var_map[NodeType]
@@ -975,7 +998,7 @@ class ConnectionField(RelayField):
             return nodes
 
         return_type = cast(Connection[Node], info.return_type)
-        type_def = return_type._type_definition  # type:ignore
+        type_def = return_type._type_definition  # type: ignore
         assert isinstance(type_def, TypeDefinition)
 
         field_type = type_def.type_var_map[NodeType]
@@ -1106,7 +1129,8 @@ def node(
 ) -> Any:
     """Annotate a property to create a relay query field.
 
-    Examples:
+    Examples
+    --------
         Annotating something like this:
 
         >>> @strawberry.type
@@ -1225,7 +1249,8 @@ def connection(
     case for this is to provide a filtered iterable of nodes by using some custom
     filter arguments.
 
-    Examples:
+    Examples
+    --------
         Annotating something like this:
 
         >>> @strawberry.type
@@ -1357,7 +1382,8 @@ def input_mutation(
     named using the mutation name, capitalizing the first letter and append "Input"
     at the end. e.g. `doSomeMutation` will generate an input type `DoSomeMutationInput`.
 
-    Examples:
+    Examples
+    --------
         Annotating something like this:
 
         >>> @strawberry.type

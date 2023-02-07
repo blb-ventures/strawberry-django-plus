@@ -45,7 +45,7 @@ def test_user_query(db, gql_client: GraphQLTestClient):
                 "username": user.username,
                 "email": user.email,
                 "fullName": "John Snow",
-            }
+            },
         }
 
 
@@ -91,10 +91,10 @@ def test_interface_query(db, gql_client: GraphQLTestClient):
                 {
                     "id": to_base64("TagType", t.pk),
                     "name": t.name,
-                }.items()
+                }.items(),
             )
             for t in tags
-        }
+        },
     )
     assert res.data == {
         "node": {
@@ -109,7 +109,7 @@ def test_interface_query(db, gql_client: GraphQLTestClient):
                     "name": issue.milestone.project.name,
                 },
             },
-        }
+        },
     }
 
 
@@ -234,7 +234,7 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                         "nameWithPriority": f"{i.kind}: {i.priority}",
                         "milestone": m_res,
                         "milestoneAgain": m_res,
-                    }
+                    },
                 )
 
     with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 56):
@@ -303,7 +303,7 @@ def test_query_prefetch(db, gql_client: GraphQLTestClient):
                             "id": m_res["id"],
                             "name": m_res["name"],
                         },
-                    }
+                    },
                 )
 
     assert len(expected) == 2
@@ -374,7 +374,7 @@ def test_query_prefetch_with_callable(db, gql_client: GraphQLTestClient):
                             "id": m_res["id"],
                             "name": m_res["name"],
                         },
-                    }
+                    },
                 )
 
     assert len(expected) == 2
@@ -470,7 +470,7 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                                 "name": p_res["name"],
                             },
                         },
-                    }
+                    },
                 )
                 m_res["otherIssues"].append(
                     {
@@ -482,7 +482,7 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                                 "name": p_res["name"],
                             },
                         },
-                    }
+                    },
                 )
 
     assert len(expected) == 3
@@ -525,7 +525,7 @@ def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
                 {"node": {"id": to_base64("ProjectType", p.id), "name": p.name}}
                 for p in [p1, p2, p3]
             ],
-        }
+        },
     }
 
 
@@ -586,5 +586,5 @@ def test_query_connection_nested(db, gql_client: GraphQLTestClient):
                     ],
                 },
             },
-        ]
+        ],
     }

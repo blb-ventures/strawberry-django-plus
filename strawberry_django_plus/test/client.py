@@ -3,7 +3,7 @@ from typing import Any, Awaitable, Dict, Optional, cast
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth.models import AbstractUser
-from django.test.client import AsyncClient, Client  # type:ignore
+from django.test.client import AsyncClient, Client  # type: ignore
 from strawberry.test import BaseGraphQLTestClient
 from strawberry.test.client import Response
 

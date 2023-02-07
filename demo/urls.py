@@ -9,4 +9,5 @@ urlpatterns = [
     path("graphql/", GraphQLView.as_view(schema=schema)),
     path("graphql_async/", AsyncGraphQLView.as_view(schema=schema)),
     path("__debug__/", include("debug_toolbar.urls")),
-] + static("/media")
+    *static("/media"),
+]

@@ -16,6 +16,7 @@ from typing import (
     overload,
 )
 
+import strawberry
 from django.db import models, transaction
 from django.db.models.base import Model
 from django.db.models.fields.related import ManyToManyField
@@ -25,7 +26,6 @@ from django.db.models.fields.reverse_related import (
     ManyToOneRel,
     OneToOneRel,
 )
-import strawberry
 from strawberry import UNSET
 from strawberry.file_uploads.scalars import Upload
 from strawberry.types.info import Info
@@ -115,7 +115,7 @@ class ParsedObject:
 class ParsedObjectList:
     add: Optional[List[_InputListTypes]] = None
     remove: Optional[List[_InputListTypes]] = None
-    set: Optional[List[_InputListTypes]] = None  # noqa:A003
+    set: Optional[List[_InputListTypes]] = None  # noqa: A003
 
 
 @overload
@@ -424,11 +424,11 @@ def update_m2m(
                         if through_defaults:
                             manager = cast("ManyToManyRelatedManager", manager)
                             intermediate_model = manager.through
-                            im = intermediate_model._base_manager.get(  # type:ignore
+                            im = intermediate_model._base_manager.get(  # type: ignore
                                 **{
-                                    manager.source_field_name: instance,  # type:ignore
-                                    manager.target_field_name: obj,  # type:ignore
-                                }
+                                    manager.source_field_name: instance,  # type: ignore
+                                    manager.target_field_name: obj,  # type: ignore
+                                },
                             )
 
                             for k, v in through_defaults.items():
@@ -487,4 +487,4 @@ def update_m2m(
         manager.filter(pk__in=[item.pk for item in to_delete]).delete()
 
     if need_remove_cache:
-        manager._remove_prefetched_objects()  # type:ignore
+        manager._remove_prefetched_objects()  # type: ignore

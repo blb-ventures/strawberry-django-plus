@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
-from django.db.models.sql.query import get_field_names_from_opts  # type:ignore
+from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
 from strawberry import UNSET
 from strawberry.field import StrawberryField
 from strawberry.utils.typing import __dataclass_transform__
@@ -81,7 +81,7 @@ _filters.build_filter_kwargs = _build_filter_kwargs
         field.connection,
     ),
 )
-def filter(  # noqa:A001
+def filter(  # noqa: A001
     model: Type[Model],
     *,
     name: Optional[str] = None,

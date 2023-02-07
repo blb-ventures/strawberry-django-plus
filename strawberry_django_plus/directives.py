@@ -1,6 +1,6 @@
-from collections import defaultdict
 import dataclasses
 import functools
+from collections import defaultdict
 from typing import (
     Any,
     Callable,
@@ -35,7 +35,7 @@ from typing_extensions import TypeAlias
 
 try:
     # Try to use the smaller/faster cache decorator if available
-    _cache = functools.cache  # type:ignore
+    _cache = functools.cache  # type: ignore
 except AttributeError:
     _cache = functools.lru_cache
 
@@ -132,7 +132,7 @@ class SchemaDirectiveExtension(Extension):
 
         schema = cast(
             Schema,
-            info.schema._strawberry_schema,  # type:ignore
+            info.schema._strawberry_schema,  # type: ignore
         )
 
         type_def = schema.get_type_by_name(type_name)
@@ -178,7 +178,7 @@ class SchemaDirectiveExtension(Extension):
                     SchemaDirectiveHelperReturnType(
                         ret_type=type_,
                         type_def=type_def,
-                    )
+                    ),
                 )
 
         # Keep directives sorted by order of priority and avoid duplicates

@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 from django.db import models
 from django.db.models.manager import BaseManager
@@ -6,9 +7,9 @@ from django.db.models.query import QuerySet
 
 for cls in [QuerySet, BaseManager, models.ForeignKey, models.ManyToManyField]:
     if not hasattr(cls, "__class_getitem__"):
-        cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)  # type:ignore
+        cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)  # type: ignore
 
-_DIR = os.path.dirname(os.path.abspath(__file__))
+_DIR = pathlib.Path(__file__).parent.absolute()
 
 DEBUG = True
 
@@ -32,9 +33,7 @@ INSTALLED_APPS = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": (
-            os.path.join(_DIR, "db.sqlite3") if os.environ.get("_PERSISTENT_DB") else ":memory:"
-        ),
+        "NAME": str(_DIR / "db.sqlite3") if os.environ.get("_PERSISTENT_DB") else ":memory:",
     },
 }
 
