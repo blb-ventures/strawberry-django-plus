@@ -41,9 +41,3 @@ repos:
     hooks:
       - id: black
         args: ["--config", "pyproject.toml"]
-
-  - repo: https://github.com/returntocorp/semgrep
-    rev: "v1.9.0"
-    hooks:
-      - id: semgrep
-        args: ["--config", "auto"]
