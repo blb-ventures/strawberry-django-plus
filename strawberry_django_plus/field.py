@@ -218,7 +218,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
         if self.is_list:
 
-            def qs_resolver(qs):
+            def qs_resolver(qs):  # type: ignore
                 return self.get_queryset_as_list(qs, info, kwargs)
 
         else:

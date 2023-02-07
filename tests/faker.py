@@ -35,7 +35,7 @@ class UserFactory(_BaseFactory["User"]):
     is_active = True
     first_name = factory.Faker("first_name")
     last_name = factory.Faker("last_name")
-    username = factory.Faker("username")
+    username = factory.Sequence(lambda n: f"user-{n}")
     email = factory.Faker("email")
     password = factory.LazyFunction(lambda: make_password("foobar"))
 

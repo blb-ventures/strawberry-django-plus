@@ -155,7 +155,7 @@ def resolve_qs(
     ...
 
 
-def resolve_qs(qs, *, resolver=None, info=None) -> Any:
+def resolve_qs(qs, *, resolver=None, info=None) -> Any:  # type: ignore
     """Resolve the queryset, ensuring its db operations are executed in a sync context.
 
     Args:
