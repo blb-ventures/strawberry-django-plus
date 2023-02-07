@@ -69,3 +69,9 @@ repos:
             "flake8-return==1.2.0",
             "flake8-simplify==0.19.3",
           ]
+
+  - repo: https://github.com/returntocorp/semgrep
+    rev: "v1.9.0"
+    hooks:
+      - id: semgrep
+        args: ["--config", "auto"]
