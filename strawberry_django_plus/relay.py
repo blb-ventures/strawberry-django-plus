@@ -53,7 +53,7 @@ from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Annotated
 
 from .settings import config
-from .utils import aio
+from .utils import aio, resolvers
 
 __all__ = [
     "Connection",
@@ -601,6 +601,7 @@ class Connection(Generic[NodeType]):
     )
 
     @classmethod
+    @resolvers.async_safe
     def from_nodes(
         cls,
         nodes: Iterable[NodeType],
