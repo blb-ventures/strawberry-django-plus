@@ -58,7 +58,7 @@ mkdocs-material = "^9.0.9"
 mkdocs-minify-plugin = "^0.6.2"
 pymdown-extensions = "^9.5"
 Markdown = "^3.3.7"
-ruff = "^0.0.243"
+ruff = "^0.0.251"
 
 
 [tool.poetry.extras]
@@ -72,6 +72,7 @@ select = [
   "F",
   "W",
   "I",
+  "D",
   "N",
   "UP",
   "YTT",
@@ -94,7 +95,7 @@ select = [
   "T20",
   "PT",
   "Q",
-  # "RET",
+  "RET",
   "SIM",
   "TID",
   "TCH",
@@ -106,6 +107,7 @@ select = [
   "RUF",
 ]
 ignore = [
+  "D1",
   "D203",
   "D213",
   "TCH001",

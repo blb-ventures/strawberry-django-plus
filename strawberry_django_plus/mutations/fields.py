@@ -461,8 +461,10 @@ def mutation(
         filters=filters,
         handle_django_errors=handle_django_errors,
     )
+
     if resolver is not None:
-        f = f(resolver)
+        return f(resolver)
+
     return f
 
 
@@ -585,8 +587,10 @@ def input_mutation(
         filters=filters,
         handle_django_errors=handle_django_errors,
     )
+
     if resolver is not None:
-        f = f(resolver)
+        return f(resolver)
+
     return f
 
 

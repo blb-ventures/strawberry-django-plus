@@ -537,7 +537,7 @@ class OptimizerStore:
         if config.enable_only and self.only:
             qs = qs.only(*self.only)
 
-        return qs
+        return qs  # noqa: RET504
 
 
 optimizer: contextvars.ContextVar[Optional["DjangoOptimizerExtension"]] = contextvars.ContextVar(

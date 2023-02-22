@@ -290,9 +290,11 @@ def resolve_result(res, *, info=None, qs_resolver=None):
 
         qs_resolver = qs_resolver or resolve_qs
         return qs_resolver(res)
-    elif callable(res):
+
+    if callable(res):
         return resolve_result(async_safe(res)(), info=info, qs_resolver=qs_resolver)
-    elif is_awaitable(res, info=info):
+
+    if is_awaitable(res, info=info):
         return resolve_async(
             res,
             functools.partial(resolve_result, info=info, qs_resolver=qs_resolver),
@@ -437,7 +439,7 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     else:
         ret = resolve_result(qs, info=info, qs_resolver=resolve_qs_get_first)
 
-    return ret
+    return ret  # noqa: RET504
 
 
 def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> AwaitableOrValue[str]:

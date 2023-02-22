@@ -394,10 +394,12 @@ class Node(abc.ABC):
         if isinstance(node_id, str):
             # str is the default and is faster to check for it than is_awaitable
             return GlobalID(type_name=type_name, node_id=node_id)
-        elif isinstance(node_id, (int, uuid.UUID)):
+
+        if isinstance(node_id, (int, uuid.UUID)):
             # those are very common ids and are safe to convert to str
             return GlobalID(type_name=type_name, node_id=str(node_id))
-        elif aio.is_awaitable(node_id, info=info):
+
+        if aio.is_awaitable(node_id, info=info):
             return aio.resolve_async(  # type: ignore
                 node_id,
                 lambda resolved: GlobalID(type_name=type_name, node_id=resolved),
@@ -810,15 +812,15 @@ class NodeField(RelayField):
                     description="The IDs of the objects.",
                 ),
             }
-        else:
-            return {
-                "id": StrawberryArgument(
-                    python_name="id",
-                    graphql_name=None,
-                    type_annotation=StrawberryAnnotation(GlobalID),
-                    description="The ID of the object.",
-                ),
-            }
+
+        return {
+            "id": StrawberryArgument(
+                python_name="id",
+                graphql_name=None,
+                type_annotation=StrawberryAnnotation(GlobalID),
+                description="The ID of the object.",
+            ),
+        }
 
     def __call__(self, resolver):
         raise TypeError("NodeField cannot have a resolver, use a common field instead.")
@@ -832,8 +834,8 @@ class NodeField(RelayField):
     ) -> AwaitableOrValue[Any]:
         if self.is_list:
             return self.resolve_nodes(source, info, args, kwargs)
-        else:
-            return self.resolve_node(source, info, args, kwargs)
+
+        return self.resolve_node(source, info, args, kwargs)
 
     def resolve_node(
         self,
@@ -1301,8 +1303,10 @@ def connection(
         metadata=metadata,
         directives=directives or (),
     )
+
     if resolver is not None:
-        f = f(resolver)
+        return f(resolver)
+
     return f
 
 
@@ -1425,6 +1429,8 @@ def input_mutation(
         metadata=metadata,
         directives=directives or (),
     )
+
     if resolver is not None:
-        f = f(resolver)
+        return f(resolver)
+
     return f

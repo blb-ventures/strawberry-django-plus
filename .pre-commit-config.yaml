@@ -31,7 +31,7 @@ repos:
         args: ["--py38-plus"]
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.243
+    rev: v0.0.251
     hooks:
       - id: ruff
         args: ["--fix"]

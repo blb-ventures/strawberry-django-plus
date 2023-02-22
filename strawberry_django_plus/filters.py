@@ -20,7 +20,7 @@ _T = TypeVar("_T")
 def _normalize_value(value: Any):
     if isinstance(value, list):
         return [_normalize_value(v) for v in value]
-    elif isinstance(value, GlobalID):
+    if isinstance(value, GlobalID):
         return value.node_id
 
     return value

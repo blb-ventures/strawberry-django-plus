@@ -173,7 +173,8 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         resolver = self.base_resolver
         assert resolver
         if not resolver.is_async:
-            resolver = resolvers.async_safe(resolver)
+            return resolvers.async_safe(resolver)
+
         return resolver
 
     def get_result(
@@ -466,8 +467,10 @@ def field(
         prefetch_related=prefetch_related,
         disable_optimization=disable_optimization,
     )
+
     if resolver:
-        f = f(resolver)
+        return f(resolver)
+
     return f
 
 
@@ -700,6 +703,8 @@ def connection(
         prefetch_related=prefetch_related,
         disable_optimization=disable_optimization,
     )
+
     if resolver is not None:
-        f = f(resolver)
+        return f(resolver)
+
     return f

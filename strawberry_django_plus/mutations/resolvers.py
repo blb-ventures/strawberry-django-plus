@@ -63,11 +63,11 @@ def _parse_pk(
 ) -> Tuple[Optional[_M], Optional[Dict[str, Any]]]:
     if value is None:
         return None, None
-    elif isinstance(value, Model):
+    if isinstance(value, Model):
         return value, None
-    elif isinstance(value, ParsedObject):
+    if isinstance(value, ParsedObject):
         return value.parse(model)
-    elif isinstance(value, dict):
+    if isinstance(value, dict):
         return None, value
 
     return model._default_manager.get(pk=value), None
@@ -104,11 +104,11 @@ class ParsedObject:
     def parse(self, model: Type[_M]) -> Tuple[Optional[_M], Optional[Dict[str, Any]]]:
         if self.pk is None or self.pk is UNSET:
             return None, self.data
-        elif isinstance(self.pk, models.Model):
+        if isinstance(self.pk, models.Model):
             assert isinstance(self.pk, model)
             return self.pk, self.data
-        else:
-            return model._default_manager.get(pk=self.pk), self.data
+
+        return model._default_manager.get(pk=self.pk), self.data
 
 
 @dataclasses.dataclass
@@ -141,14 +141,14 @@ def parse_input(info: Info, data: Any) -> Any:
 def parse_input(info: Info, data: Any):
     if isinstance(data, dict):
         return {k: parse_input(info, v) for k, v in data.items()}
-    elif isinstance(data, list):
+    if isinstance(data, list):
         return [parse_input(info, v) for v in data]
-    elif isinstance(data, relay.GlobalID):
+    if isinstance(data, relay.GlobalID):
         node = data.resolve_node(info, required=True)
         if aio.is_awaitable(node, info=info):
             node = resolve_sync(node)
         return node
-    elif isinstance(data, NodeInput):
+    if isinstance(data, NodeInput):
         pk = cast(Any, parse_input(info, getattr(data, "id", UNSET)))
         parsed = {}
         for field in dataclasses.fields(data):
@@ -159,11 +159,11 @@ def parse_input(info: Info, data: Any):
             pk=pk,
             data=parsed if len(parsed) else None,
         )
-    elif isinstance(data, (OneToOneInput, OneToManyInput)):
+    if isinstance(data, (OneToOneInput, OneToManyInput)):
         return ParsedObject(
             pk=parse_input(info, data.set),
         )
-    elif isinstance(data, (ManyToOneInput, ManyToManyInput, ListInput)):
+    if isinstance(data, (ManyToOneInput, ManyToManyInput, ListInput)):
         d = getattr(data, "data", None)
         if dataclasses.is_dataclass(d):
             d = {f.name: parse_input(info, getattr(data, f.name)) for f in dataclasses.fields(d)}
@@ -172,7 +172,7 @@ def parse_input(info: Info, data: Any):
             remove=cast(List[_InputListTypes], parse_input(info, data.remove)),
             set=cast(List[_InputListTypes], parse_input(info, data.set)),
         )
-    elif dataclasses.is_dataclass(data):
+    if dataclasses.is_dataclass(data):
         return {f.name: parse_input(info, getattr(data, f.name)) for f in dataclasses.fields(data)}
 
     return data
@@ -210,8 +210,10 @@ def create(
 ):
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
-    elif dataclasses.is_dataclass(data):
+
+    if dataclasses.is_dataclass(data):
         data = vars(cast(object, data))
+
     return update(info, model(), data, full_clean=full_clean)
 
 
@@ -267,7 +269,8 @@ def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = 
 
         if field is None or value is UNSET:
             continue
-        elif isinstance(field, models.FileField):
+
+        if isinstance(field, models.FileField):
             if value is None:
                 # We want to reset the file field value when None was passed in the input, but
                 # `FileField.save_form_data` ignores None values. In that case we manually pass
@@ -276,11 +279,13 @@ def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = 
             # set filefields at the same time so their hooks can use other set values
             files.append((field, value))
             continue
-        elif isinstance(field, (ManyToManyField, ForeignObjectRel)):
+
+        if isinstance(field, (ManyToManyField, ForeignObjectRel)):
             # m2m will be processed later
             m2m.append((field, value))
             continue
-        elif isinstance(field, models.ForeignKey) and isinstance(
+
+        if isinstance(field, models.ForeignKey) and isinstance(
             value,
             # We are using str here because strawberry.ID can't be used for isinstance
             (ParsedObject, str),

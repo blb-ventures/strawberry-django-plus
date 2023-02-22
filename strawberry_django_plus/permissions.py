@@ -320,7 +320,8 @@ class AuthDirective(SchemaDirectiveWithResolver):
                     message=self.message,
                     field=info.field_name,
                 )
-            elif p.type_def and issubclass(p.type_def.origin, OperationInfo):
+
+            if p.type_def and issubclass(p.type_def.origin, OperationInfo):
                 return p.type_def.origin(
                     messages=[
                         OperationMessage(
@@ -632,12 +633,12 @@ class HasPermDirective(AuthDirective):
             has_perm = cache.get(self)
             if has_perm is None:
                 has_perm = self._has_perm_safe(root, info, user)
-            return self.resolve_retval(helper, root, info, resolver, has_perm)
+            retval = self.resolve_retval(helper, root, info, resolver, has_perm)
         elif self.target == PermTarget.ROOT:
             has_perm = cache.get((self, root))
             if has_perm is None:
                 has_perm = self._has_obj_perm_safe(root, info, user, root)
-            return self.resolve_retval(helper, root, info, resolver, has_perm)
+            retval = self.resolve_retval(helper, root, info, resolver, has_perm)
         elif self.target == PermTarget.RETVAL:
             init_checker(self)
 
@@ -652,9 +653,11 @@ class HasPermDirective(AuthDirective):
                     ret,
                     functools.partial(self._resolve_obj_perms, helper, root, info, user),
                 )
-            return self._resolve_obj_perms(helper, root, info, user, ret)
+            retval = self._resolve_obj_perms(helper, root, info, user, ret)
         else:
             assert_never(self.target)
+
+        return retval
 
     @resolvers.async_safe
     def _has_perm_safe(
