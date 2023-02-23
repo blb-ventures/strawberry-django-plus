@@ -300,7 +300,7 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
             instance = get_with_perms(pk, info, required=True, model=self.model)
-            return resolvers.update(
+            retval = resolvers.update(
                 info,
                 instance,
                 resolvers.parse_input(info, vdata),
@@ -308,6 +308,8 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
             )
         finally:
             DjangoOptimizerExtension.enabled.reset(token)
+
+        return retval
 
 
 class DjangoDeleteMutationField(DjangoInputMutationField):
@@ -344,9 +346,11 @@ class DjangoDeleteMutationField(DjangoInputMutationField):
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
             instance = get_with_perms(pk, info, required=True, model=self.model)
-            return resolvers.delete(info, instance, data=resolvers.parse_input(info, vdata))
+            retval = resolvers.delete(info, instance, data=resolvers.parse_input(info, vdata))
         finally:
             DjangoOptimizerExtension.enabled.reset(token)
+
+        return retval
 
 
 @overload

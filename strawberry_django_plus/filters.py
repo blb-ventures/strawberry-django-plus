@@ -55,7 +55,7 @@ def _build_filter_kwargs(filters):
             subfield_filter_kwargs, subfield_filter_methods = _build_filter_kwargs(field_value)
             for subfield_name, subfield_value in subfield_filter_kwargs.items():
                 if isinstance(subfield_value, Enum):
-                    subfield_value = subfield_value.value
+                    subfield_value = subfield_value.value  # noqa: PLW2901
                 filter_kwargs[f"{field_name}__{subfield_name}"] = subfield_value
 
             filter_methods.extend(subfield_filter_methods)

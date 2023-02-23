@@ -462,7 +462,7 @@ class OptimizerStore:
         for p in self.prefetch_related:
             if isinstance(p, Callable):
                 assert_type(p, PrefetchCallable)
-                p = p(info)
+                p = p(info)  # noqa: PLW2901
 
             if isinstance(p, str):
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
@@ -501,7 +501,7 @@ class OptimizerStore:
 
                 if isinstance(p, Callable):
                     assert_type(p, PrefetchCallable)
-                    p = p(info)
+                    p = p(info)  # noqa: PLW2901
 
                 path = cast(str, p.prefetch_to)  # type: ignore
                 existing = to_prefetch.get(path)

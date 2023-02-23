@@ -378,7 +378,7 @@ class Node(abc.ABC):
                 parent_type = info._raw_info.parent_type
                 type_def = info.schema.get_type_by_name(parent_type.name)
                 if not isinstance(type_def, TypeDefinition):
-                    raise TypeError
+                    raise TypeError  # noqa: TRY301
 
                 resolve_id = type_def.origin.resolve_id
             except (RuntimeError, AttributeError):

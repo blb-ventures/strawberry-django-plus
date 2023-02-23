@@ -213,7 +213,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                     # This returns a queryset, it is async safe
                     result = getattr(source, attname)
                 else:
-                    raise KeyError
+                    raise KeyError  # noqa: TRY301
             except KeyError:
                 result = resolvers.getattr_async_safe(source, attname)
 
@@ -283,10 +283,11 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 if isinstance(node, relay.GlobalID):
                     assert node.resolve_type(info) == unwrap_type(self.type)
                     qs = qs.filter(pk=node.node_id)
-            return qs.get()
         except self.model.DoesNotExist:
             if not self.is_optional:
                 raise
+        else:
+            return qs.get()
 
         return None
 

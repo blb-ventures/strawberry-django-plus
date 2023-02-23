@@ -38,7 +38,7 @@ def order(
     def wrapper(cls):
         for fname, type_ in cls.__annotations__.items():
             if is_auto(type_):
-                type_ = Ordering
+                type_ = Ordering  # noqa: PLW2901
 
             cls.__annotations__[fname] = Optional[type_]
             setattr(cls, fname, UNSET)

@@ -84,11 +84,11 @@ def _parse_data(info: Info, model: Type[_M], value: Any):
 
             if isinstance(v, ParsedObject):
                 if v.pk is None:
-                    v = cast(_M, create(info, model(), v.data or {}))
+                    v = cast(_M, create(info, model(), v.data or {}))  # noqa: PLW2901
                 elif isinstance(v.pk, models.Model) and v.data:
-                    v = update(info, v.pk, v.data)
+                    v = update(info, v.pk, v.data)  # noqa: PLW2901
                 else:
-                    v = v.pk
+                    v = v.pk  # noqa: PLW2901
 
             if k == "through_defaults" or not obj or getattr(obj, k) != v:
                 parsed_data[k] = v
@@ -275,7 +275,8 @@ def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = 
                 # We want to reset the file field value when None was passed in the input, but
                 # `FileField.save_form_data` ignores None values. In that case we manually pass
                 # False which clears the file.
-                value = False
+                value = False  # noqa: PLW2901
+
             # set filefields at the same time so their hooks can use other set values
             files.append((field, value))
             continue
@@ -290,10 +291,10 @@ def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = 
             # We are using str here because strawberry.ID can't be used for isinstance
             (ParsedObject, str),
         ):
-            value, value_data = _parse_data(info, field.related_model, value)
+            value, value_data = _parse_data(info, field.related_model, value)  # noqa: PLW2901
             # If value is None, that means we should create the model
             if value is None:
-                value = field.related_model._default_manager.create(**value_data)
+                value = field.related_model._default_manager.create(**value_data)  # noqa: PLW2901
             else:
                 update(info, value, value_data, full_clean=full_clean)
 
@@ -436,17 +437,17 @@ def update_m2m(
                                 },
                             )
 
-                            for k, v in through_defaults.items():
-                                setattr(im, k, v)
+                            for k, inner_value in through_defaults.items():
+                                setattr(im, k, inner_value)
                             im.save()
 
                         if data:
-                            for k, v in data.items():
-                                setattr(obj, k, v)
+                            for k, inner_value in data.items():
+                                setattr(obj, k, inner_value)
                             obj.save()
                     elif obj in existing:
-                        for k, v in data.items():
-                            setattr(obj, k, v)
+                        for k, inner_value in data.items():
+                            setattr(obj, k, inner_value)
                         obj.save()
                     else:
                         manager.add(obj, **data)

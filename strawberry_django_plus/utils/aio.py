@@ -232,7 +232,7 @@ def resolver(func, *, on_result=None, on_error=None, info=None) -> Any:
                     if not isinstance(exc, BaseException):
                         return exc
 
-                    raise exc
+                    raise
                 else:
                     if on_result is not None:
                         resolved = on_result(resolved)
