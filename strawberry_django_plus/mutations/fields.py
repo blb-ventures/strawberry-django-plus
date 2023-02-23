@@ -654,7 +654,7 @@ def create(
 
 
 def update(
-    input_type: Type[NodeInput],
+    input_type: type,
     *,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
@@ -707,7 +707,7 @@ def update(
 
 
 def delete(
-    input_type: Type[NodeInput] = NodeInput,
+    input_type: type = NodeInput,
     *,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
