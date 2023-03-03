@@ -1010,6 +1010,9 @@ class ConnectionField(RelayField):
         if nodes is None:
             nodes = cast(Node, field_type).resolve_nodes(info=info)
 
+        if hasattr(field_type, 'get_queryset'):
+            nodes = field_type.get_queryset(nodes, info)
+
         if aio.is_awaitable(nodes, info=info):
             return aio.resolve_async(
                 nodes,

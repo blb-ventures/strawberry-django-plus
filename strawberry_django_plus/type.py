@@ -90,7 +90,7 @@ def _from_django_type(
         if not field.base_resolver:
 
             def conn_resolver(root):
-                return getattr(root, name).all()
+                return getattr(root, name).filter()
 
             field.base_resolver = StrawberryResolver(conn_resolver)
             if type_annotation is not None:
