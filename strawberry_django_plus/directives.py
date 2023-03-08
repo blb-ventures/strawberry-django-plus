@@ -25,7 +25,7 @@ from graphql.type.definition import (
     GraphQLUnionType,
     GraphQLWrappingType,
 )
-from strawberry.extensions.base_extension import Extension
+from strawberry.extensions import SchemaExtension
 from strawberry.field import StrawberryField
 from strawberry.private import Private
 from strawberry.schema.schema import Schema
@@ -98,7 +98,7 @@ class SchemaDirectiveHelper:
     is_list: bool
 
 
-class SchemaDirectiveExtension(Extension):
+class SchemaDirectiveExtension(SchemaExtension):
     """Execute schema directives."""
 
     _helper_cache: ClassVar[Dict[Tuple[str, str], SchemaDirectiveHelper]] = {}
