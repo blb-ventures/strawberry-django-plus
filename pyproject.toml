@@ -32,7 +32,7 @@ include = ["strawberry_django_plus/py.typed"]
 [tool.poetry.dependencies]
 python = "^3.8"
 django = ">= 3.2"
-strawberry-graphql = ">= 0.140.3"
+strawberry-graphql = ">=0.140.3"
 strawberry-graphql-django = ">= 0.8"
 typing-extensions = ">= 4.2.0"
 django-debug-toolbar = { version = ">=3.4", optional = true }
