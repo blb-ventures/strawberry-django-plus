@@ -27,7 +27,7 @@ from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
-from strawberry.extensions.base_extension import Extension
+from strawberry.extensions import SchemaExtension
 from strawberry.lazy_type import LazyType
 from strawberry.schema.schema import Schema
 from strawberry.types.execution import ExecutionContext
@@ -546,7 +546,7 @@ optimizer: contextvars.ContextVar[Optional["DjangoOptimizerExtension"]] = contex
 )
 
 
-class DjangoOptimizerExtension(Extension):
+class DjangoOptimizerExtension(SchemaExtension):
     """Automatically optimize returned querysets from internal resolvers.
 
     Attributes
