@@ -349,7 +349,7 @@ class AuthDirective(SchemaDirectiveWithResolver):
                 and type_def.concrete_of
                 and issubclass(type_def.concrete_of.origin, Connection)
             ):
-                return type_def.origin.from_nodes([], total_count=0)
+                return cast(Connection, type_def.origin).from_nodes([], total_count=0)
 
         # In last case, raise an error
         raise PermissionDenied(self.message)
@@ -466,8 +466,7 @@ class IsSuperuser(ConditionDirective):
 class PermDefinition:
     """Permission definition.
 
-    Attributes
-    ----------
+    Attributes:
         resource:
             The resource to which we are requiring permission.
         permission:
@@ -770,8 +769,7 @@ class HasPerm(HasPermDirective):
     Given a `resource` name, the user can access the decorated object/field
     if he has any of the permissions defined in this directive.
 
-    Examples
-    --------
+    Examples:
         To indicate that a mutation can only be done by someone who
         has "product.add_product" perm in the django system:
 
@@ -781,8 +779,7 @@ class HasPerm(HasPermDirective):
         ...     def create_product(self, name: str) -> ProductType:
         ...         ...
 
-    Attributes
-    ----------
+    Attributes:
         perms:
             Perms required to access this resource.
         any:
@@ -822,8 +819,7 @@ class HasRootPerm(HasPermDirective):
     is defined) to resolve the field, which means that this cannot be used for root
     queries and types.
 
-    Examples
-    --------
+    Examples:
         To indicate that a field inside a `ProductType` can only be accessed if
         the user has "product.view_field" in it in the django system:
 
@@ -833,8 +829,7 @@ class HasRootPerm(HasPermDirective):
         ...         directives=[RootPermRequired(".add_product")],
         ...     )
 
-    Attributes
-    ----------
+    Attributes:
         perms:
             Perms required to access this resource.
         any:
@@ -877,8 +872,7 @@ class HasObjPerm(HasPermDirective):
     Note that this depends on resolving the object to check the permissions
     specifically for that object, unlike `PermRequired` which checks it before resolving.
 
-    Examples
-    --------
+    Examples:
         To indicate that a field that returns a `ProductType` can only be accessed
         by someone who has "product.view_product"
         has "product.view_product" perm in the django system:
@@ -889,8 +883,7 @@ class HasObjPerm(HasPermDirective):
         ...         directives=[ObjPermRequired(".add_product")],
         ...     )
 
-    Attributes
-    ----------
+    Attributes:
         perms:
             Perms required to access this resource.
         any:

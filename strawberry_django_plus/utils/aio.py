@@ -46,8 +46,7 @@ def is_awaitable(
             of `is_awaitable`, which might have some optimizations. Otherwise
             will fallback to `inspect.is_awaitable`
 
-    Returns
-    -------
+    Returns:
         `True` if the value is awaitable, `False` otherwise
 
     """
@@ -74,13 +73,15 @@ async def resolve_async(
             The resolver to be called after the value was awaited.
         ensure_type:
             Optional type to ensure that the retval is an instance of it.
+        info:
+            Optional gql execution info. If present, will use its implementation
+            of `is_awaitable`, which might have some optimizations. Otherwise
+            will fallback to `inspect.is_awaitable`
 
-    Returns
-    -------
+    Returns:
         An `Awaitable` with the return value of `resolver(await value)`
 
-    Raises
-    ------
+    Raises:
         TypeError: If ensure_type was passed and the return value
         is not an instance of it (checked using `instance(retval, ensyure_type)`).
 
@@ -129,6 +130,8 @@ def resolve(value, resolver, *, ensure_type=None, info=None):
     Args:
         value:
             The value to be passed to the resolver.
+        resolver:
+            The resolver itself.
         info:
             The resolver to be called after the value was awaited.
         ensure_type:
@@ -138,14 +141,12 @@ def resolve(value, resolver, *, ensure_type=None, info=None):
             of `is_awaitable`, which might have some optimizations. Otherwise
             will fallback to `inspect.is_awaitable`
 
-    Returns
-    -------
+    Returns:
         If the value is not awaitable, it will simply return `resolver(value)`.
         Otherwise, an `Awaitable` will be returned that, when awaited will return
         the return value of `resolver(await value)`.
 
-    Raises
-    ------
+    Raises:
         TypeError: If ensure_type was passed and the return value
         is not an instance of it (checked using `instance(retval, ensyure_type)`).
 

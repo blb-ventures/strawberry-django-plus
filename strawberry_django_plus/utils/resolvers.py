@@ -77,8 +77,7 @@ def async_safe(func=None, /, *, thread_sensitive=True):
             If the sync function should run in the same thread as all other
             thread_sensitive functions
 
-    Returns
-    -------
+    Returns:
         The wrapped function
 
     .. _asgi.sync_to_async:
@@ -111,7 +110,7 @@ def async_safe(func=None, /, *, thread_sensitive=True):
 
 
 def async_unsafe(*args, **kwargs):
-    warnings.warn("use `async_safe` instead", DeprecationWarning)
+    warnings.warn("use `async_safe` instead", DeprecationWarning, stacklevel=1)
     return async_safe(*args, **kwargs)
 
 
@@ -123,8 +122,7 @@ async def resolve_sync(value: Awaitable[_T]) -> _T:
         value:
             The awaitable to be resolved
 
-    Returns
-    -------
+    Returns:
         The resolved value.
 
     """
@@ -170,8 +168,7 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:  # type: ignore
             of `is_awaitable`, which might have some optimizations. Otherwise
             will fallback to `inspect.is_awaitable`
 
-    Returns
-    -------
+    Returns:
         The wrapped function
 
     .. _asgi.sync_to_async:
@@ -271,8 +268,7 @@ def resolve_result(res, *, info=None, qs_resolver=None):
             `resolve_qs` will be used, which by default returns the queryset
             already prefetched from the database.
 
-    Returns
-    -------
+    Returns:
         The resolved result.
 
     """
@@ -322,9 +318,10 @@ def resolve_model_nodes(
             is enabled. This will also be used for `is_awaitable` check.
         node_ids:
             Optional filter by those node_ids instead of retrieving everything
+        filter_perms:
+            If we should filter the queryset with the permissions defined in the field
 
-    Returns
-    -------
+    Returns:
         The resolved queryset, already prefetched from the database
 
     """
@@ -412,8 +409,7 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
             used, which might raise `model.DoesNotExist` error if the node doesn't exist.
             Otherwise, `qs.first()` will be used, which might return None.
 
-    Returns
-    -------
+    Returns:
         The resolved node, already prefetched from the database
 
     """
@@ -434,12 +430,11 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     if origin and hasattr(origin, "get_queryset"):
         qs = origin.get_queryset(qs, info)
 
-    if required:
-        ret = resolve_result(qs, info=info, qs_resolver=resolve_qs_get_one)
-    else:
-        ret = resolve_result(qs, info=info, qs_resolver=resolve_qs_get_first)
-
-    return ret  # noqa: RET504
+    return resolve_result(
+        qs,
+        info=info,
+        qs_resolver=resolve_qs_get_one if required else resolve_qs_get_first,
+    )
 
 
 def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> AwaitableOrValue[str]:
@@ -451,8 +446,7 @@ def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> Awaita
         root:
             The source model object.
 
-    Returns
-    -------
+    Returns:
         The resolved object id
 
     """

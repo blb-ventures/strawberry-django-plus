@@ -304,8 +304,7 @@ def optimize(
         store:
             Optional initial store to use for the optimization
 
-    Returns
-    -------
+    Returns:
         The optimized queryset
 
     .. _QuerySet:
@@ -383,8 +382,7 @@ def optimize(
 class OptimizerConfig:
     """Django optimization configuration.
 
-    Attributes
-    ----------
+    Attributes:
         enable_only:
             Enable `QuerySet.only` optimizations
         enable_select_related:
@@ -403,8 +401,7 @@ class OptimizerConfig:
 class OptimizerStore:
     """Django optimization store.
 
-    Attributes
-    ----------
+    Attributes:
         only:
             Set of values to optimize using `QuerySet.only`
         selected:
@@ -537,7 +534,7 @@ class OptimizerStore:
         if config.enable_only and self.only:
             qs = qs.only(*self.only)
 
-        return qs  # noqa: RET504
+        return qs
 
 
 optimizer: contextvars.ContextVar[Optional["DjangoOptimizerExtension"]] = contextvars.ContextVar(
@@ -549,8 +546,7 @@ optimizer: contextvars.ContextVar[Optional["DjangoOptimizerExtension"]] = contex
 class DjangoOptimizerExtension(SchemaExtension):
     """Automatically optimize returned querysets from internal resolvers.
 
-    Attributes
-    ----------
+    Attributes:
         enable_only_optimization:
             Enable `QuerySet.only` optimizations
         enable_select_related_optimization:
@@ -558,8 +554,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         enable_prefetch_related_optimization:
             Enable `QuerySet.prefetch_related` optimizations
 
-    Examples
-    --------
+    Examples:
         Add the following to your schema configuration.
 
         >>> import strawberry

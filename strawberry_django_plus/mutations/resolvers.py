@@ -430,7 +430,7 @@ def update_m2m(
                         if through_defaults:
                             manager = cast("ManyToManyRelatedManager", manager)
                             intermediate_model = manager.through
-                            im = intermediate_model._base_manager.get(  # type: ignore
+                            im = intermediate_model._base_manager.get(
                                 **{
                                     manager.source_field_name: instance,  # type: ignore
                                     manager.target_field_name: obj,  # type: ignore
@@ -451,9 +451,8 @@ def update_m2m(
                         obj.save()
                     else:
                         manager.add(obj, **data)
-                else:
-                    if obj not in existing:
-                        to_add.append(obj)
+                elif obj not in existing:
+                    to_add.append(obj)
 
                 existing.discard(obj)
             else:

@@ -621,8 +621,7 @@ def create(
 
     Automatically create data for django input fields.
 
-    Examples
-    --------
+    Examples:
         >>> @gql.django.input
         ... class ProductInput:
         ...     name: gql.auto
@@ -674,8 +673,7 @@ def update(
 ) -> Any:
     """Update mutation for django input fields.
 
-    Examples
-    --------
+    Examples:
         >>> @gql.django.input
         ... class ProductInput(IdInput):
         ...     name: gql.auto

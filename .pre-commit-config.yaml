@@ -20,9 +20,10 @@ repos:
       - id: check-symlinks
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.2
+    rev: v2.2.4
     hooks:
       - id: codespell
+        types_or: [cython, pyi, python, markdown]
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.3.1
@@ -31,13 +32,13 @@ repos:
         args: ["--py38-plus"]
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.252
+    rev: v0.0.260
     hooks:
       - id: ruff
         args: ["--fix"]
 
   - repo: https://github.com/psf/black
-    rev: 23.1.0
+    rev: 23.3.0
     hooks:
       - id: black
         args: ["--config", "pyproject.toml"]

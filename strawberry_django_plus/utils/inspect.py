@@ -103,12 +103,10 @@ def get_django_type(type_, *, ensure_type=False):
             If we should ensure that the type is indeed a django type.
             If this is false, the result might be None.
 
-    Returns
-    -------
+    Returns:
         The retrieved StrawberryDjangoType
 
-    Raises
-    ------
+    Raises:
         TypeError:
             If the type ensuring fails
 
@@ -135,8 +133,7 @@ def get_possible_types(
             Optional type definition to use to resolve type vars. This is
             mostly used internally, no need to pass this.
 
-    Yields
-    ------
+    Yields:
         All possibilities for the type
 
     """
@@ -178,8 +175,7 @@ def get_possible_type_definitions(
         gql_type:
             The type to retrieve possibilities from.
 
-    Yields
-    ------
+    Yields:
         All possibilities for the type
 
     """
@@ -207,8 +203,7 @@ def get_selections(
         typename:
             Only resolve fragments for that typename
 
-    Yields
-    ------
+    Yields:
         All possibilities for the type
 
     """

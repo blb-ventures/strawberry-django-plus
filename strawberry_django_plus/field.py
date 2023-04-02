@@ -434,8 +434,7 @@ def field(
 ) -> Any:
     """Annotate a method or property as a Django GraphQL field.
 
-    Examples
-    --------
+    Examples:
         It can be used both as decorator and as a normal function:
 
         >>> @gql.type
@@ -498,8 +497,7 @@ def node(
 ) -> Any:
     """Annotate a property to create a relay query field.
 
-    Examples
-    --------
+    Examples:
         Annotating something like this:
 
         >>> @strawberry.type
@@ -646,8 +644,7 @@ def connection(
     case for this is to provide a filtered iterable of nodes by using some custom
     filter arguments.
 
-    Examples
-    --------
+    Examples:
         Annotating something like this:
 
         >>> @strawberry.type

@@ -166,19 +166,21 @@ def model_cached_property(
     is enabled, it will automatically optimize the hintings on this field.
 
     Args:
+        func:
+            The method to decorate.
+        meta:
+            Some extra metadata to be attached to the field.
         only:
             Optional sequence of values to optimize using `QuerySet.only`
-        selected:
+        select_related:
             Optional sequence of values to optimize using `QuerySet.select_related`
         prefetch_related:
             Optional sequence of values to optimize using `QuerySet.prefetch_related`
 
-    Returns
-    -------
+    Returns:
         The decorated method.
 
-    Examples
-    --------
+    Examples:
         In a model, define it like this to have the hintings defined in
         `col_b_formatted` automatically optimized.
 

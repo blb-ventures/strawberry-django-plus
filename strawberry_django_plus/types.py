@@ -73,13 +73,12 @@ def register(
     """Register types to convert `auto` fields to.
 
     Args:
-        field:
+        fields:
             Type or sequence of types to register
         for_input:
             If the type should be used for input only.
 
-    Examples
-    --------
+    Examples:
         To define a type that should be used for `ImageField`:
 
         >>> @register(ImageField)
@@ -122,8 +121,7 @@ class NodeType(relay.Node):
 class NodeInput:
     """Set the value to the selected node.
 
-    Notes
-    -----
+    Notes:
         This can be used as a base class for input types that receive an
         `id` of type `GlobalID` when inheriting from it.
 
@@ -144,8 +142,7 @@ class NodeInput:
 class NodeInputPartial(NodeInput):
     """Set the value to the selected node.
 
-    Notes
-    -----
+    Notes:
         This can be used as a base class for input types that receive an
         `id` of type `GlobalID` when inheriting from it.
 
@@ -169,8 +166,7 @@ class NodeInputPartial(NodeInput):
 class ListInput(Generic[K]):
     """Add/remove/set the selected nodes.
 
-    Notes
-    -----
+    Notes:
         To pass data to an intermediate model, type the input in a
         `throught_defaults` key inside the input object.
 
@@ -327,13 +323,12 @@ def resolve_model_field_type(
         optional = is_input or is_partial or is_filter
     elif isinstance(field, ForeignObjectRel):
         optional = is_input or is_partial or is_filter or field.null
+    elif is_partial or is_filter:
+        optional = True
+    elif is_input:
+        optional = field.blank or field.default is not NOT_PROVIDED
     else:
-        if is_partial or is_filter:
-            optional = True
-        elif is_input:
-            optional = field.blank or field.default is not NOT_PROVIDED
-        else:
-            optional = field.null
+        optional = field.null
 
     if optional:
         return Optional[retval]
