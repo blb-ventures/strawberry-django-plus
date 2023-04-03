@@ -5,6 +5,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     List,
     Optional,
     Tuple,
@@ -587,14 +588,15 @@ class DjangoOptimizerExtension(SchemaExtension):
         self._enable_select_related = enable_select_related_optimization
         self._enable_prefetch_related = enable_prefetch_related_optimization
 
-    def on_request_start(self) -> AwaitableOrValue[None]:
-        if not self.enabled.get():
-            return
+    def on_execute(self) -> Generator[None, None, None]:
+        if enabled := self.enabled.get():
+            optimizer.set(self)
 
-        optimizer.set(self)
-
-    def on_request_end(self) -> AwaitableOrValue[None]:
-        optimizer.set(None)
+        try:
+            yield
+        finally:
+            if enabled:
+                optimizer.set(None)
 
     def resolve(
         self,
