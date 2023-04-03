@@ -223,7 +223,17 @@ def get_selections(
             if skip and skip["if"]:
                 continue
 
-            ret[s.alias or s.name] = s
+            f_name = s.alias or s.name
+            existing = ret.get(f_name)
+            if existing := ret.get(f_name):
+                s.selections = list(
+                    {
+                        **get_selections(existing),
+                        **get_selections(s),
+                    }.values(),
+                )
+            else:
+                ret[f_name] = s
         elif isinstance(s, (FragmentSpread, InlineFragment)):
             if typename is not None and s.type_condition != typename:
                 continue
@@ -237,7 +247,7 @@ def get_selections(
                             **get_selections(f),
                         }.values(),
                     )
-                ret[f.name] = f
+                ret[f_name] = f
         else:  # pragma:nocover
             assert_never(s)
 
