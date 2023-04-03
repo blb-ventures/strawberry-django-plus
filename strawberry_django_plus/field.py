@@ -41,9 +41,8 @@ from strawberry_django.arguments import argument
 from strawberry_django.fields.field import StrawberryDjangoField as _StrawberryDjangoField
 from strawberry_django.utils import get_django_model, unwrap_type
 
-from . import relay
+from . import optimizer, relay
 from .descriptors import ModelProperty
-from .optimizer import OptimizerStore, PrefetchType
 from .permissions import filter_with_perms
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
@@ -68,11 +67,11 @@ class StrawberryDjangoField(_StrawberryDjangoField):
 
     """
 
-    store: OptimizerStore
+    store: optimizer.OptimizerStore
 
     def __init__(self, *args, **kwargs):
         self.disable_optimization = kwargs.pop("disable_optimization", False)
-        self.store = OptimizerStore.with_hints(
+        self.store = optimizer.OptimizerStore.with_hints(
             only=kwargs.pop("only", None),
             select_related=kwargs.pop("select_related", None),
             prefetch_related=kwargs.pop("prefetch_related", None),
@@ -238,6 +237,16 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     ) -> Any:
         return self.safe_resolver(*args, **kwargs)
 
+    def get_queryset(self, queryset: QuerySet[_M], info: Info, *args, **kwargs) -> QuerySet[_M]:
+        qs = super().get_queryset(queryset, info, *args, **kwargs)
+
+        ext = optimizer.optimizer.get()
+        if ext is not None:
+            # If optimizer extension is enabled, optimize this queryset
+            qs = ext.optimize(qs, info=info)
+
+        return qs
+
     @resolvers.async_safe
     def get_queryset_as_list(
         self,
@@ -348,7 +357,7 @@ def field(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
 ) -> _T:
     ...
@@ -374,7 +383,7 @@ def field(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
 ) -> Any:
     ...
@@ -400,7 +409,7 @@ def field(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
 ) -> StrawberryDjangoField:
     ...
@@ -425,7 +434,7 @@ def field(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -488,7 +497,7 @@ def node(
     graphql_type: Optional[Any] = None,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -554,7 +563,7 @@ def connection(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
 ) -> _T:
     ...
@@ -578,7 +587,7 @@ def connection(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
 ) -> Any:
     ...
@@ -602,7 +611,7 @@ def connection(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
 ) -> StrawberryDjangoConnectionField:
     ...
@@ -625,7 +634,7 @@ def connection(
     order: Optional[type] = UNSET,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
-    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
