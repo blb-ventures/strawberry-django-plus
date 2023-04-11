@@ -1,5 +1,6 @@
 import contextvars
 import dataclasses
+import itertools
 from collections import defaultdict
 from typing import (
     Any,
@@ -492,7 +493,11 @@ class OptimizerStore:
             }
 
             abort_only = set()
-            for p in self.prefetch_related:
+            # Merge already existing prefetches together
+            for p in itertools.chain(
+                qs._prefetch_related_lookups,  # type: ignore
+                self.prefetch_related,
+            ):
                 # Already added above
                 if isinstance(p, str):
                     continue
@@ -527,7 +532,10 @@ class OptimizerStore:
             for ao in abort_only:
                 to_prefetch[ao].queryset.query.deferred_loading = ([], True)  # type: ignore
 
-            qs = qs.prefetch_related(*to_prefetch.values())
+            # First prefetch_related(None) to clear all existing prefetches, and them add ours,
+            # which also contains them. This is to avoid the
+            # "lookup was already seen with a different queryset" error
+            qs = qs.prefetch_related(None).prefetch_related(*to_prefetch.values())
 
         if config.enable_select_related and self.select_related:
             qs = qs.select_related(*self.select_related)
