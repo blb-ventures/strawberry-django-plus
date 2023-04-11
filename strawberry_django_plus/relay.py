@@ -40,6 +40,7 @@ from graphql import GraphQLID
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.custom_scalar import ScalarDefinition
+from strawberry.extensions.field_extension import FieldExtension
 from strawberry.field import StrawberryField
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
@@ -1107,6 +1108,7 @@ def node(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1145,6 +1147,7 @@ def node(
         default_factory=default_factory,
         metadata=metadata,
         directives=directives or (),
+        extensions=extensions or (),
     )
 
 
@@ -1163,6 +1166,7 @@ def connection(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> _T:
     ...
 
@@ -1181,6 +1185,7 @@ def connection(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> Any:
     ...
 
@@ -1199,6 +1204,7 @@ def connection(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> ConnectionField:
     ...
 
@@ -1216,6 +1222,7 @@ def connection(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1283,6 +1290,7 @@ def connection(
         default_factory=default_factory,
         metadata=metadata,
         directives=directives or (),
+        extensions=extensions or (),
     )
 
     if resolver is not None:
@@ -1305,6 +1313,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> _T:
     ...
 
@@ -1322,6 +1331,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> Any:
     ...
 
@@ -1339,6 +1349,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> InputMutationField:
     ...
 
@@ -1355,6 +1366,7 @@ def input_mutation(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1408,6 +1420,7 @@ def input_mutation(
         default_factory=default_factory,
         metadata=metadata,
         directives=directives or (),
+        extensions=extensions or (),
     )
 
     if resolver is not None:
