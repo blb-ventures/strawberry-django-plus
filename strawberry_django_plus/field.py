@@ -30,6 +30,7 @@ from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
+from strawberry.extensions.field_extension import FieldExtension
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.type import StrawberryContainer, StrawberryType
@@ -38,7 +39,9 @@ from strawberry.types.info import Info
 from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry_django.arguments import argument
-from strawberry_django.fields.field import StrawberryDjangoField as _StrawberryDjangoField
+from strawberry_django.fields.field import (
+    StrawberryDjangoField as _StrawberryDjangoField,
+)
 from strawberry_django.utils import get_django_model, unwrap_type
 
 from . import optimizer, relay
@@ -359,6 +362,7 @@ def field(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> _T:
     ...
 
@@ -385,6 +389,7 @@ def field(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> Any:
     ...
 
@@ -411,6 +416,7 @@ def field(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> StrawberryDjangoField:
     ...
 
@@ -436,6 +442,7 @@ def field(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -475,6 +482,7 @@ def field(
         select_related=select_related,
         prefetch_related=prefetch_related,
         disable_optimization=disable_optimization,
+        extensions=extensions,
     )
 
     if resolver:
@@ -499,6 +507,7 @@ def node(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -541,6 +550,7 @@ def node(
         select_related=select_related,
         prefetch_related=prefetch_related,
         disable_optimization=disable_optimization,
+        extensions=extensions,
     )
 
 
@@ -565,6 +575,7 @@ def connection(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> _T:
     ...
 
@@ -589,6 +600,7 @@ def connection(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> Any:
     ...
 
@@ -613,6 +625,7 @@ def connection(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> StrawberryDjangoConnectionField:
     ...
 
@@ -636,6 +649,7 @@ def connection(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
     disable_optimization: bool = False,
+    extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -709,6 +723,7 @@ def connection(
         select_related=select_related,
         prefetch_related=prefetch_related,
         disable_optimization=disable_optimization,
+        extensions=extensions,
     )
 
     if resolver is not None:

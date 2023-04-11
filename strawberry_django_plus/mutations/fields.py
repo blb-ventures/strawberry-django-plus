@@ -26,6 +26,7 @@ from django.core.exceptions import (
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
+from strawberry.extensions.field_extension import FieldExtension
 from strawberry.permission import BasePermission
 from strawberry.type import StrawberryType
 from strawberry.types.fields.resolver import StrawberryResolver
@@ -371,6 +372,7 @@ def mutation(
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> _T:
     ...
 
@@ -392,6 +394,7 @@ def mutation(
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> Any:
     ...
 
@@ -413,6 +416,7 @@ def mutation(
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
+    extensions: List[FieldExtension] = (),  # type: ignore
 ) -> DjangoInputMutationField:
     ...
 
@@ -433,6 +437,7 @@ def mutation(
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
+    extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -464,6 +469,7 @@ def mutation(
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
+        extensions=extensions or (),
     )
 
     if resolver is not None:

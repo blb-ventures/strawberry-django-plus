@@ -126,6 +126,7 @@ def _from_django_type(
             select_related=store and store.select_related,
             prefetch_related=store and store.prefetch_related,
             disable_optimization=getattr(attr, "disable_optimization", False),
+            extensions=getattr(attr, "extensions", ()),
         )
     elif isinstance(attr, StrawberryResolver):
         field = StrawberryDjangoField(base_resolver=attr)
