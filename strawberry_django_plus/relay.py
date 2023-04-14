@@ -586,7 +586,7 @@ class Connection(Generic[NodeType]):
     )
 
     @classmethod
-    def from_nodes(
+    async def from_nodes(
         cls,
         nodes: Iterable[NodeType],
         *,
@@ -632,7 +632,8 @@ class Connection(Generic[NodeType]):
         if total_count is None:
             # Support ORMs that define .count() (e.g. django)
             try:
-                total_count = int(nodes.count())  # type: ignore
+                count = await nodes.acount()
+                total_count = int(count)  # type: ignore
             except (AttributeError, ValueError, TypeError):
                 if isinstance(nodes, Sized):
                     total_count = len(nodes)
@@ -713,7 +714,11 @@ class Connection(Generic[NodeType]):
                 cast(int, end + 1) if end is not None else None,
             )
         )
-        edges = [edge_class.from_node(v, cursor=start + i) for i, v in enumerate(iterator)]
+        edges = []
+        i = 0
+        async for v in iterator:
+            edges.append(edge_class.from_node(v, cursor=start + i))
+            i += 1
 
         # Remove the overfetched result
         if len(edges) == expected + 1:
