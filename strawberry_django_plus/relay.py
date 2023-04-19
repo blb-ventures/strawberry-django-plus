@@ -8,6 +8,7 @@ import itertools
 import math
 import sys
 import uuid
+import warnings
 from typing import (
     Any,
     Awaitable,
@@ -245,19 +246,9 @@ class GlobalID:
         self,
         info: Info,
         *,
-        required: Literal[True] = ...,
-        ensure_type: Awaitable[Type[_T]],
-    ) -> Awaitable[_T]:
-        ...
-
-    @overload
-    def resolve_node(
-        self,
-        info: Info,
-        *,
         required: Literal[True],
         ensure_type: None = ...,
-    ) -> AwaitableOrValue["Node"]:
+    ) -> "Node":
         ...
 
     @overload
@@ -267,7 +258,7 @@ class GlobalID:
         *,
         required: bool = ...,
         ensure_type: None = ...,
-    ) -> AwaitableOrValue[Optional["Node"]]:
+    ) -> Optional["Node"]:
         ...
 
     def resolve_node(self, info, *, required=False, ensure_type=None) -> Any:
@@ -306,10 +297,72 @@ class GlobalID:
         if node is not None and ensure_type is not None:
             origin = get_origin(ensure_type)
             if origin and issubclass(origin, Awaitable):
+                warnings.warn("use `aresolve_node` instead", DeprecationWarning, stacklevel=1)
                 ensure_type = get_args(ensure_type)[0]
             return aio.resolve(node, lambda n: n, info=info, ensure_type=ensure_type)
 
         return node
+
+    @overload
+    async def aresolve_node(
+        self,
+        info: Info,
+        *,
+        required: Literal[True] = ...,
+        ensure_type: Type[_T],
+    ) -> _T:
+        ...
+
+    @overload
+    async def aresolve_node(
+        self,
+        info: Info,
+        *,
+        required: Literal[True],
+        ensure_type: None = ...,
+    ) -> "Node":
+        ...
+
+    @overload
+    async def aresolve_node(
+        self,
+        info: Info,
+        *,
+        required: bool = ...,
+        ensure_type: None = ...,
+    ) -> Optional["Node"]:
+        ...
+
+    async def aresolve_node(self, info, *, required=False, ensure_type=None) -> Any:
+        """Resolve the type name and node id info to the node itself.
+
+        Tip: When you know the expected type, calling `ensure_type` should help
+        not only to enforce it, but also help with typing since it will know that,
+        if this function returns successfully, the retval should be of that
+        type and not `Node`.
+
+        Args:
+            info:
+                The strawberry execution info resolve the type name from
+            required:
+                If the value is required to exist. Note that asking to ensure
+                the type automatically makes required true.
+            ensure_type:
+                Optionally check if the returned node is really an instance
+                of this type.
+
+        Returns:
+            The resolved node
+
+        Raises:
+            TypeError:
+                If ensure_type was provided and the type is not an instance of it
+
+        """
+        return await cast(
+            Awaitable,
+            self.resolve_node(info, required=required, ensure_type=ensure_type),
+        )
 
 
 # Register our GlobalID scalar

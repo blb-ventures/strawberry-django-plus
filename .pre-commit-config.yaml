@@ -10,7 +10,8 @@ repos:
               tests/data/schema.gql
           )
       - id: check-added-large-files
-        args: ["--maxkb=1024"]
+        args:
+          - --maxkb=1024
       - id: check-docstring-first
       - id: check-merge-conflict
       - id: check-yaml
@@ -18,27 +19,31 @@ repos:
       - id: check-json
       - id: check-xml
       - id: check-symlinks
-
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.4
     hooks:
       - id: codespell
-        types_or: [cython, pyi, python, markdown]
-
+        types_or:
+          - cython
+          - pyi
+          - python
+          - markdown
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.3.1
     hooks:
       - id: pyupgrade
-        args: ["--py38-plus"]
-
+        args:
+          - --py38-plus
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.260
+    rev: v0.0.261
     hooks:
       - id: ruff
-        args: ["--fix"]
-
+        args:
+          - --fix
   - repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
       - id: black
-        args: ["--config", "pyproject.toml"]
+        args:
+          - --config
+          - pyproject.toml
