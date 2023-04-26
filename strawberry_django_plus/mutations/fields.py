@@ -72,7 +72,7 @@ def _get_validation_errors(error: Exception):
         for e in error.error_list:
             yield OperationMessage(
                 kind=kind,
-                message=e.message % e.params,
+                message=e.message % e.params if e.params else e.message,
             )
     else:
         msg = getattr(error, "msg", None)
