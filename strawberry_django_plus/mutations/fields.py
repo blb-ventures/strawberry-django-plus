@@ -70,9 +70,12 @@ def _get_validation_errors(error: Exception):
     elif isinstance(error, ValidationError) and hasattr(error, "error_list"):
         # convert non-field errors
         for e in error.error_list:
+            message = e.message
+            if e.params:
+                message %= e.params
             yield OperationMessage(
                 kind=kind,
-                message=e.message % e.params,
+                message=message,
             )
     else:
         msg = getattr(error, "msg", None)
