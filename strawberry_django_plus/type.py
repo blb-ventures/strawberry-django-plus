@@ -1,6 +1,9 @@
 import dataclasses
+import inspect
+import sys
 import types
 from contextlib import suppress
+from functools import cached_property
 from typing import (
     Callable,
     Literal,
@@ -21,7 +24,7 @@ from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.exceptions import PrivateStrawberryFieldError
+from strawberry.exceptions import MissingFieldAnnotationError, PrivateStrawberryFieldError
 from strawberry.field import UNRESOLVED, StrawberryField
 from strawberry.private import is_private
 from strawberry.types.fields.resolver import StrawberryResolver
@@ -151,18 +154,31 @@ def _from_django_type(
             django_type.model,
             getattr(field, "django_name", None) or name,
         )
-    except FieldDoesNotExist:
+    except FieldDoesNotExist as e:
         model_attr = getattr(django_type.model, name, None)
+        namespace = sys.modules[django_type.model.__module__].__dict__
         if model_attr is not None and isinstance(model_attr, ModelProperty):
             if field.is_auto:
                 annotation = model_attr.type_annotation
                 if get_origin(annotation) is Annotated:
                     annotation = get_args(annotation)[0]
-                field.type_annotation = StrawberryAnnotation(annotation)
+                field.type_annotation = StrawberryAnnotation(annotation, namespace=namespace)
                 field.is_auto = is_auto(field.type_annotation)
 
             if field.description is None:
                 field.description = model_attr.description
+        elif model_attr is not None and isinstance(model_attr, (property, cached_property)):
+            func = model_attr.fget if isinstance(model_attr, property) else model_attr.func
+            if field.is_auto:
+                annotations = func.__annotations__
+                if (return_type := annotations.get("return")) is None:
+                    raise MissingFieldAnnotationError(name, origin) from e
+
+                field.type_annotation = StrawberryAnnotation(return_type, namespace=namespace)
+                field.is_auto = is_auto(field.type_annotation)
+
+            if field.description is None and func.__doc__:
+                field.description = inspect.cleandoc(func.__doc__)
         elif field.django_name or field.is_auto:
             raise  # field should exist, reraise caught exception
     else:
