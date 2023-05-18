@@ -7,7 +7,6 @@ from typing import (
     Callable,
     Coroutine,
     Iterable,
-    List,
     Literal,
     Optional,
     Type,
@@ -37,10 +36,12 @@ _M = TypeVar("_M", bound=Model)
 _R = TypeVar("_R")
 _P = ParamSpec("_P")
 _sentinel = object()
-_async_to_sync = cast(
-    Callable[[Callable[[Awaitable[_T]], Coroutine[Any, Any, _T]]], Callable[[Awaitable[_T]], _T]],
-    async_to_sync,
-)
+
+
+def _async_to_sync(
+    func: Callable[[Awaitable[_T]], Coroutine[Any, Any, _T]],
+) -> Callable[[Awaitable[_T]], _T]:
+    return async_to_sync(func)
 
 
 @overload
@@ -199,18 +200,9 @@ def resolve_qs(qs, *, resolver=None, info=None) -> Any:  # type: ignore
     return resolver(qs)
 
 
-resolve_qs_get_list = cast(
-    Callable[[AwaitableOrValue[QuerySet[_M]]], AwaitableOrValue[List[_M]]],
-    functools.partial(resolve_qs, resolver=list),
-)
-resolve_qs_get_first = cast(
-    Callable[[AwaitableOrValue[QuerySet[_M]]], AwaitableOrValue[Optional[_M]]],
-    functools.partial(resolve_qs, resolver=lambda qs: qs.first()),
-)
-resolve_qs_get_one = cast(
-    Callable[[AwaitableOrValue[QuerySet[_M]]], AwaitableOrValue[_M]],
-    functools.partial(resolve_qs, resolver=lambda qs: qs.get()),
-)
+resolve_qs_get_list = functools.partial(resolve_qs, resolver=list)
+resolve_qs_get_first = functools.partial(resolve_qs, resolver=lambda qs: qs.first())
+resolve_qs_get_one = functools.partial(resolve_qs, resolver=lambda qs: qs.get())
 
 
 @overload
@@ -418,7 +410,7 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     else:
         origin = source
         django_type = get_django_type(source, ensure_type=True)
-        source = cast(Type[_M], django_type.model)
+        source = cast(Type[Model], django_type.model)
 
     if isinstance(node_id, GlobalID):
         node_id = node_id.node_id
