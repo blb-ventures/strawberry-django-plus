@@ -101,7 +101,7 @@ def from_base64(value: str) -> Tuple[str, str]:
     except Exception as e:  # noqa: BLE001
         raise ValueError(str(e)) from e
 
-    if len(res) != 2:
+    if len(res) != 2:  # noqa: PLR2004
         raise ValueError(f"{res} expected to contain only 2 items")
 
     return res[0], res[1]
@@ -171,11 +171,11 @@ class GlobalID:
     def __post_init__(self):
         if not isinstance(self.type_name, str):
             raise GlobalIDValueError(
-                f"type_name is expected to be a string, found {repr(self.type_name)}",
+                f"type_name is expected to be a string, found {self.type_name!r}",
             )
         if not isinstance(self.node_id, str):
             raise GlobalIDValueError(
-                f"node_id is expected to be a string, found {repr(self.node_id)}",
+                f"node_id is expected to be a string, found {self.node_id!r}",
             )
 
     def __str__(self):

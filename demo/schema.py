@@ -321,7 +321,7 @@ class Mutation:
         due_date: Optional[datetime.datetime] = None,
     ) -> ProjectType:
         """Create project documentation."""
-        if cost > 500:
+        if cost > 500:  # noqa: PLR2004
             raise ValidationError({"cost": "Cost cannot be higher than 500"})
 
         return cast(

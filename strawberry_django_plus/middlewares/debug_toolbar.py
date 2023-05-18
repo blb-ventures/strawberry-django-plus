@@ -155,7 +155,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         is_html = content_type in _HTML_TYPES
         is_graphiql = getattr(request, "_is_graphiql", False)
 
-        if is_html and is_graphiql and response.status_code == 200:
+        if is_html and is_graphiql and response.status_code == 200:  # noqa: PLR2004
             template = render_to_string("strawberry_django_plus/debug_toolbar.html")
             response.write(template)
             if "Content-Length" in response:

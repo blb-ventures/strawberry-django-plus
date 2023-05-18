@@ -490,7 +490,7 @@ class PermDefinition:
     @classmethod
     def from_perm(cls, perm: str):
         parts = perm.split(".")
-        if len(parts) != 2:
+        if len(parts) != 2:  # noqa: PLR2004
             raise TypeError(
                 "Permissions need to be defined as `app_label.perm`, `app_label.` or `.perm`",
             )

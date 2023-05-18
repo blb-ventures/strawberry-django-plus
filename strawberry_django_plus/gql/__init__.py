@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-import strawberry_django
+import strawberry_django  # noqa: TCH002
 from strawberry import (
     ID,
     UNSET,

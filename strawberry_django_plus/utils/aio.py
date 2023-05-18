@@ -94,7 +94,7 @@ async def resolve_async(
         if (origin := get_origin(ensure_type)) and origin is Union:
             ensure_type = tuple(get_args(ensure_type))
         if not isinstance(ret, ensure_type):
-            raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
+            raise TypeError(f"{ensure_type} expected, found {ret!r}")
 
     # FIXME: Remove cast once pyright resolves the negative TypeGuard form
     ret = cast(_R, ret)
@@ -159,7 +159,7 @@ def resolve(value, resolver, *, ensure_type=None, info=None):
         if (origin := get_origin(ensure_type)) and origin is Union:
             ensure_type = tuple(get_args(ensure_type))
         if not isinstance(ret, ensure_type):
-            raise TypeError(f"{ensure_type} expected, found {repr(ret)}")
+            raise TypeError(f"{ensure_type} expected, found {ret!r}")
 
     return ret
 

@@ -13,13 +13,13 @@ from typing import (
 )
 
 from django.db.models.base import Model
-from django.db.models.query import Prefetch
 from typing_extensions import Self
 
-from .utils.typing import TypeOrSequence
-
 if TYPE_CHECKING:
+    from django.db.models.query import Prefetch
+
     from .optimizer import OptimizerStore, PrefetchType
+    from .utils.typing import TypeOrSequence
 
 __all__ = [
     "ModelProperty",

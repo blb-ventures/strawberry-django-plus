@@ -27,7 +27,6 @@ from django.db.models.fields.reverse_related import (
     OneToOneRel,
 )
 from strawberry import UNSET
-from strawberry.file_uploads.scalars import Upload
 from strawberry.types.info import Info
 from strawberry_django.fields.types import (
     ManyToManyInput,
@@ -45,6 +44,7 @@ from strawberry_django_plus.utils.resolvers import resolve_sync
 
 if TYPE_CHECKING:
     from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
+    from strawberry.file_uploads.scalars import Upload
 
 _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
@@ -256,7 +256,7 @@ def update(info, instance, data, *, full_clean: Union[bool, FullCleanOptions] = 
     files: List[
         Tuple[
             models.FileField,
-            Union[Upload, Literal[False]],
+            Union["Upload", Literal[False]],
         ]
     ] = []
     m2m: List[Tuple[Union[ManyToManyField, ForeignObjectRel], Any]] = []
