@@ -327,6 +327,13 @@ def _process_type(
                 cls,
             )
 
+        # Adjust types that inherit from other types/interfaces that implement Node
+        # to make sure they pass themselves as the node type
+        for attr in ["resolve_node", "resolve_nodes", "resolve_id"]:
+            meth = getattr(cls, attr)
+            if isinstance(meth, types.MethodType) and meth.__self__ is not cls:
+                setattr(cls, attr, types.MethodType(cast(classmethod, meth).__func__, cls))
+
     strawberry.type(cls, **kwargs)
 
     # restore original annotations for further use
