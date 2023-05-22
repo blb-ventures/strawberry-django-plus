@@ -588,3 +588,66 @@ def test_query_connection_nested(db, gql_client: GraphQLTestClient):
             },
         ],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_nested_fragments(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        issueConn {
+          ...IssueConnection2
+          ...IssueConnection1
+        }
+      }
+
+      fragment IssueConnection1 on IssueTypeConnection {
+        edges {
+          node {
+            issueAssignees {
+              id
+            }
+          }
+        }
+      }
+
+      fragment IssueConnection2 on IssueTypeConnection {
+        edges {
+          node {
+            milestone {
+              id
+              project {
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    UserFactory.create()
+    expected = {"issueConn": {"edges": []}}
+    for i in IssueFactory.create_batch(2):
+        assert i.milestone
+        assert i.milestone.project
+
+        assignee1 = Assignee.objects.create(user=UserFactory.create(), issue=i)
+        assignee2 = Assignee.objects.create(user=UserFactory.create(), issue=i)
+        expected["issueConn"]["edges"].append(
+            {
+                "node": {
+                    "issueAssignees": [
+                        {"id": to_base64("AssigneeType", assignee1.pk)},
+                        {"id": to_base64("AssigneeType", assignee2.pk)},
+                    ],
+                    "milestone": {
+                        "id": to_base64("MilestoneType", i.milestone.pk),
+                        "project": {"name": i.milestone.project.name},
+                    },
+                },
+            },
+        )
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 8):
+        res = gql_client.query(query)
+
+    assert res.data == expected

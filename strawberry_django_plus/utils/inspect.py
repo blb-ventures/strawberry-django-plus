@@ -211,6 +211,27 @@ def get_selections(
     # later selections should replace previous ones
     ret: Dict[str, SelectedField] = {}
 
+    def merge_selections(f1: SelectedField, f2: SelectedField) -> SelectedField:
+        if not f1.selections:
+            return f2
+        if not f2.selections:
+            return f1
+
+        f1_selections = {s.name: s for s in cast(List[SelectedField], f1.selections)}
+        f2_selections = {s.name: s for s in cast(List[SelectedField], f2.selections)}
+
+        selections: Dict[str, SelectedField] = {}
+        for f_name in set(f1_selections) - set(f2_selections):
+            selections[f_name] = f1_selections[f_name]
+        for f_name in set(f2_selections) - set(f1_selections):
+            selections[f_name] = f2_selections[f_name]
+        for f_name in set(f2_selections) & set(f1_selections):
+            selections[f_name] = f1_selections[f_name]
+            selections[f_name] = merge_selections(f1_selections[f_name], f2_selections[f_name])
+
+        f1.selections = list(selections.values())
+        return f1
+
     for s in selection.selections:
         if isinstance(s, SelectedField):
             # @include(if: <bool>)
@@ -226,12 +247,7 @@ def get_selections(
             f_name = s.alias or s.name
             existing = ret.get(f_name)
             if existing := ret.get(f_name):
-                s.selections = list(
-                    {
-                        **get_selections(existing),
-                        **get_selections(s),
-                    }.values(),
-                )
+                ret[f_name] = merge_selections(existing, s)
             else:
                 ret[f_name] = s
         elif isinstance(s, (FragmentSpread, InlineFragment)):
@@ -241,13 +257,9 @@ def get_selections(
             for f_name, f in get_selections(s, typename=typename).items():
                 existing = ret.get(f_name)
                 if existing is not None:
-                    f.selections = list(
-                        {
-                            **get_selections(existing),
-                            **get_selections(f),
-                        }.values(),
-                    )
-                ret[f_name] = f
+                    ret[f_name] = merge_selections(existing, f)
+                else:
+                    ret[f_name] = f
         else:  # pragma:nocover
             assert_never(s)
 
