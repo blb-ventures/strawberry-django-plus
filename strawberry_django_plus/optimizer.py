@@ -6,6 +6,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    ForwardRef,
     Generator,
     List,
     Optional,
@@ -15,6 +16,7 @@ from typing import (
     Union,
     cast,
 )
+import typing
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.db import models
@@ -69,6 +71,28 @@ _interfaces: "defaultdict[Schema, Dict[TypeDefinition, List[TypeDefinition]]]" =
 
 PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], Prefetch]
 PrefetchType: TypeAlias = Union[str, Prefetch, PrefetchCallable]
+
+
+def _get_prefetch_queryset(
+    remote_model: models.Model,
+    field,
+    config: "OptimizerConfig",
+    info: GraphQLResolveInfo
+) -> QuerySet:
+    """Returns a model's original QuerySet or a user's specified one.
+    
+    If config.prefetch_custom_queryset is set True, the type's get_queryset() as well as
+    the model's custom manager/queryset are used to generate the prefetch query.
+    """
+
+    if not config.prefetch_custom_queryset:
+        return remote_model._base_manager.all()
+    remote_type_def = field.type_annotation.annotation.__args__[0]
+    if type(remote_type_def) is ForwardRef:
+        remote_type = typing._eval_type(remote_type_def, globals(), globals())
+    else:
+        remote_type = remote_type_def
+    return remote_type.get_queryset(remote_model.objects.all(), info)
 
 
 def _get_model_hints(
@@ -250,10 +274,12 @@ def _get_model_hints(
 
                         model_cache.setdefault(remote_model, []).append((level, f_store))
 
-                        # We need to use _base_manager here instead of _default_manager because we
-                        # are getting related objects, and not querying it directly
+                        # If prefetch_custom_queryset is not set, we use _base_manager here instead of
+                        # _default_manager because we are getting related objects, and not querying it
+                        # directly. Else the type's get_queryset and model's custom QuerySet are used.
+                        base_qs = _get_prefetch_queryset(remote_model, field, config, info)
                         f_qs = f_store.apply(
-                            remote_model._base_manager.all(),  # type: ignore
+                            base_qs,
                             info=info,
                             config=config,
                         )
@@ -391,12 +417,15 @@ class OptimizerConfig:
             Enable `QuerySet.select_related` optimizations
         enable_prefetch_related:
             Enable `QuerySet.prefetch_related` optimizations
+        prefetch_custom_queryset:
+            Use custom instead of _base_manager for prefetch querysets
 
     """
 
     enable_only: bool = dataclasses.field(default=True)
     enable_select_related: bool = dataclasses.field(default=True)
     enable_prefetch_related: bool = dataclasses.field(default=True)
+    prefetch_custom_queryset: bool = dataclasses.field(default=False)
 
 
 @dataclasses.dataclass
@@ -590,11 +619,13 @@ class DjangoOptimizerExtension(SchemaExtension):
         enable_select_related_optimization: bool = True,
         enable_prefetch_related_optimization: bool = True,
         execution_context: Optional[ExecutionContext] = None,
+        prefetch_custom_queryset: bool = False,
     ):
         super().__init__(execution_context=execution_context)  # type: ignore
         self._enable_ony = enable_only_optimization
         self._enable_select_related = enable_select_related_optimization
         self._enable_prefetch_related = enable_prefetch_related_optimization
+        self._prefetch_custom_queryset = prefetch_custom_queryset
 
     def on_execute(self) -> Generator[None, None, None]:
         if enabled := self.enabled.get():
@@ -628,6 +659,7 @@ class DjangoOptimizerExtension(SchemaExtension):
                     ),
                     enable_select_related=self._enable_select_related,
                     enable_prefetch_related=self._enable_prefetch_related,
+                    prefetch_custom_queryset=self._prefetch_custom_queryset
                 )
                 return resolvers.resolve_qs(optimize(qs=ret, info=info, config=config))
 
@@ -647,5 +679,6 @@ class DjangoOptimizerExtension(SchemaExtension):
             enable_only=self._enable_ony and info.operation.operation == OperationType.QUERY,
             enable_select_related=self._enable_select_related,
             enable_prefetch_related=self._enable_prefetch_related,
+            prefetch_custom_queryset=self._prefetch_custom_queryset
         )
         return optimize(qs, info, config=config, store=store)
