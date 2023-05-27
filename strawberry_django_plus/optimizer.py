@@ -1,6 +1,7 @@
 import contextvars
 import dataclasses
 import itertools
+import typing
 from collections import defaultdict
 from typing import (
     Any,
@@ -16,7 +17,6 @@ from typing import (
     Union,
     cast,
 )
-import typing
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.db import models
@@ -39,6 +39,7 @@ from strawberry.types.info import Info
 from strawberry.types.nodes import InlineFragment, Selection, convert_selections
 from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
+from strawberry.utils.typing import eval_type
 from strawberry_django.fields.types import resolve_model_field_name
 from typing_extensions import TypeAlias, assert_never, assert_type
 
@@ -77,19 +78,18 @@ def _get_prefetch_queryset(
     remote_model: models.Model,
     field,
     config: "OptimizerConfig",
-    info: GraphQLResolveInfo
+    info: GraphQLResolveInfo,
 ) -> QuerySet:
     """Returns a model's original QuerySet or a user's specified one.
-    
+
     If config.prefetch_custom_queryset is set True, the type's get_queryset() as well as
     the model's custom manager/queryset are used to generate the prefetch query.
     """
-
     if not config.prefetch_custom_queryset:
         return remote_model._base_manager.all()
-    remote_type_def = field.type_annotation.annotation.__args__[0]
+    remote_type_def = typing.get_args(field.type_annotation.annotation)
     if type(remote_type_def) is ForwardRef:
-        remote_type = typing._eval_type(remote_type_def, globals(), globals())
+        remote_type = eval_type(remote_type_def, field.type_annotation.namespace, None)
     else:
         remote_type = remote_type_def
     return remote_type.get_queryset(remote_model.objects.all(), info)
@@ -274,9 +274,9 @@ def _get_model_hints(
 
                         model_cache.setdefault(remote_model, []).append((level, f_store))
 
-                        # If prefetch_custom_queryset is not set, we use _base_manager here instead of
-                        # _default_manager because we are getting related objects, and not querying it
-                        # directly. Else the type's get_queryset and model's custom QuerySet are used.
+                        # If prefetch_custom_queryset is false, use _base_manager here instead of
+                        # _default_manager because we are getting related objects, and not querying
+                        # it directly. Else use the type's get_queryset and model's custom QuerySet.
                         base_qs = _get_prefetch_queryset(remote_model, field, config, info)
                         f_qs = f_store.apply(
                             base_qs,
@@ -659,7 +659,7 @@ class DjangoOptimizerExtension(SchemaExtension):
                     ),
                     enable_select_related=self._enable_select_related,
                     enable_prefetch_related=self._enable_prefetch_related,
-                    prefetch_custom_queryset=self._prefetch_custom_queryset
+                    prefetch_custom_queryset=self._prefetch_custom_queryset,
                 )
                 return resolvers.resolve_qs(optimize(qs=ret, info=info, config=config))
 
@@ -679,6 +679,6 @@ class DjangoOptimizerExtension(SchemaExtension):
             enable_only=self._enable_ony and info.operation.operation == OperationType.QUERY,
             enable_select_related=self._enable_select_related,
             enable_prefetch_related=self._enable_prefetch_related,
-            prefetch_custom_queryset=self._prefetch_custom_queryset
+            prefetch_custom_queryset=self._prefetch_custom_queryset,
         )
         return optimize(qs, info, config=config, store=store)
