@@ -87,11 +87,13 @@ def _get_prefetch_queryset(
     """
     if not config.prefetch_custom_queryset:
         return remote_model._base_manager.all()
-    remote_type_def = typing.get_args(field.type_annotation.annotation)
-    if type(remote_type_def) is ForwardRef:
-        remote_type = eval_type(remote_type_def, field.type_annotation.namespace, None)
+    remote_type_defs = typing.get_args(field.type_annotation.annotation)
+    if len(remote_type_defs) != 1:
+        raise TypeError(f"Expected exactly one remote type: {remote_type_defs}")
+    if type(remote_type_defs[0]) is ForwardRef:
+        remote_type = eval_type(remote_type_defs[0], field.type_annotation.namespace, None)
     else:
-        remote_type = remote_type_def
+        remote_type = remote_type_defs[0]
     return remote_type.get_queryset(remote_model.objects.all(), info)
 
 
