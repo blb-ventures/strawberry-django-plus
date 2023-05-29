@@ -21,7 +21,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: python
           package-name: strawberry-django-plus
-          extra-files: k8s/base/kustomization.yaml
+          extra-files: strawberry-django-plus/__init__.py
           changelog-types: >
             [{"type":"feat","section":"Features","hidden":false},
              {"type":"fix","section":"Bug Fixes","hidden":false},
