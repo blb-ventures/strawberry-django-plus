@@ -21,4 +21,4 @@ jobs:
           cache: poetry
       - run: |-
           poetry install
-          mkdocs gh-deploy --force
+          poetry run mkdocs gh-deploy --force
