@@ -1,74 +1,79 @@
 ---
-name: Run Tests
+name: 🧪 Tests
 
+# yamllint disable-line rule:truthy
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
-  release:
-    types:
-      - released
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: -a
-
-  tests:
+  typing:
+    name: Typing
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        django-version: ["3.2.0", "4.0.0", "4.1.0", "4.2.0"]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Install poetry
         run: |
           pipx install poetry
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
-
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: poetry
+      - name: Install dependencies
+        run: |
+          poetry install -E debug-toolbar -E enum
+      - name: Check for pyright errors
+        uses: jakebailey/pyright-action@v1
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        django-version:
+          - 3.2.*
+          - 4.0.*
+          - 4.1.*
+          - 4.2.*
+        python-version:
+          - '3.8'
+          - '3.9'
+          - '3.10'
+          - '3.11'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "poetry"
-
+          cache: poetry
       - name: Install dependencies
         run: |
           poetry install -E debug-toolbar -E enum
           poetry run pip install "Django~=${{ matrix.django-version }}"
-
       - name: Check for pyright errors
         uses: jakebailey/pyright-action@v1
-
       - name: Run tests
         run: poetry run pytest -vvv --cov-report=xml
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
-
-  publish:
-    runs-on: ubuntu-latest
-    needs: [lint, tests]
-    if: ${{ needs.lint.result == 'success' &&
-      needs.tests.result == 'success' &&
-      github.event.action == 'released' }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Build and publish to pypi
-        uses: JRubics/poetry-publish@v1.13
-        with:
-          pypi_token: ${{ secrets.PYPI_TOKEN }}
