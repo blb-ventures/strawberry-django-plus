@@ -75,9 +75,9 @@ PrefetchType: TypeAlias = Union[str, Prefetch, PrefetchCallable]
 
 
 def _get_prefetch_queryset(
-    remote_model: models.Model,
+    remote_model: Type[models.Model],
     field,
-    config: "OptimizerConfig",
+    config: Optional["OptimizerConfig"],
     info: GraphQLResolveInfo,
 ) -> QuerySet:
     """Returns a model's original QuerySet or a user's specified one.
@@ -85,8 +85,8 @@ def _get_prefetch_queryset(
     If config.prefetch_custom_queryset is set True, the type's get_queryset() as well as
     the model's custom manager/queryset are used to generate the prefetch query.
     """
-    if not config.prefetch_custom_queryset:
-        return remote_model._base_manager.all()
+    if not config or not config.prefetch_custom_queryset:
+        return remote_model._base_manager.all()  # type: ignore
     remote_type_defs = typing.get_args(field.type_annotation.annotation)
     if len(remote_type_defs) != 1:
         raise TypeError(f"Expected exactly one remote type: {remote_type_defs}")
