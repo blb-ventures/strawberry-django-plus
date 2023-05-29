@@ -1,10 +1,10 @@
 import dataclasses
+import functools
 import inspect
 import sys
 import types
 from contextlib import suppress
 from functools import cached_property
-from functools import partial as partialfunc
 from typing import (
     Callable,
     Literal,
@@ -61,6 +61,33 @@ _O = TypeVar("_O", bound=type)
 _M = TypeVar("_M", bound=Model)
 
 
+class WrappablePartial(functools.partial):
+    """Handle broken functools.partial in Python 3.8 - 3.9.
+
+    Should resolve the error:
+        AttributeError: 'functools.partial' object has no attribute '__module__'
+
+    Fix taken from StackOverflow:
+        https://stackoverflow.com/a/33173123/6783666
+    """
+
+    @property
+    def __module__(self):
+        return self.func.__module__
+
+    @property
+    def __name__(self):  # noqa: A003
+        return "functools.partial({}, *{}, **{})".format(
+            self.func.__name__,
+            self.args,
+            self.keywords,
+        )
+
+    @property
+    def __doc__(self):  # noqa: A003
+        return self.func.__doc__
+
+
 def _from_django_type(
     django_type: "StrawberryDjangoType",
     name: str,
@@ -103,7 +130,7 @@ def _from_django_type(
                     qs = remote_type.get_queryset(qs, info)
                 return qs
 
-            aware_conn_resolver = partialfunc(conn_resolver, type_annotation)
+            aware_conn_resolver = WrappablePartial(conn_resolver, type_annotation)
 
             field.base_resolver = StrawberryResolver(aware_conn_resolver)
             if type_annotation is not None:
