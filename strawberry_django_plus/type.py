@@ -93,12 +93,12 @@ def _from_django_type(
 
         if not field.base_resolver:
 
-            def conn_resolver(type_annotation: Optional[StrawberryAnnotation], root, info: Info):
+            def conn_resolver(parent_annotation: Optional[StrawberryAnnotation], root, info: Info):
                 qs = getattr(root, name).all()
-                if not type_annotation:
+                if not parent_annotation:
                     return qs
-                remote_type_defs = get_args(type_annotation.annotation)
-                remote_type = eval_type(remote_type_defs[0], type_annotation.namespace, None)
+                remote_type_defs = get_args(parent_annotation.annotation)
+                remote_type = eval_type(remote_type_defs[0], parent_annotation.namespace, None)
                 if hasattr(remote_type, "get_queryset"):
                     qs = remote_type.get_queryset(qs, info)
                 return qs
