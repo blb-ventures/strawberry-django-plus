@@ -4,6 +4,7 @@ import sys
 import types
 from contextlib import suppress
 from functools import cached_property
+from functools import partial as partialfunc
 from typing import (
     Callable,
     Literal,
@@ -27,9 +28,10 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import MissingFieldAnnotationError, PrivateStrawberryFieldError
 from strawberry.field import UNRESOLVED, StrawberryField
 from strawberry.private import is_private
+from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
-from strawberry.utils.typing import __dataclass_transform__
+from strawberry.utils.typing import __dataclass_transform__, eval_type
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import get_model_field, resolve_model_field_name
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
@@ -89,13 +91,18 @@ def _from_django_type(
 
         field = cast(StrawberryDjangoField, field)
 
-        # FIXME: Improve this...
         if not field.base_resolver:
 
-            def conn_resolver(root):
-                return getattr(root, name).all()
+            def conn_resolver(type_annotation, root, info: Info):
+                qs =  getattr(root, name).all()
+                remote_type_defs = get_args(type_annotation.annotation)
+                remote_type = eval_type(remote_type_defs[0], type_annotation.namespace, None)
+                if hasattr(remote_type, "get_queryset"):
+                    return remote_type.get_queryset(qs, info)
+                return qs
+            aware_conn_resolver = partialfunc(conn_resolver, type_annotation)
 
-            field.base_resolver = StrawberryResolver(conn_resolver)
+            field.base_resolver = StrawberryResolver(aware_conn_resolver)
             if type_annotation is not None:
                 field.type_annotation = type_annotation
     elif isinstance(attr, StrawberryDjangoField) and not attr.origin_django_type:
