@@ -98,7 +98,7 @@ def _from_django_type(
                 remote_type_defs = get_args(type_annotation.annotation)
                 remote_type = eval_type(remote_type_defs[0], type_annotation.namespace, None)
                 if hasattr(remote_type, "get_queryset"):
-                    return remote_type.get_queryset(qs, info)
+                    qs = remote_type.get_queryset(qs, info)
                 return qs
             aware_conn_resolver = partialfunc(conn_resolver, type_annotation)
 
