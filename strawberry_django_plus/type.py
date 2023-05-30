@@ -1,5 +1,4 @@
 import dataclasses
-import functools
 import inspect
 import sys
 import types
@@ -61,33 +60,6 @@ _O = TypeVar("_O", bound=type)
 _M = TypeVar("_M", bound=Model)
 
 
-class WrappablePartial(functools.partial):
-    """Handle broken functools.partial in Python 3.8 - 3.9.
-
-    Should resolve the error:
-        AttributeError: 'functools.partial' object has no attribute '__module__'
-
-    Fix taken from StackOverflow:
-        https://stackoverflow.com/a/33173123/6783666
-    """
-
-    @property
-    def __module__(self):
-        return self.func.__module__
-
-    @property
-    def __name__(self):  # noqa: A003
-        return "functools.partial({}, *{}, **{})".format(
-            self.func.__name__,
-            self.args,
-            self.keywords,
-        )
-
-    @property
-    def __doc__(self):  # noqa: A003
-        return self.func.__doc__
-
-
 def _from_django_type(
     django_type: "StrawberryDjangoType",
     name: str,
@@ -120,19 +92,17 @@ def _from_django_type(
 
         if not field.base_resolver:
 
-            def conn_resolver(parent_annotation: Optional[StrawberryAnnotation], root, info: Info):
+            def conn_resolver(root, info: Info):
                 qs = getattr(root, name).all()
-                if not parent_annotation:
+                if not type_annotation:
                     return qs
-                remote_type_defs = get_args(parent_annotation.annotation)
-                remote_type = eval_type(remote_type_defs[0], parent_annotation.namespace, None)
+                remote_type_defs = get_args(type_annotation.annotation)
+                remote_type = eval_type(remote_type_defs[0], type_annotation.namespace, None)
                 if hasattr(remote_type, "get_queryset"):
                     qs = remote_type.get_queryset(qs, info)
                 return qs
 
-            aware_conn_resolver = WrappablePartial(conn_resolver, type_annotation)
-
-            field.base_resolver = StrawberryResolver(aware_conn_resolver)
+            field.base_resolver = StrawberryResolver(conn_resolver)
             if type_annotation is not None:
                 field.type_annotation = type_annotation
     elif isinstance(attr, StrawberryDjangoField) and not attr.origin_django_type:
