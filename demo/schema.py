@@ -24,7 +24,7 @@ from strawberry_django_plus.permissions import (
     IsSuperuser,
 )
 
-from .models import Assignee, Issue, Milestone, Project, Quiz, Tag
+from .models import Assignee, Favorite, FavoriteQuerySet, Issue, Milestone, Project, Quiz, Tag
 
 UserModel = cast(Type[AbstractUser], get_user_model())
 
@@ -122,6 +122,17 @@ class MilestoneType(relay.Node):
         return f"value: {value}"
 
 
+@gql.django.type(Favorite)
+class FavoriteType(relay.Node):
+    name: gql.auto
+    user: UserType
+    issue: "IssueType"
+
+    @classmethod
+    def get_queryset(cls, queryset: FavoriteQuerySet, info: Info) -> QuerySet:
+        return queryset.by_user(info.context.request.user)
+
+
 @gql.django.type(Issue)
 class IssueType(relay.Node):
     name: gql.auto
@@ -132,6 +143,7 @@ class IssueType(relay.Node):
     name_with_kind: str = gql.django.field(only=["kind", "name"])
     tags: List["TagType"]
     issue_assignees: List["AssigneeType"]
+    favorite_set: relay.Connection["FavoriteType"]
 
 
 @gql.django.type(Tag)
@@ -218,6 +230,7 @@ class Query:
 
     node: Optional[gql.Node] = gql.django.node()
 
+    favorite: Optional[FavoriteType] = gql.django.node()
     issue: Optional[IssueType] = gql.django.node(description="Foobar")
     milestone: Optional[Annotated["MilestoneType", gql.lazy("demo.schema")]] = gql.django.node()
     milestone_mandatory: MilestoneType = gql.django.node()
@@ -237,6 +250,7 @@ class Query:
     project_list: List[ProjectType] = gql.django.field()
     tag_list: List[TagType] = gql.django.field()
 
+    favorite_conn: relay.Connection[FavoriteType] = gql.django.connection()
     issue_conn: relay.Connection[
         gql.LazyType["IssueType", "demo.schema"]  # type: ignore  # noqa: F821
     ] = gql.django.connection()

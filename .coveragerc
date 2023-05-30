@@ -12,3 +12,5 @@ exclude_lines =
     @abstractmethod
     @abc.abstractmethod
     assert_never
+omit =
+    */tests/*

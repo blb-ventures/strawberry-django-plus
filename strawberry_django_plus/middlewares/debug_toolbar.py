@@ -146,6 +146,8 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         return await sync_to_async(self.process_request, thread_sensitive=False)(request)
 
     def process_request(self, request: HttpRequest):
+        # Warm up user object in sync context
+        request.user.is_anonymous  # noqa: B018
         response = super().__call__(request)
 
         if not show_toolbar(request) or DebugToolbar.is_toolbar_request(request):

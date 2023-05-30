@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_choices_field.fields import TextChoicesField
 
@@ -71,6 +72,31 @@ class Milestone(models.Model):
         related_name="milestones",
         related_query_name="milestone",
     )
+
+
+class FavoriteQuerySet(QuerySet):
+    def by_user(self, user: User):
+        if user.is_anonymous:
+            return self.none()
+        return self.filter(user__pk=user.pk)
+
+
+class Favorite(models.Model):
+    """A user's favorite issues."""
+
+    class Meta:
+        # Needed to allow type's get_queryset() to access a model's custom QuerySet
+        base_manager_name = "objects"
+
+    id = models.BigAutoField(  # noqa: A003
+        verbose_name="ID",
+        primary_key=True,
+    )
+    name = models.CharField(max_length=32)
+    user = models.ForeignKey(User, related_name="favorite_set", on_delete=models.CASCADE)
+    issue = models.ForeignKey("Issue", related_name="favorite_set", on_delete=models.CASCADE)
+
+    objects = FavoriteQuerySet.as_manager()
 
 
 class Issue(models.Model):
