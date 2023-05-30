@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_choices_field.fields import TextChoicesField
 
 from strawberry_django_plus.descriptors import model_property
+from strawberry_django_plus.utils.typing import UserType
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -75,7 +76,7 @@ class Milestone(models.Model):
 
 
 class FavoriteQuerySet(QuerySet):
-    def by_user(self, user: User):
+    def by_user(self, user: UserType):
         if user.is_anonymous:
             return self.none()
         return self.filter(user__pk=user.pk)

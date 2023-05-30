@@ -1007,6 +1007,8 @@ def test_query_connection_get_queryset(db, gql_client: GraphQLTestClient):
 
     with gql_client.login(user_a):
         res = gql_client.query(query, {"id": relay.to_base64("IssueType", issue.pk)})
+        assert res.data
+        assert isinstance(res.data["issue"], dict)
         nodes = [i["node"] for i in res.data["issue"]["favoriteSet"]["edges"]]
         assert nodes == [
             {
