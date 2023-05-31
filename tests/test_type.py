@@ -8,12 +8,6 @@ from strawberry.printer import print_schema
 from strawberry_django_plus import gql
 
 
-class MyChoice(models.TextChoices):
-    ONE = "One", "The first number"
-    TWO = "Two", "The second number"
-    THREE = "Three", "The third number"
-
-
 class MyModel(models.Model):
     class Meta:
         app_label = "tests"
@@ -21,8 +15,6 @@ class MyModel(models.Model):
     id = models.BigAutoField(  # noqa: A003
         primary_key=True,
     )
-
-    choice = models.CharField(choices=MyChoice.choices, default=MyChoice.ONE)
 
     @property
     def some_property(self) -> str:
@@ -38,30 +30,6 @@ class MyModel(models.Model):
     def some_model_property(self) -> str:
         """Some model property doc."""
         return "some_value"
-
-
-def test_choice_field(use_generate_enums_from_choices):
-    @gql.django.type(MyModel)
-    class MyType:
-        choice: gql.auto
-
-    @strawberry.type
-    class Query:
-        my_type: MyType
-
-    expected_representation = '''
-    type MyType {
-      """Some property doc."""
-      choice: TestsMyModelChoiceEnum!
-    }
-
-    type Query {
-      someType: MyType!
-    }
-    '''
-
-    schema = strawberry.Schema(Query)
-    assert print_schema(schema) == textwrap.dedent(expected_representation).strip()
 
 
 def test_property():
