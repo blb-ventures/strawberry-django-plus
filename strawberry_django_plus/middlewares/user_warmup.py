@@ -14,7 +14,7 @@ def user_warmup_middleware(
 
         async def middleware(request):  # type: ignore
             # Warm up user object in sync context
-            await sync_to_async(getattr)(request, "user")
+            await sync_to_async(getattr)(request.user, "is_anonymous")
             return await cast(Awaitable, get_response(request))
 
     else:
