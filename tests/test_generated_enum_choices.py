@@ -1,5 +1,6 @@
 import textwrap
 
+import pytest
 import strawberry
 from django.db import models
 from strawberry.printer import print_schema
@@ -38,7 +39,8 @@ def make_schema():
     return strawberry.Schema(Query)
 
 
-def test_schema(use_generate_enums_from_choices):
+@pytest.mark.usefixtures("_use_generate_enums_from_choices")
+def test_schema():
     schema = make_schema()
 
     expected_representation = '''
@@ -66,10 +68,12 @@ def test_schema(use_generate_enums_from_choices):
     assert print_schema(schema) == textwrap.dedent(expected_representation).strip()
 
 
-def test_enum_data_query(use_generate_enums_from_choices):
+@pytest.mark.usefixtures("_use_generate_enums_from_choices")
+def test_enum_data_query():
     schema = make_schema()
 
-    res = schema.execute_sync("""
+    res = schema.execute_sync(
+        """
       query TestsUserFavoritesFavoriteNumberEnumQuery {
         enumData: __type(name: "TestsUserFavoritesFavoriteNumberEnum") {
           name
@@ -79,7 +83,8 @@ def test_enum_data_query(use_generate_enums_from_choices):
           }
         }
       }
-      """)
+      """,
+    )
 
     assert res.data == {
         "enumData": {

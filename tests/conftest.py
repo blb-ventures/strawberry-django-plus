@@ -1,8 +1,10 @@
 from typing import Dict, Tuple, Type, Union, cast
 
 import pytest
-from django.test.client import AsyncClient  # type: ignore
-from django.test.client import Client
+from django.test.client import (
+    AsyncClient,  # type: ignore
+    Client,
+)
 
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from tests.utils import GraphQLTestClient
@@ -26,5 +28,5 @@ def gql_client(request):
 
 
 @pytest.fixture(autouse=False)
-def use_generate_enums_from_choices(settings):
+def __use_generate_enums_from_choices(settings):
     settings.STRAWBERRY_DJANGO_GENERATE_ENUMS_FROM_CHOICES = True
