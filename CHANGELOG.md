@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.0](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.5.0...v2.6.0) (2023-06-01)
+
+
+### Features
+
+* add description to enums from django choices ([#217](https://github.com/blb-ventures/strawberry-django-plus/issues/217)) ([4d640e7](https://github.com/blb-ventures/strawberry-django-plus/commit/4d640e7d5cb05ed9bac79743e291121d2a9e56fa))
+* use a type's get_queryset for Relay connections if it defines one ([#215](https://github.com/blb-ventures/strawberry-django-plus/issues/215)) ([bb3af76](https://github.com/blb-ventures/strawberry-django-plus/commit/bb3af7675a175fc3b85eedef54464198d38613da))
+
 ## [2.5.0](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.4.2...v2.5.0) (2023-05-29)
 
 
