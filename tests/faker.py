@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractUser, Group
 
-from demo.models import Issue, Milestone, Project, Tag
+from demo.models import Favorite, Issue, Milestone, Project, Tag
 
 _T = TypeVar("_T")
 User = cast(Type[AbstractUser], get_user_model())
@@ -63,6 +63,13 @@ class MilestoneFactory(_BaseFactory[Milestone]):
     name = factory.Sequence(lambda n: f"Milestone {n}")
     due_date = factory.Faker("future_date")
     project = factory.SubFactory(ProjectFactory)
+
+
+class FavoriteFactory(_BaseFactory[Favorite]):
+    class Meta:
+        model = Favorite
+
+    name = factory.Sequence(lambda n: f"Favorite {n}")
 
 
 class IssueFactory(_BaseFactory[Issue]):

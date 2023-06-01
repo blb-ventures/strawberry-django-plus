@@ -115,6 +115,34 @@ scalar Decimal
 
 union DeleteIssuePayload = IssueType | OperationInfo
 
+type FavoriteType implements Node {
+  id: GlobalID!
+  name: String!
+  user: UserType!
+  issue: IssueType!
+}
+
+"""A connection to a list of items."""
+type FavoriteTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [FavoriteTypeEdge!]!
+
+  """Total quantity of existing nodes"""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type FavoriteTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: FavoriteType!
+}
+
 """
 The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
 """
@@ -170,6 +198,19 @@ type IssueType implements Node {
   nameWithKind: String!
   tags: [TagType!]!
   issueAssignees: [AssigneeType!]!
+  favoriteSet(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): FavoriteTypeConnection!
 }
 
 """A connection to a list of items."""
@@ -390,6 +431,10 @@ type Query {
     """The ID of the object."""
     id: GlobalID!
   ): Node
+  favorite(
+    """The ID of the object."""
+    id: GlobalID!
+  ): FavoriteType
 
   """Foobar"""
   issue(
@@ -432,6 +477,19 @@ type Query {
   milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   projectList: [ProjectType!]!
   tagList: [TagType!]!
+  favoriteConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): FavoriteTypeConnection!
   issueConn(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null

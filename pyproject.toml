@@ -60,6 +60,7 @@ mkdocs-minify-plugin = "^0.6.2"
 pymdown-extensions = ">=9.5,<11.0"
 Markdown = "^3.3.7"
 ruff = "^0.0.270"
+debugpy = "^1.6.7"
 
 
 [tool.poetry.extras]

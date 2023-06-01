@@ -6,7 +6,10 @@ import strawberry
 from strawberry.types import Info
 from typing_extensions import Self
 
+from demo.models import Favorite
 from strawberry_django_plus import relay
+from tests.faker import FavoriteFactory, IssueFactory, UserFactory
+from tests.utils import GraphQLTestClient
 
 
 @strawberry.type
@@ -975,3 +978,47 @@ def test_query_connection_custom_resolver_filtering_last_with_before(query_attr:
             },
         },
     }
+
+
+# Test Relay Connection with ForeignKey and ManyToMany relationships
+@pytest.mark.django_db(transaction=True)
+def test_query_connection_get_queryset(db, gql_client: GraphQLTestClient):
+    query = """
+    query Issue ($id: GlobalID!){
+        issue(id: $id) {
+            favoriteSet {
+                edges { node {
+                    name
+                    user { id }
+                } }
+            }
+        }
+    }
+    """
+
+    user_a = UserFactory.create()
+    user_b = UserFactory.create()
+
+    issue = IssueFactory.create()
+
+    favorite_a1 = FavoriteFactory.create(user=user_a, issue=issue)
+    favorite_a2 = FavoriteFactory.create(user=user_a, issue=issue)
+    FavoriteFactory.create(user=user_b, issue=issue)
+
+    with gql_client.login(user_a):
+        res = gql_client.query(query, {"id": relay.to_base64("IssueType", issue.pk)})
+        assert res.data
+        assert isinstance(res.data["issue"], dict)
+        nodes = [i["node"] for i in res.data["issue"]["favoriteSet"]["edges"]]
+        assert nodes == [
+            {
+                "name": favorite_a1.name,
+                "user": {"id": relay.to_base64("UserType", user_a.username)},
+            },
+            {
+                "name": favorite_a2.name,
+                "user": {"id": relay.to_base64("UserType", user_a.username)},
+            },
+        ]
+
+    assert Favorite.objects.all().count() == 3

@@ -27,9 +27,10 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import MissingFieldAnnotationError, PrivateStrawberryFieldError
 from strawberry.field import UNRESOLVED, StrawberryField
 from strawberry.private import is_private
+from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
-from strawberry.utils.typing import __dataclass_transform__
+from strawberry.utils.typing import __dataclass_transform__, eval_type
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import get_model_field, resolve_model_field_name
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
@@ -89,11 +90,17 @@ def _from_django_type(
 
         field = cast(StrawberryDjangoField, field)
 
-        # FIXME: Improve this...
         if not field.base_resolver:
 
-            def conn_resolver(root):
-                return getattr(root, name).all()
+            def conn_resolver(root, info: Info):
+                qs = getattr(root, name).all()
+                if not type_annotation:
+                    return qs
+                remote_type_defs = get_args(type_annotation.annotation)
+                remote_type = eval_type(remote_type_defs[0], type_annotation.namespace, None)
+                if hasattr(remote_type, "get_queryset"):
+                    qs = remote_type.get_queryset(qs, info)
+                return qs
 
             field.base_resolver = StrawberryResolver(conn_resolver)
             if type_annotation is not None:

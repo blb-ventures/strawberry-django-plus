@@ -47,6 +47,7 @@ AUTHENTICATION_BACKENDS = (
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "strawberry_django_plus.middlewares.user_warmup.user_warmup_middleware",
     "strawberry_django_plus.middlewares.debug_toolbar.DebugToolbarMiddleware",
 ]
 
