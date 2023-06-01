@@ -25,3 +25,8 @@ def gql_client(request):
     with GraphQLTestClient(path, client()) as c:
         yield c
     DjangoOptimizerExtension.enabled.reset(token)
+
+
+@pytest.fixture(autouse=False)
+def _use_generate_enums_from_choices(settings):
+    settings.STRAWBERRY_DJANGO_GENERATE_ENUMS_FROM_CHOICES = True

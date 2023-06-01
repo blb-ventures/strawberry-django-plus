@@ -21,6 +21,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ForeignObjectRel
 from strawberry import UNSET
 from strawberry.custom_scalar import ScalarWrapper
+from strawberry.enum import EnumValueDefinition
 from strawberry.file_uploads import Upload
 from strawberry.type import StrawberryType
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
@@ -269,7 +270,9 @@ def resolve_model_field_type(
         if strawberry_enum is None:
             # Generate automatic Enum class for standard django's "choices" fields
             meta = field.model._meta
-            auto_enum_class_fields = {c[0]: c[0] for c in choices}
+            auto_enum_class_fields = {
+                c[0]: EnumValueDefinition(value=c[0], description=c[1]) for c in choices
+            }
             auto_enum_class_name = "".join(
                 (
                     capitalize_first(to_camel_case(meta.app_label)),
