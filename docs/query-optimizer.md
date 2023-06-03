@@ -28,7 +28,7 @@ Now consider the following:
         class Album(models.Moodel):
             name = models.CharField()
             release_date = models.DateTimeField()
-            artist = models.ForeignKey("Artist", related_name="albuns")
+            artist = models.ForeignKey("Artist", related_name="albums")
 
 
         class Song(models.Model):
