@@ -23,7 +23,7 @@ class TestClient(BaseGraphQLTestClient):
         headers: Optional[Dict[str, object]] = None,
         files: Optional[Dict[str, object]] = None,
     ):
-        kwargs: Dict[str, object] = {"data": body}
+        kwargs: Dict[str, object] = {"data": body, "headers": headers}
         if files:
             kwargs["format"] = "multipart"
         else:
