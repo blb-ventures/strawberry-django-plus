@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.1](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.0...v2.6.1) (2023-06-05)
+
+
+### Bug Fixes
+
+* allow connections to be typed as unions ([698b854](https://github.com/blb-ventures/strawberry-django-plus/commit/698b854b03ba58eaa3af84074ca6504732bf52d9)), closes [#223](https://github.com/blb-ventures/strawberry-django-plus/issues/223)
+* pass headers further on TestClient ([39dc5ac](https://github.com/blb-ventures/strawberry-django-plus/commit/39dc5acb1c64c45bffc07653a0ce5e0ce3f45b13)), closes [#224](https://github.com/blb-ventures/strawberry-django-plus/issues/224)
+
+
+### Documentation
+
+* fix album related name in docs ([#219](https://github.com/blb-ventures/strawberry-django-plus/issues/219)) ([6d120d3](https://github.com/blb-ventures/strawberry-django-plus/commit/6d120d3eb445d16bd24663c05fdf7471d14e38e2))
+
 ## [2.6.0](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.5.0...v2.6.0) (2023-06-01)
 
 
