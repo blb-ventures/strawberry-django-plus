@@ -50,6 +50,7 @@ from strawberry.type import StrawberryContainer, StrawberryList, StrawberryOptio
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import TypeDefinition
+from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Annotated
@@ -998,13 +999,6 @@ class ConnectionField(RelayField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
-        type_def = info.return_type._type_definition  # type: ignore
-        assert isinstance(type_def, TypeDefinition)
-
-        field_type = type_def.type_var_map[NodeType]
-        if isinstance(field_type, LazyType):
-            field_type = field_type.resolve_type()
-
         if self.base_resolver is not None:
             # If base_resolver is not self.conn_resolver, then it is defined to something
             assert self.base_resolver
@@ -1036,7 +1030,18 @@ class ConnectionField(RelayField):
         if isinstance(nodes, Connection):
             return nodes
 
-        return_type = cast(Connection[Node], info.return_type)
+        return_type = info.return_type
+        if isinstance(return_type, StrawberryUnion):
+            candidates = [
+                rt
+                for rt in return_type.types
+                if isinstance(rt, type) and issubclass(rt, Connection)
+            ]
+            if len(candidates) > 1:
+                raise TypeError("Multiple connection types found in union")
+
+            return_type = candidates[0]
+
         type_def = return_type._type_definition  # type: ignore
         assert isinstance(type_def, TypeDefinition)
 
