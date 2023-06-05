@@ -1075,8 +1075,18 @@ class ConnectionField(RelayField):
         info: Info,
         **kwargs,
     ):
-        return_type = cast(Connection[Node], info.return_type)
-        return return_type.from_nodes(nodes, **kwargs)
+        return_type = info.return_type
+        if isinstance(return_type, StrawberryUnion):
+            candidates = [
+                rt
+                for rt in return_type.types
+                if isinstance(rt, type) and issubclass(rt, Connection)
+            ]
+            if len(candidates) > 1:
+                raise TypeError("Multiple connection types found in union")
+
+            return_type = candidates[0]
+        return return_type.from_nodes(nodes, **kwargs)  # type: ignore
 
 
 class InputMutationField(RelayField):

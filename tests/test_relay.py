@@ -1,5 +1,5 @@
 import pathlib
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 import pytest
 import strawberry
@@ -8,6 +8,7 @@ from typing_extensions import Self
 
 from demo.models import Favorite
 from strawberry_django_plus import relay
+from strawberry_django_plus.types import OperationMessage
 from tests.faker import FavoriteFactory, IssueFactory, UserFactory
 from tests.utils import GraphQLTestClient
 
@@ -120,6 +121,7 @@ class Query:
     node: relay.Node = relay.node()
     nodes: List[relay.Node] = relay.node()
     fruits: relay.Connection[Fruit] = relay.connection()
+    fruits_or_error: Union[relay.Connection[Fruit], OperationMessage] = relay.connection()
     fruits_custom_pagination: CustomPaginationConnection[Fruit] = relay.connection()
 
     @relay.connection
@@ -268,6 +270,77 @@ def test_query_connection(query_attr: str):
     assert result.errors is None
     assert result.data == {
         query_attr: {
+            "edges": [
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjA=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 1),
+                        "color": "yellow",
+                        "name": "Banana",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjE=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 2),
+                        "color": "red",
+                        "name": "Apple",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 3),
+                        "color": "yellow",
+                        "name": "Pineapple",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjM=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 4),
+                        "color": "purple",
+                        "name": "Grape",
+                    },
+                },
+                {
+                    "cursor": "YXJyYXljb25uZWN0aW9uOjQ=",
+                    "node": {
+                        "id": relay.to_base64("Fruit", 5),
+                        "color": "orange",
+                        "name": "Orange",
+                    },
+                },
+            ],
+            "pageInfo": {
+                "hasNextPage": False,
+                "hasPreviousPage": False,
+                "startCursor": relay.to_base64("arrayconnection", "0"),
+                "endCursor": relay.to_base64("arrayconnection", "4"),
+            },
+        },
+    }
+
+
+def test_query_connection_union():
+    result = schema.execute_sync(
+        """
+        query TestQuery {
+            fruitsOrError {
+                ... on FruitConnection {
+                    edges {
+                        node {
+                            id
+                        }
+                    }
+                }
+            }
+        }
+        """,
+    )
+    assert result.errors is None
+    assert result.data == {
+        "fruitsOrError": {
             "edges": [
                 {
                     "cursor": "YXJyYXljb25uZWN0aW9uOjA=",
