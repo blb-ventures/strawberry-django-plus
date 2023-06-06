@@ -87,8 +87,8 @@ Important to note is that the input has to be converted via `vars` call. The con
 ## Custom model mutations
 
 It is possible to create custom model mutations with `gql.django.input_mutation`, which will
-automatically convert the arguments to a input type and mark the return value as a union
-between the type annotation and `types.OperationInfo`. The later will be returned if
+automatically convert the arguments to an input type and mark the return value as a union
+between the type annotation and `types.OperationInfo`. The latter will be returned if
 the resolver raises `ValidationError`.
 
 For example:
