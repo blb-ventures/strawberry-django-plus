@@ -217,10 +217,10 @@ def get_selections(
         if not f2.selections:
             return f1
 
-        f1_selections = {s.name: s for s in cast(List[SelectedField], f1.selections)}
-        f2_selections = {s.name: s for s in cast(List[SelectedField], f2.selections)}
+        f1_selections = {s.name: s for s in f1.selections if isinstance(s, SelectedField)}
+        f2_selections = {s.name: s for s in f2.selections if isinstance(s, SelectedField)}
 
-        selections: Dict[str, SelectedField] = {}
+        selections: dict[str, SelectedField] = {}
         for f_name in set(f1_selections) - set(f2_selections):
             selections[f_name] = f1_selections[f_name]
         for f_name in set(f2_selections) - set(f1_selections):
@@ -229,7 +229,11 @@ def get_selections(
             selections[f_name] = f1_selections[f_name]
             selections[f_name] = merge_selections(f1_selections[f_name], f2_selections[f_name])
 
-        f1.selections = list(selections.values())
+        f1.selections = list(selections.values()) + [
+            s
+            for s in (f1.selections + f2.selections)
+            if isinstance(s, (FragmentSpread, InlineFragment))
+        ]
         return f1
 
     for s in selection.selections:
