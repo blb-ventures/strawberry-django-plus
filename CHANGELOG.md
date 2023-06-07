@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.6.2](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.1...v2.6.2) (2023-06-07)
+
+
+### Bug Fixes
+
+* do not try to merge fragments, they have no name ([efa0cb4](https://github.com/blb-ventures/strawberry-django-plus/commit/efa0cb4c4cacc24b4cd4091cb5b1cce203bc7a78))
+
+
+### Documentation
+
+* fixes 2 typos in docs ([#227](https://github.com/blb-ventures/strawberry-django-plus/issues/227)) ([07bb59a](https://github.com/blb-ventures/strawberry-django-plus/commit/07bb59a48586e5737fc7b725e414c7461bdaaebb))
+
+
+### Miscellaneous
+
+* **deps:** update dev dependencies ([3ab7c91](https://github.com/blb-ventures/strawberry-django-plus/commit/3ab7c91b2431515b00d025cc2d8cf57efd989884))
+
 ## [2.6.1](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.0...v2.6.1) (2023-06-05)
 
 
