@@ -65,7 +65,10 @@ class GraphQLTestClient(TestClient):
         else:
             kwargs["content_type"] = "application/json"
 
-        return self.client.post(self.path, **kwargs)
+        return self.client.post(
+            self.path,
+            **kwargs,  # type: ignore
+        )
 
     def query(
         self,

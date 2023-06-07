@@ -29,7 +29,10 @@ class TestClient(BaseGraphQLTestClient):
         else:
             kwargs["content_type"] = "application/json"
 
-        return self.client.post(self.path, **kwargs)
+        return self.client.post(
+            self.path,
+            **kwargs,  # type: ignore
+        )
 
     @contextlib.contextmanager
     def login(self, user: AbstractUser):

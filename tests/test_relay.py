@@ -1,5 +1,5 @@
 import pathlib
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, cast
 
 import pytest
 import strawberry
@@ -58,7 +58,7 @@ class CustomPaginationConnection(relay.Connection[relay.NodeType]):
     @classmethod
     def from_nodes(
         cls,
-        nodes: Iterable[Fruit],
+        nodes: Iterable[relay.NodeType],
         *,
         info: Optional[Info] = None,
         total_count: Optional[int] = None,
@@ -68,11 +68,11 @@ class CustomPaginationConnection(relay.Connection[relay.NodeType]):
         last: Optional[int] = None,
     ):
         edges_mapping = {
-            relay.to_base64("fruit_name", n.name): relay.Edge(
+            relay.to_base64("fruit_name", cast(Fruit, n).name): relay.Edge(
                 node=n,
-                cursor=relay.to_base64("fruit_name", n.name),
+                cursor=relay.to_base64("fruit_name", cast(Fruit, n).name),
             )
-            for n in sorted(nodes, key=lambda f: f.name)
+            for n in sorted(nodes, key=lambda f: cast(Fruit, f).name)
         }
         edges = list(edges_mapping.values())
         first_edge = edges[0] if edges else None
