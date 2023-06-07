@@ -141,7 +141,7 @@ def _from_django_type(
     elif isinstance(attr, StrawberryResolver):
         field = StrawberryDjangoField(base_resolver=attr)
     elif callable(attr):
-        field = cast(StrawberryDjangoField, StrawberryDjangoField()(attr))
+        field = StrawberryDjangoField()(attr)
     else:
         field = StrawberryDjangoField(default=attr)
 
