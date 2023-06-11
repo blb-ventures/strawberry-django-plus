@@ -137,117 +137,46 @@ schema = strawberry.Schema(
 
 ### Relay Support
 
-We have a custom [relay spec](https://relay.dev/docs/guides/graphql-server-specification/)
-implementation. It is not tied to Django at all to allow its usage with other types.
-
-It provides types and fields for node and connection querying. For example:
+You can use the [official strawberry relay integration](https://strawberry.rocks/docs/guides/relay)
+directly with django types like this:
 
 ```python
-# schema.py
 from strawberry_django_plus import gql
-from strawberry_django_plus.gql import relay
 
-@gql.type
-class Fruit(relay.Node):
-    name: str
 
-    def resolve_node(cls, node_id, info, required=False):
-        ...
+class Fruit(models.Model):
+    ...
 
-    def resolve_nodes(cls, node_id, info, node_ids=False):
-        ...
+
+@gql.django.type(Fruit)
+class FruitType(gql.relay.Node):
+    ...
 
 
 @gql.type
 class Query:
-    fruit: Optional[Fruit] = relay.node()
-    fruits_connection: relay.Connection[Fruit] = relay.connection()
+    some_model_conn: gql.relay.ListConnection[FruitType] = gql.django.connection()
 
-    @relay.connection
-    def fruits_connection_filtered(self, name_startswith: str) -> Iterable[Fruit]:
-        # Note that this resolver is special. It should not resolve the connection, but
-        # the iterable of nodes itself. Thus, any arguments defined here will be appended
-        # to the query, and the pagination of the iterable returned here will be
-        # automatically handled.
-        ...
+    @gql.django.connection(gql.relay.ListConnection[FruitType])
+    def some_model_conn_with_resolver(self, root: SomeModel) -> models.QuerySet[SomeModel]:
+        return SomeModel.objects.all()
 ```
 
-Will generate a schema like this:
+In this example, `some_model_conn` will automatically add a resolver that
+returns `SomeModel.objects.all()` for you.
 
-```gql
-interface Node {
-  id: GlobalID!
-}
+You can also define your own custom resolver like `some_model_conn_with_resolver` and it
+will be used instead. You can use this to filter the base `QuerySet` that will be used
+for pagination. Also note that you can
+[add extra arguments in that resolver](https://strawberry.rocks/docs/guides/relay#custom-connection-arguments),
+and they will be included in the final field.
 
-type Fruit implements Node {
-  id: GlobalID!
-  name: String!
-}
-
-type FruitEdge implements Node {
-  cursor: String!
-  node: Fruit
-}
-
-type FruitConnection {
-  edges: [ShipEdge!]!
-  pageInfo: PageInfo!
-}
-
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
-}
-
-type Query {
-  fruit(id: GlobalID!): Fruit
-  fruits_connection(
-    before: String
-    after: String
-    first: Int
-    last: Int
-  ): FruitConnection
-  fruits_connection_filtered(
-    before: String
-    after: String
-    first: Int
-    last: Int
-    nameStartswith: String!
-  ): FruitConnection
-}
-```
-
-It is expected that types implementing the `Node` interface define some methods, like
-`resolve_nodes` and `resolve_node`. By default the `id` field is used for the node id.
-This is customizable with the `id_attr` attribute. Take a look at
-[the documentation](/strawberry_django_plus/relay.py) for more information.
-
-Also note that Django fields created with `@gql.django.type` automatically implements
-all of the required methods when the type inherits from `Node`.
-By default the `pk` field is used for the node id (overwrites the default `id` field) but
-can also be customized with the `id_attr`attribute.
-
-This module also exposes a mutation that converts all of its arguments to a single input.
-For example:
+You can also define your own
+[custom connection type](https://strawberry.rocks/docs/guides/relay#custom-connection-pagination)
+to add extra fields or customize the pagination algorithm. This libs provides a custom connection
+type that adds an extra field to retrieve the `totalCount` of the connection, and can be used
+like this:
 
 ```python
-@gql.type
-class Mutation:
-    @relay.input_mutation
-    def create_fruit(name: str) -> Fruit:
-        ....
-```
-
-Will generate those types:
-
-```gql
-input CreateFruitInput {
-  name: String!
-}
-
-type Mutation {
-  createFruit(input: CreateFruitInput!): Fruit
-}
+some_model_conn: gql.django.ListConnectionWithTotalCount[FruitType] = gql.django.connection()
 ```
