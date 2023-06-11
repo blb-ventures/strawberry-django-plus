@@ -26,7 +26,7 @@ from django.db.models.fields.reverse_related import (
     ManyToOneRel,
     OneToOneRel,
 )
-from strawberry import UNSET
+from strawberry import UNSET, relay
 from strawberry.types.info import Info
 from strawberry_django.fields.types import (
     ManyToManyInput,
@@ -36,7 +36,6 @@ from strawberry_django.fields.types import (
 )
 from typing_extensions import TypeAlias
 
-from strawberry_django_plus import relay
 from strawberry_django_plus.types import ListInput, NodeInput
 from strawberry_django_plus.utils import aio
 from strawberry_django_plus.utils.inspect import get_model_fields

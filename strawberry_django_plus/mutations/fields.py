@@ -23,10 +23,11 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from strawberry import UNSET
+from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.extensions.field_extension import FieldExtension
+from strawberry.field_extensions import InputMutationExtension
 from strawberry.permission import BasePermission
 from strawberry.type import StrawberryType
 from strawberry.types.fields.resolver import StrawberryResolver
@@ -34,7 +35,6 @@ from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.str_converters import to_camel_case
 
-from strawberry_django_plus import relay
 from strawberry_django_plus.field import StrawberryDjangoField
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.permissions import get_with_perms
@@ -109,8 +109,8 @@ class DjangoMutationField(StrawberryDjangoField):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        self._handle_errors: bool = kwargs.pop("handle_django_errors", True)
+    def __init__(self, *args, handle_django_errors: bool = True, **kwargs):
+        self._handle_errors: bool = handle_django_errors
         super().__init__(*args, **kwargs)
 
     def __call__(self, resolver: Callable[..., Iterable[relay.Node]]):
@@ -157,7 +157,7 @@ class DjangoMutationField(StrawberryDjangoField):
         args: List[Any],
         kwargs: Dict[str, Any],
     ) -> AwaitableOrValue[Any]:
-        # FIXME: Any other exception types that we should capture here?
+        # TODO: Any other exception types that we should capture here?
         resolver = aio.resolver(
             self.resolver,
             on_error=_map_exception if self._handle_errors else None,
@@ -166,38 +166,24 @@ class DjangoMutationField(StrawberryDjangoField):
         return resolver(source, info, args, kwargs)
 
 
-class DjangoInputMutationField(DjangoMutationField, relay.InputMutationField):
-    """Input mutation for django models.
-
-    This fields does 3 things:
-
-    - It ensures that the mutation resolver gets called in an async safe environment.
-    - If `handle_django_errors` is True (the default), the return values gets
-      changed to a union with `OperationMessage`, which will be returned instead
-      if the mutation raises any `PermissionDenied`, `ValidationError` or
-      `ObjectDoesNotExist`.
-    - It transforms the resolver arguments to a new type and receives it in
-      a `input` argument at the graphql side.
-
-    Do not instantiate this directly. Instead, use `@gql.django.input_mutation`
-
-    """
-
-    def __init__(self, *args, **kwargs):
-        input_type: Optional[type] = kwargs.pop("input_type", None)
-
+class DjangoCUDMutationField(DjangoMutationField):
+    def __init__(self, input_type: type, *args, full_clean: bool = True, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.input_type = input_type
-        if self.input_type and not self.base_resolver:
-            namespace = sys.modules[self.input_type.__module__].__dict__
-            type_def = getattr(input_type, "_type_definition", None)
-            self.default_args["input"] = StrawberryArgument(
+        self.full_clean = full_clean
+
+    @property
+    def arguments(self) -> List[StrawberryArgument]:
+        namespace = sys.modules[self.input_type.__module__].__dict__
+        type_def = getattr(self.input_type, "_type_definition", None)
+        return [
+            StrawberryArgument(
                 python_name="input",
                 graphql_name=None,
                 type_annotation=StrawberryAnnotation(self.input_type, namespace=namespace),
                 description=type_def and type_def.description,
-            )
+            ),
+        ]
 
     def get_result(
         self,
@@ -208,7 +194,7 @@ class DjangoInputMutationField(DjangoMutationField, relay.InputMutationField):
     ) -> AwaitableOrValue[Any]:
         input_obj = kwargs.pop("input", None)
 
-        # FIXME: Any other exception types that we should capture here?
+        # TODO: Any other exception types that we should capture here?
         resolver = aio.resolver(
             self.resolver,
             on_error=_map_exception if self._handle_errors else None,
@@ -227,23 +213,13 @@ class DjangoInputMutationField(DjangoMutationField, relay.InputMutationField):
         return self.safe_resolver(*args, **kwargs, **vars(data))
 
 
-class DjangoCreateMutationField(DjangoInputMutationField):
+class DjangoCreateMutationField(DjangoCUDMutationField):
     """Create mutation for django models.
 
     Do not instantiate this directly. Instead, use
     `@gql.django.create_mutation`
 
     """
-
-    def __init__(self, *args, **kwargs):
-        self.full_clean: bool = kwargs.pop("full_clean", True)
-        super().__init__(*args, **kwargs)
-
-    @property
-    def arguments(self) -> List[StrawberryArgument]:
-        # FIXME: We don't have a base_resolve in this case. Make sure StrawberryDjangoFieldFilters
-        # doesn't add a opk argument in here...
-        return [a for a in super().arguments if a.python_name == "input"]
 
     @async_safe
     def resolver(
@@ -255,31 +231,28 @@ class DjangoCreateMutationField(DjangoInputMutationField):
         kwargs: Dict[str, Any],
     ) -> Any:
         assert data is not None
-        return resolvers.create(
-            info,
-            self.model,
-            resolvers.parse_input(info, vars(data)),
-            full_clean=self.full_clean,
-        )
+        # Do not optimize anything while retrieving the object to update
+        token = DjangoOptimizerExtension.enabled.set(False)
+        try:
+            retval = resolvers.create(
+                info,
+                self.model,
+                resolvers.parse_input(info, vars(data)),
+                full_clean=self.full_clean,
+            )
+        finally:
+            DjangoOptimizerExtension.enabled.reset(token)
+
+        return retval
 
 
-class DjangoUpdateMutationField(DjangoInputMutationField):
+class DjangoUpdateMutationField(DjangoCUDMutationField):
     """Update mutation for django models.
 
     Do not instantiate this directly. Instead, use
     `@gql.django.update_mutation`
 
     """
-
-    def __init__(self, *args, **kwargs):
-        self.full_clean: bool = kwargs.pop("full_clean", True)
-        super().__init__(*args, **kwargs)
-
-    @property
-    def arguments(self) -> List[StrawberryArgument]:
-        # FIXME: We don't have a base_resolve in this case. Make sure StrawberryDjangoFieldFilters
-        # doesn't add a opk argument in here...
-        return [a for a in super().arguments if a.python_name == "input"]
 
     @async_safe
     def resolver(
@@ -313,19 +286,13 @@ class DjangoUpdateMutationField(DjangoInputMutationField):
         return retval
 
 
-class DjangoDeleteMutationField(DjangoInputMutationField):
+class DjangoDeleteMutationField(DjangoCUDMutationField):
     """Delete mutation for django models.
 
     Do not instantiate this directly. Instead, use
     `@gql.django.delete_mutation`
 
     """
-
-    @property
-    def arguments(self) -> List[StrawberryArgument]:
-        # FIXME: We don't have a base_resolve in this case. Make sure StrawberryDjangoFieldFilters
-        # doesn't add a opk argument in here...
-        return [a for a in super().arguments if a.python_name == "input"]
 
     @async_safe
     def resolver(
@@ -371,8 +338,8 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    handle_django_errors: bool = True,
     extensions: List[FieldExtension] = (),  # type: ignore
+    handle_django_errors: bool = True,
 ) -> _T:
     ...
 
@@ -393,8 +360,8 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    handle_django_errors: bool = True,
     extensions: List[FieldExtension] = (),  # type: ignore
+    handle_django_errors: bool = True,
 ) -> Any:
     ...
 
@@ -415,9 +382,9 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    handle_django_errors: bool = True,
     extensions: List[FieldExtension] = (),  # type: ignore
-) -> DjangoInputMutationField:
+    handle_django_errors: bool = True,
+) -> DjangoMutationField:
     ...
 
 
@@ -436,8 +403,8 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    handle_django_errors: bool = True,
     extensions: List[FieldExtension] = (),  # type: ignore
+    handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -481,7 +448,6 @@ def mutation(
 @overload
 def input_mutation(
     *,
-    input_type: Optional[type] = None,
     resolver: Callable[[], _T],
     name: Optional[str] = None,
     field_name: Optional[str] = None,
@@ -496,6 +462,7 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: bool = True,
 ) -> _T:
     ...
@@ -504,7 +471,6 @@ def input_mutation(
 @overload
 def input_mutation(
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -518,6 +484,7 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: bool = True,
 ) -> Any:
     ...
@@ -527,7 +494,6 @@ def input_mutation(
 def input_mutation(
     resolver: Union[StrawberryResolver, Callable, staticmethod, classmethod],
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -540,15 +506,15 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: bool = True,
-) -> DjangoInputMutationField:
+) -> DjangoMutationField:
     ...
 
 
 def input_mutation(
     resolver=None,
     *,
-    input_type: Optional[type] = None,
     name: Optional[str] = None,
     field_name: Optional[str] = None,
     filters: Any = UNSET,
@@ -561,6 +527,7 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: bool = True,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -580,8 +547,8 @@ def input_mutation(
           a `input` argument at the graphql side.
 
     """
-    f = DjangoInputMutationField(
-        input_type=input_type,
+    extensions = [*list(extensions), InputMutationExtension()]
+    f = DjangoMutationField(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
@@ -595,6 +562,7 @@ def input_mutation(
         metadata=metadata,
         directives=directives,
         filters=filters,
+        extensions=extensions,
         handle_django_errors=handle_django_errors,
     )
 
@@ -620,6 +588,7 @@ def create(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: bool = True,
     full_clean: bool = True,
 ) -> Any:
@@ -639,7 +608,7 @@ def create(
 
     """
     return DjangoCreateMutationField(
-        input_type=input_type,
+        input_type,
         python_name=None,
         django_name=field_name,
         graphql_name=name,
@@ -655,6 +624,7 @@ def create(
         filters=filters,
         handle_django_errors=handle_django_errors,
         full_clean=full_clean,
+        extensions=extensions or (),
     )
 
 
@@ -674,6 +644,7 @@ def update(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
+    extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: bool = True,
     full_clean: bool = True,
 ) -> Any:
@@ -691,7 +662,7 @@ def update(
 
     """
     return DjangoUpdateMutationField(
-        input_type=input_type,
+        input_type,
         python_name=None,
         django_name=field_name,
         graphql_name=name,
@@ -707,6 +678,7 @@ def update(
         filters=filters,
         handle_django_errors=handle_django_errors,
         full_clean=full_clean,
+        extensions=extensions or (),
     )
 
 
@@ -725,11 +697,12 @@ def delete(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
+    extensions: List[FieldExtension] = (),  # type: ignore
     graphql_type: Optional[Any] = None,
     handle_django_errors: bool = True,
 ) -> Any:
     return DjangoDeleteMutationField(
-        input_type=input_type,
+        input_type,
         python_name=None,
         django_name=field_name,
         graphql_name=name,
@@ -744,4 +717,5 @@ def delete(
         directives=directives,
         filters=filters,
         handle_django_errors=handle_django_errors,
+        extensions=extensions or (),
     )

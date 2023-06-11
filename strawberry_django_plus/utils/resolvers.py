@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Coroutine,
     Iterable,
+    List,
     Literal,
     Optional,
     Type,
@@ -19,14 +20,13 @@ from typing import (
 from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Model, QuerySet
 from django.db.models.manager import BaseManager
+from strawberry import relay
+from strawberry.relay.exceptions import NodeIDAnnotationError
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django.utils import is_async
 from typing_extensions import ParamSpec
-
-from strawberry_django_plus import relay
-from strawberry_django_plus.relay import GlobalID, Node
 
 from .aio import is_awaitable, resolve_async
 from .inspect import get_django_type
@@ -292,13 +292,88 @@ def resolve_result(res, *, info=None, qs_resolver=None):
     return res
 
 
+@overload
 def resolve_model_nodes(
-    source: Union[Type[Node], Type[_M]],
+    source: Union[Type[relay.Node], Type[_M]],
     *,
     info: Optional[Info] = None,
-    node_ids: Optional[Iterable[Union[str, GlobalID]]] = None,
+    node_ids: Iterable[Union[str, relay.GlobalID]],
+    required: Literal[True],
+    filter_perms: bool = False,
+) -> AwaitableOrValue[Iterable[_M]]:
+    ...
+
+
+@overload
+def resolve_model_nodes(
+    source: Union[Type[relay.Node], Type[_M]],
+    *,
+    info: Optional[Info] = None,
+    node_ids: None = None,
+    required: Literal[True],
     filter_perms: bool = False,
 ) -> AwaitableOrValue[QuerySet[_M]]:
+    ...
+
+
+@overload
+def resolve_model_nodes(
+    source: Union[Type[relay.Node], Type[_M]],
+    *,
+    info: Optional[Info] = None,
+    node_ids: Iterable[Union[str, relay.GlobalID]],
+    required: Literal[False],
+    filter_perms: bool = False,
+) -> AwaitableOrValue[Iterable[Optional[_M]]]:
+    ...
+
+
+@overload
+def resolve_model_nodes(
+    source: Union[Type[relay.Node], Type[_M]],
+    *,
+    info: Optional[Info] = None,
+    node_ids: None = None,
+    required: Literal[False],
+    filter_perms: bool = False,
+) -> AwaitableOrValue[Optional[QuerySet[_M]]]:
+    ...
+
+
+@overload
+def resolve_model_nodes(
+    source: Union[Type[relay.Node], Type[_M]],
+    *,
+    info: Optional[Info] = None,
+    node_ids: Optional[Iterable[Union[str, relay.GlobalID]]] = None,
+    required: bool = False,
+    filter_perms: bool = False,
+) -> AwaitableOrValue[
+    Union[
+        Iterable[_M],
+        QuerySet[_M],
+        Iterable[Optional[_M]],
+        Optional[QuerySet[_M]],
+    ]
+]:
+    ...
+
+
+def resolve_model_nodes(
+    source,
+    *,
+    info=None,
+    node_ids=None,
+    required=False,
+    filter_perms=False,
+) -> AwaitableOrValue[
+    Union[
+        Iterable[_M],
+        QuerySet[_M],
+        Iterable[Optional[_M]],
+        Optional[QuerySet[_M]],
+    ]
+]:
     """Resolve model nodes, ensuring those are prefetched in a sync context.
 
     Args:
@@ -310,6 +385,11 @@ def resolve_model_nodes(
             is enabled. This will also be used for `is_awaitable` check.
         node_ids:
             Optional filter by those node_ids instead of retrieving everything
+        required:
+            If `True`, all `node_ids` requested must exist. If they don't,
+            an error must be raised. If `False`, missing nodes should be
+            returned as `None`. It only makes sense when passing a list of
+            `node_ids`, otherwise it will should ignored.
         filter_perms:
             If we should filter the queryset with the permissions defined in the field
 
@@ -331,12 +411,16 @@ def resolve_model_nodes(
     qs = source._default_manager.all()
 
     if origin and hasattr(origin, "get_queryset"):
-        qs = origin.get_queryset(qs, info)  # type: ignore
+        qs = origin.get_queryset(qs, info)
 
+    id_attr = cast(relay.Node, origin).resolve_id_attr()
     if node_ids is not None:
-        id_attr = getattr(origin, "id_attr", "pk")
         qs = qs.filter(
-            **{f"{id_attr}__in": [i.node_id if isinstance(i, GlobalID) else i for i in node_ids]},
+            **{
+                f"{id_attr}__in": [
+                    i.node_id if isinstance(i, relay.GlobalID) else i for i in node_ids
+                ],
+            },
         )
 
     if filter_perms:
@@ -359,13 +443,36 @@ def resolve_model_nodes(
             def qs_resolver(qs):
                 return qs
 
-    return resolve_result(qs, info=info, qs_resolver=qs_resolver)
+    retval = cast(
+        AwaitableOrValue[QuerySet[_M]],
+        resolve_result(qs, info=info, qs_resolver=qs_resolver),
+    )
+    if not node_ids:
+        return retval
+
+    def map_results(results: QuerySet[_M]) -> List[_M]:
+        results_map = {str(getattr(obj, id_attr)): obj for obj in results}
+        retval: List[Optional[_M]] = []
+        for node_id in node_ids:
+            if required:
+                retval.append(results_map[str(node_id)])
+            else:
+                retval.append(results_map.get(str(node_id), None))
+
+        return retval  # type: ignore
+
+    if inspect.isawaitable(retval):
+
+        async def resolver():
+            return await sync_to_async(map_results)(await retval)
+
+    return map_results(cast(QuerySet[_M], retval))
 
 
 @overload
 def resolve_model_node(
-    source: Union[Type[Node], Type[_M]],
-    node_id: Union[str, GlobalID],
+    source: Union[Type[relay.Node], Type[_M]],
+    node_id: Union[str, relay.GlobalID],
     *,
     info: Optional[Info] = ...,
     required: Literal[False] = ...,
@@ -375,8 +482,8 @@ def resolve_model_node(
 
 @overload
 def resolve_model_node(
-    source: Union[Type[Node], Type[_M]],
-    node_id: Union[str, GlobalID],
+    source: Union[Type[relay.Node], Type[_M]],
+    node_id: Union[str, relay.GlobalID],
     *,
     info: Optional[Info] = ...,
     required: Literal[True],
@@ -412,10 +519,10 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
         django_type = get_django_type(source, ensure_type=True)
         source = cast(Type[Model], django_type.model)
 
-    if isinstance(node_id, GlobalID):
+    if isinstance(node_id, relay.GlobalID):
         node_id = node_id.node_id
 
-    id_attr = getattr(origin, "id_attr", "pk")
+    id_attr = cast(relay.Node, origin).resolve_id_attr()
 
     qs = source._default_manager.filter(**{id_attr: node_id})
 
@@ -429,7 +536,29 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     )
 
 
-def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> AwaitableOrValue[str]:
+def resolve_model_id_attr(source: Type) -> str:
+    """Resolve the model id, ensuring it is retrieved in a sync context.
+
+    Args:
+        source:
+            The source model type that implements the `Node` interface
+
+    Returns:
+        The resolved id attr
+
+    """
+    try:
+        id_attr = super(source, source).resolve_id_attr()
+    except NodeIDAnnotationError:
+        id_attr = "pk"
+
+    return id_attr
+
+
+def resolve_model_id(
+    source: Union[Type[relay.Node], Type[_M]],
+    root: Model,
+) -> AwaitableOrValue[str]:
     """Resolve the model id, ensuring it is retrieved in a sync context.
 
     Args:
@@ -442,7 +571,8 @@ def resolve_model_id(source: Union[Type[Node], Type[_M]], root: Model) -> Awaita
         The resolved object id
 
     """
-    id_attr = getattr(source, "id_attr", "pk")
+    id_attr = cast(relay.Node, source).resolve_id_attr()
+
     assert isinstance(root, Model)
     if id_attr == "pk":
         pk = root.__class__._meta.pk

@@ -8,12 +8,12 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db.models import Exists, OuterRef, Prefetch
 from django.db.models.query import QuerySet
+from strawberry import relay
 from strawberry.types.info import Info
 from typing_extensions import Annotated
 
 from strawberry_django_plus import gql
 from strawberry_django_plus.directives import SchemaDirectiveExtension
-from strawberry_django_plus.gql import relay
 from strawberry_django_plus.mutations import resolvers
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
 from strawberry_django_plus.permissions import (
@@ -31,13 +31,11 @@ UserModel = cast(Type[AbstractUser], get_user_model())
 
 @gql.django.type(UserModel)
 class UserType(relay.Node):
-    username: gql.auto
+    username: relay.NodeID[str]
     email: gql.auto
     is_active: gql.auto
     is_superuser: gql.auto
     is_staff: gql.auto
-
-    id_attr = "username"
 
     @gql.django.field(only=["first_name", "last_name"])
     def full_name(self, root: AbstractUser) -> str:
@@ -46,13 +44,11 @@ class UserType(relay.Node):
 
 @gql.django.type(UserModel)
 class StaffType(relay.Node):
-    username: gql.auto
+    username: relay.NodeID[str]
     email: gql.auto
     is_active: gql.auto
     is_superuser: gql.auto
     is_staff: gql.auto
-
-    id_attr = "username"
 
     @classmethod
     def get_queryset(cls, queryset: QuerySet[AbstractUser], info: Info) -> QuerySet[AbstractUser]:
@@ -118,7 +114,7 @@ class MilestoneType(relay.Node):
 
     @gql.django.field
     async def async_field(self, value: str) -> str:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0)
         return f"value: {value}"
 
 
@@ -143,13 +139,13 @@ class IssueType(relay.Node):
     name_with_kind: str = gql.django.field(only=["kind", "name"])
     tags: List["TagType"]
     issue_assignees: List["AssigneeType"]
-    favorite_set: relay.Connection["FavoriteType"]
+    favorite_set: gql.django.ListConnectionWithTotalCount["FavoriteType"] = gql.django.connection()
 
 
 @gql.django.type(Tag)
 class TagType(relay.Node):
     name: gql.auto
-    issues: relay.Connection[IssueType]
+    issues: gql.django.ListConnectionWithTotalCount[IssueType] = gql.django.connection()
 
 
 @gql.django.type(Quiz)
@@ -239,7 +235,7 @@ class Query:
     project_login_required: Optional[ProjectType] = gql.django.node(directives=[IsAuthenticated()])
     tag: Optional[TagType] = gql.django.node()
     staff: Optional[StaffType] = gql.django.node()
-    staff_list: List[StaffType] = gql.django.node()
+    staff_list: List[Optional[StaffType]] = gql.django.node()
 
     issue_list: List[IssueType] = gql.django.field()
     milestone_list: List[MilestoneType] = gql.django.field(
@@ -250,15 +246,15 @@ class Query:
     project_list: List[ProjectType] = gql.django.field()
     tag_list: List[TagType] = gql.django.field()
 
-    favorite_conn: relay.Connection[FavoriteType] = gql.django.connection()
-    issue_conn: relay.Connection[
+    favorite_conn: gql.django.ListConnectionWithTotalCount[FavoriteType] = gql.django.connection()
+    issue_conn: gql.django.ListConnectionWithTotalCount[
         gql.LazyType["IssueType", "demo.schema"]  # type: ignore  # noqa: F821
     ] = gql.django.connection()
-    milestone_conn: relay.Connection[MilestoneType] = gql.django.connection()
+    milestone_conn: gql.django.ListConnectionWithTotalCount[MilestoneType] = gql.django.connection()
 
-    project_conn: relay.Connection[ProjectType] = gql.django.connection()
-    tag_conn: relay.Connection[TagType] = gql.django.connection()
-    staff_conn: relay.Connection[StaffType] = gql.django.connection()
+    project_conn: gql.django.ListConnectionWithTotalCount[ProjectType] = gql.django.connection()
+    tag_conn: gql.django.ListConnectionWithTotalCount[TagType] = gql.django.connection()
+    staff_conn: gql.django.ListConnectionWithTotalCount[StaffType] = gql.django.connection()
 
     # Login required to resolve
     issue_login_required: IssueType = gql.django.node(directives=[IsAuthenticated()])
@@ -283,8 +279,10 @@ class Query:
     issue_list_perm_required: List[IssueType] = gql.django.field(
         directives=[HasPerm(perms=["demo.view_issue"])],
     )
-    issue_conn_perm_required: relay.Connection[IssueType] = gql.django.connection(
-        directives=[HasPerm(perms=["demo.view_issue"])],
+    issue_conn_perm_required: gql.django.ListConnectionWithTotalCount[IssueType] = (
+        gql.django.connection(
+            directives=[HasPerm(perms=["demo.view_issue"])],
+        )
     )
     # User permission on the resolved object for "demo.view_issue"
     issue_obj_perm_required: IssueType = gql.django.node(
@@ -296,8 +294,10 @@ class Query:
     issue_list_obj_perm_required: List[IssueType] = gql.django.field(
         directives=[HasObjPerm(perms=["demo.view_issue"])],
     )
-    issue_conn_obj_perm_required: relay.Connection[IssueType] = gql.django.connection(
-        directives=[HasObjPerm(perms=["demo.view_issue"])],
+    issue_conn_obj_perm_required: gql.django.ListConnectionWithTotalCount[IssueType] = (
+        gql.django.connection(
+            directives=[HasObjPerm(perms=["demo.view_issue"])],
+        )
     )
 
     @gql.django.field
@@ -308,9 +308,9 @@ class Query:
 
         return cast(UserType, user)
 
-    @gql.django.connection
-    def project_conn_with_resolver(self, root: str, name: str) -> Iterable[ProjectType]:
-        return cast(Iterable[ProjectType], Project.objects.filter(name__contains=name))
+    @gql.django.connection(gql.django.ListConnectionWithTotalCount[ProjectType])
+    def project_conn_with_resolver(self, root: str, name: str) -> Iterable[Project]:
+        return Project.objects.filter(name__contains=name)
 
 
 @gql.type

@@ -75,6 +75,7 @@ input AssigneeThroughInputPartial {
 }
 
 type AssigneeType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
   user: UserType!
   owner: Boolean!
@@ -116,6 +117,7 @@ scalar Decimal
 union DeleteIssuePayload = IssueType | OperationInfo
 
 type FavoriteType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
   user: UserType!
@@ -130,7 +132,7 @@ type FavoriteTypeConnection {
   """Contains the nodes in this connection"""
   edges: [FavoriteTypeEdge!]!
 
-  """Total quantity of existing nodes"""
+  """Total quantity of existing nodes."""
   totalCount: Int
 }
 
@@ -185,6 +187,7 @@ input IssueInputPartial {
 }
 
 type IssueType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
   milestone: MilestoneType!
@@ -221,7 +224,7 @@ type IssueTypeConnection {
   """Contains the nodes in this connection"""
   edges: [IssueTypeEdge!]!
 
-  """Total quantity of existing nodes"""
+  """Total quantity of existing nodes."""
   totalCount: Int
 }
 
@@ -261,13 +264,14 @@ input MilestoneOrder {
 }
 
 type MilestoneType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
   dueDate: Date
   project: ProjectType!
   issues: [IssueType!]!
-  asyncField(value: String!): String!
   myIssues: [IssueType!]!
+  asyncField(value: String!): String!
 }
 
 """A connection to a list of items."""
@@ -278,7 +282,7 @@ type MilestoneTypeConnection {
   """Contains the nodes in this connection"""
   edges: [MilestoneTypeEdge!]!
 
-  """Total quantity of existing nodes"""
+  """Total quantity of existing nodes."""
   totalCount: Int
 }
 
@@ -392,6 +396,7 @@ input ProjectOrder {
 }
 
 type ProjectType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
 
   """The name of the project"""
@@ -412,7 +417,7 @@ type ProjectTypeConnection {
   """Contains the nodes in this connection"""
   edges: [ProjectTypeEdge!]!
 
-  """Total quantity of existing nodes"""
+  """Total quantity of existing nodes."""
   totalCount: Int
 }
 
@@ -472,7 +477,7 @@ type Query {
   staffList(
     """The IDs of the objects."""
     ids: [GlobalID!]!
-  ): [StaffType!]!
+  ): [StaffType]!
   issueList: [IssueType!]!
   milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   projectList: [ProjectType!]!
@@ -504,6 +509,9 @@ type Query {
     last: Int = null
   ): IssueTypeConnection!
   milestoneConn(
+    filters: MilestoneFilter
+    order: MilestoneOrder
+
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
 
@@ -515,8 +523,6 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-    filters: MilestoneFilter
-    order: MilestoneOrder
   ): MilestoneTypeConnection!
   projectConn(
     """Returns the items in the list that come before the specified cursor."""
@@ -627,6 +633,8 @@ type Query {
   ): IssueTypeConnection! @hasObjPerm(permissions: [{resource: "demo", permission: "view_issue"}], any: true)
   me: UserType
   projectConnWithResolver(
+    name: String!
+
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
 
@@ -638,21 +646,19 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-    name: String!
   ): ProjectTypeConnection!
 }
 
 type QuizType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
   title: String!
   sequence: Int!
 }
 
 type StaffType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
-
-  """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
-  username: String!
   email: String!
 
   """
@@ -677,7 +683,7 @@ type StaffTypeConnection {
   """Contains the nodes in this connection"""
   edges: [StaffTypeEdge!]!
 
-  """Total quantity of existing nodes"""
+  """Total quantity of existing nodes."""
   totalCount: Int
 }
 
@@ -729,6 +735,7 @@ input TagPartialListInput {
 }
 
 type TagType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
   issues(
@@ -754,7 +761,7 @@ type TagTypeConnection {
   """Contains the nodes in this connection"""
   edges: [TagTypeEdge!]!
 
-  """Total quantity of existing nodes"""
+  """Total quantity of existing nodes."""
   totalCount: Int
 }
 
@@ -772,10 +779,8 @@ union UpdateIssuePayload = IssueType | OperationInfo
 union UpdateProjectPayload = ProjectType | OperationInfo
 
 type UserType implements Node {
+  """The Globally Unique ID of this object"""
   id: GlobalID!
-
-  """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
-  username: String!
   email: String!
 
   """

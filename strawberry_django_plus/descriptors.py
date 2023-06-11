@@ -13,6 +13,7 @@ from typing import (
 )
 
 from django.db.models.base import Model
+from strawberry.exceptions import MissingFieldAnnotationError
 from typing_extensions import Self
 
 if TYPE_CHECKING:
@@ -61,6 +62,7 @@ class ModelProperty(Generic[_M, _R]):
         )
 
     def __set_name__(self, owner: Type[_M], name: str):
+        self.origin = owner
         self.name = name
 
     @overload
@@ -96,7 +98,7 @@ class ModelProperty(Generic[_M, _R]):
     def type_annotation(self) -> Union[object, str]:
         ret = self.func.__annotations__.get("return")
         if ret is None:
-            raise TypeError(f"missing type annotation from {self.func}")
+            raise MissingFieldAnnotationError(self.name, self.origin)
         return ret
 
 

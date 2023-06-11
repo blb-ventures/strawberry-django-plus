@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Any, Optional
 
+import strawberry
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import QuerySet
@@ -18,6 +19,7 @@ User = get_user_model()
 class Project(models.Model):
     milestones: "RelatedManager[Milestone]"
 
+    @strawberry.enum
     class Status(models.TextChoices):
         """Project status options."""
 

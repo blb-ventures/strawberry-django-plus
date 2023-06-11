@@ -3,9 +3,9 @@ from typing import List, Literal
 import pytest
 from django.contrib.auth.models import Permission
 from guardian.shortcuts import assign_perm
+from strawberry.relay import to_base64
 from typing_extensions import TypeAlias
 
-from strawberry_django_plus.relay import to_base64
 from tests.faker import (
     GroupFactory,
     IssueFactory,

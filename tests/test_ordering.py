@@ -1,6 +1,5 @@
 import pytest
-
-from strawberry_django_plus.relay import to_base64
+from strawberry.relay import to_base64
 
 from .faker import MilestoneFactory
 from .utils import GraphQLTestClient
