@@ -1085,13 +1085,13 @@ pyyaml = "*"
 
 [[package]]
 name = "pytest"
-version = "7.3.1"
+version = "7.3.2"
 description = "pytest: simple powerful testing with Python"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-7.3.1-py3-none-any.whl", hash = "sha256:3799fa815351fea3a5e96ac7e503a96fa51cc9942c3753cda7651b93c1cfa362"},
-    {file = "pytest-7.3.1.tar.gz", hash = "sha256:434afafd78b1d78ed0addf160ad2b77a30d35d4bdf8af234fe621919d9ed15e3"},
+    {file = "pytest-7.3.2-py3-none-any.whl", hash = "sha256:cdcbd012c9312258922f8cd3f1b62a6580fdced17db6014896053d47cddf9295"},
+    {file = "pytest-7.3.2.tar.gz", hash = "sha256:ee990a3cc55ba808b80795a79944756f315c67c12b56abd3ac993a7b8c17030b"},
 ]
 
 [package.dependencies]
@@ -1103,7 +1103,7 @@ pluggy = ">=0.12,<2.0"
 tomli = {version = ">=1.0.0", markers = "python_version < \"3.11\""}
 
 [package.extras]
-testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "xmlschema"]
+testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
 
 [[package]]
 name = "pytest-asyncio"
@@ -1428,13 +1428,13 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.183.6"
+version = "0.184.0"
 description = "A library for creating GraphQL APIs"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "strawberry_graphql-0.183.6-py3-none-any.whl", hash = "sha256:36beb6ad64af935d53920fc47e1f94ef16ebba26ad611eb847aae94ac2a55f43"},
-    {file = "strawberry_graphql-0.183.6.tar.gz", hash = "sha256:cf8a6266a806afea27f399632e832c5d96e606f1a65e1b7807feb781f0c6c561"},
+    {file = "strawberry_graphql-0.184.0-py3-none-any.whl", hash = "sha256:29795af275a33e923ef88e20bd58136eb63b95bc358a7f8e7ec208e8959f70c7"},
+    {file = "strawberry_graphql-0.184.0.tar.gz", hash = "sha256:169a13d115736b679fcfa8e36b7c5bfabaa552e2cabc5be4f8080fff99fc0a7e"},
 ]
 
 [package.dependencies]
@@ -1629,4 +1629,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "432b372ed8555a5065850cbdb3a39ff7fb4eacd07550a9b1eb97672dac857211"
+content-hash = "690ca2d83961a5feb2b75f28adc46990497f5bd99f0a3ec9d6404c259b22fe1c"
