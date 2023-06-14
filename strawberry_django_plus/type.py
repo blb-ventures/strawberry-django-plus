@@ -30,12 +30,12 @@ from strawberry.private import is_private
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UnsetType
-from strawberry.utils.typing import __dataclass_transform__, eval_type
+from strawberry.utils.typing import eval_type
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import get_model_field, resolve_model_field_name
 from strawberry_django.type import StrawberryDjangoType as _StraberryDjangoType
 from strawberry_django.utils import get_annotations, is_similar_django_type
-from typing_extensions import Annotated
+from typing_extensions import Annotated, dataclass_transform
 
 from strawberry_django_plus.optimizer import OptimizerStore, PrefetchType
 from strawberry_django_plus.utils.typing import TypeOrSequence, is_auto
@@ -362,9 +362,9 @@ class StrawberryDjangoType(_StraberryDjangoType[_O, _M]):
     store: OptimizerStore
 
 
-@__dataclass_transform__(
+@dataclass_transform(
     order_default=True,
-    field_descriptors=(
+    field_specifiers=(
         StrawberryField,
         _field,
         node,
@@ -429,9 +429,9 @@ def type(  # noqa: A001
     return wrapper
 
 
-@__dataclass_transform__(
+@dataclass_transform(
     order_default=True,
-    field_descriptors=(
+    field_specifiers=(
         StrawberryField,
         _field,
         node,
@@ -475,9 +475,9 @@ def interface(
     return wrapper
 
 
-@__dataclass_transform__(
+@dataclass_transform(
     order_default=True,
-    field_descriptors=(
+    field_specifiers=(
         StrawberryField,
         _field,
         node,
@@ -525,9 +525,9 @@ def input(  # noqa: A001
     return wrapper
 
 
-@__dataclass_transform__(
+@dataclass_transform(
     order_default=True,
-    field_descriptors=(
+    field_specifiers=(
         StrawberryField,
         _field,
         node,
