@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.4](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.3...v2.6.4) (2023-06-14)
+
+
+### Code Refactoring
+
+* fix assertionerror when registering copied generic types on schema directives ([#238](https://github.com/blb-ventures/strawberry-django-plus/issues/238)) ([250da52](https://github.com/blb-ventures/strawberry-django-plus/commit/250da52c48ea17daa756bd12b3babd1b2e050628))
+
 ## [2.6.3](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.2...v2.6.3) (2023-06-14)
 
 
