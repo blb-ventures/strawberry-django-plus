@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.6.3](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.2...v2.6.3) (2023-06-14)
+
+
+### Miscellaneous
+
+* **pyright:** fix pyright issues ([abacca4](https://github.com/blb-ventures/strawberry-django-plus/commit/abacca48ae17ec33a86dcc948e8d2d4ed62e0fe0))
+
+
+### Code Refactoring
+
+* use dataclass_transform from typing_extensions ([#236](https://github.com/blb-ventures/strawberry-django-plus/issues/236)) ([47a194e](https://github.com/blb-ventures/strawberry-django-plus/commit/47a194e07a9aa14dad05dcab42557a92c0a860d2))
+
 ## [2.6.2](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.1...v2.6.2) (2023-06-07)
 
 
