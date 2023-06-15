@@ -16,18 +16,17 @@ theme:
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to light mode
-
     - scheme: slate
       primary: green
       accent: red
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
-
   logo: images/logo.png
   favicon: images/logo.svg
   features:
     - content.code.annotate
+
 extra:
   feedback:
     title: Was this page helpful?
@@ -42,7 +41,8 @@ extra:
         data: 0
         note: >-
           Thanks for your feedback! Help us improve this page by
-          <a href="https://github.com/blb-ventures/strawberry-django-plus/issues" target=_blank>posting an issue</a>.
+          <a href="https://github.com/blb-ventures/strawberry-django-plus/issues" target=_blank>posting
+          an issue</a>.
 
 markdown_extensions:
   - admonition
@@ -52,7 +52,6 @@ markdown_extensions:
   - md_in_html
   - pymdownx.tabbed:
       alternate_style: true
-
   - toc:
       permalink: true
   - pymdownx.caret
@@ -84,4 +83,5 @@ nav:
   - Extensions:
       - Query optimizer: query-optimizer.md
       - Django debug toolbar: debug-toolbar.md
+  - Migration guide: migration-guide.md
   - Contributing: contributing.md

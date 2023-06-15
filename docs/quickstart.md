@@ -137,6 +137,15 @@ schema = strawberry.Schema(
 
 ### Relay Support
 
+!!! warning
+
+    Since version 3.0.0 the relay integration from this lib has been contributed and
+    merged directly on strawberry core.
+    Check its [docs](https://strawberry.rocks/docs/guides/relay) for more information on
+    how to use it and/or the
+    [migration guide](https://blb-ventures.github.io/strawberry-django-plus/breaking-changes/)
+    to know how to migrate your code from the older implementation.
+
 You can use the [official strawberry relay integration](https://strawberry.rocks/docs/guides/relay)
 directly with django types like this:
 
