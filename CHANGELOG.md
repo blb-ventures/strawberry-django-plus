@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.0.0](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.4...v3.0.0) (2023-06-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove debug toolbar integration
+* migrate relay to strawberry's implementation ([#235](https://github.com/blb-ventures/strawberry-django-plus/issues/235))
+
+### Features
+
+* remove debug toolbar integration ([463578a](https://github.com/blb-ventures/strawberry-django-plus/commit/463578a119535ec4a3b4df12d2c3d9d1e4c1c53e))
+
+
+### Code Refactoring
+
+* migrate relay to strawberry's implementation ([#235](https://github.com/blb-ventures/strawberry-django-plus/issues/235)) ([d55f199](https://github.com/blb-ventures/strawberry-django-plus/commit/d55f199de01aaa7c85e7ad12ab2e86ea274ca124))
+
+
+### Documentation
+
+* add a "Migration guide" section explaning how to migrate from v2 to v3 ([3a1acbb](https://github.com/blb-ventures/strawberry-django-plus/commit/3a1acbbd1c2e8c8cf544ccab05a006ebea330002))
+* add a note regarding debug-toolbar integration removal ([051b585](https://github.com/blb-ventures/strawberry-django-plus/commit/051b5854ba0992558492911129ff6fa29b15c9cb))
+
 ## [2.6.4](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.3...v2.6.4) (2023-06-14)
 
 
