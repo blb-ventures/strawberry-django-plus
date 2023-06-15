@@ -20,7 +20,7 @@
 
 ### Documentation
 
-* add a "Migration guide" section explaning how to migrate from v2 to v3 ([3a1acbb](https://github.com/blb-ventures/strawberry-django-plus/commit/3a1acbbd1c2e8c8cf544ccab05a006ebea330002))
+* add a "Migration guide" section explaining how to migrate from v2 to v3 ([3a1acbb](https://github.com/blb-ventures/strawberry-django-plus/commit/3a1acbbd1c2e8c8cf544ccab05a006ebea330002))
 * add a note regarding debug-toolbar integration removal ([051b585](https://github.com/blb-ventures/strawberry-django-plus/commit/051b5854ba0992558492911129ff6fa29b15c9cb))
 
 ## [2.6.4](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.3...v2.6.4) (2023-06-14)
