@@ -4,9 +4,9 @@ import strawberry
 from django.db.models.base import Model
 from strawberry import UNSET, relay
 from strawberry.field import StrawberryField
-from strawberry.utils.typing import __dataclass_transform__
 from strawberry_django.fields.field import field as _field
 from strawberry_django.ordering import Ordering
+from typing_extensions import dataclass_transform
 
 from strawberry_django_plus.utils.typing import is_auto
 
@@ -15,9 +15,9 @@ from . import field
 _T = TypeVar("_T")
 
 
-@__dataclass_transform__(
+@dataclass_transform(
     order_default=True,
-    field_descriptors=(
+    field_specifiers=(
         StrawberryField,
         _field,
         relay.node,

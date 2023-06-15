@@ -68,8 +68,8 @@ class SchemaDirectiveWithResolver:
         return self.priority >= other.priority
 
     def register(self, origin: Origin):
-        assert self.origin is None
-        self.origin = origin
+        if self.origin is None:
+            self.origin = origin
         _origin_cache[origin].append(self)
 
     def resolve(

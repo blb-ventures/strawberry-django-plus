@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.6.4](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.3...v2.6.4) (2023-06-14)
+
+
+### Code Refactoring
+
+* fix assertionerror when registering copied generic types on schema directives ([#238](https://github.com/blb-ventures/strawberry-django-plus/issues/238)) ([250da52](https://github.com/blb-ventures/strawberry-django-plus/commit/250da52c48ea17daa756bd12b3babd1b2e050628))
+
+## [2.6.3](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.2...v2.6.3) (2023-06-14)
+
+
+### Miscellaneous
+
+* **pyright:** fix pyright issues ([abacca4](https://github.com/blb-ventures/strawberry-django-plus/commit/abacca48ae17ec33a86dcc948e8d2d4ed62e0fe0))
+
+
+### Code Refactoring
+
+* use dataclass_transform from typing_extensions ([#236](https://github.com/blb-ventures/strawberry-django-plus/issues/236)) ([47a194e](https://github.com/blb-ventures/strawberry-django-plus/commit/47a194e07a9aa14dad05dcab42557a92c0a860d2))
+
 ## [2.6.2](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.1...v2.6.2) (2023-06-07)
 
 
