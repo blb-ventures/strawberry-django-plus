@@ -1,11 +1,14 @@
 import inspect
 from typing import TYPE_CHECKING, Any, Optional, Sized, cast
 
+import django
 import strawberry
+from asgiref.sync import sync_to_async
 from strawberry import relay
 from strawberry.relay.types import NodeIterableType
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
+from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
 from .field import field
@@ -43,6 +46,19 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
         last: Optional[int] = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
+        # FIXME: Asynchronous queryset iteration is only available on Django 4.1+.
+        # Remove this when Django we can remove support for django 4.0 and older
+        if django.VERSION < (4, 1) and in_async_context():
+            return sync_to_async(cls.resolve_connection)(  # type: ignore
+                nodes,
+                info=info,
+                before=before,
+                after=after,
+                first=first,
+                last=last,
+                **kwargs,
+            )
+
         conn = super().resolve_connection(
             nodes,
             info=info,
