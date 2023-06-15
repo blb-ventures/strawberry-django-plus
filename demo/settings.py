@@ -104,9 +104,6 @@ LOGGING = {
     },
 }
 
-
-STRAWBERRY_DJANGO_RELAY_MAX_RESULTS = 100
-
 SECRET_KEY = "dummy"
 
 ROOT_URLCONF = "demo.urls"

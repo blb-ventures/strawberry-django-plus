@@ -13,4 +13,5 @@ exclude_lines =
     @abc.abstractmethod
     assert_never
 omit =
+    */migrations/*
     */tests/*

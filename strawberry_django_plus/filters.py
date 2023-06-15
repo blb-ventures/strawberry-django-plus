@@ -3,7 +3,7 @@ from typing import Any, Callable, Optional, Sequence, Type, TypeVar, cast
 
 from django.db.models.base import Model
 from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
-from strawberry import UNSET
+from strawberry import UNSET, relay
 from strawberry.field import StrawberryField
 from strawberry_django import filters as _filters
 from strawberry_django import utils
@@ -11,7 +11,6 @@ from strawberry_django.fields.field import field as _field
 from typing_extensions import dataclass_transform
 
 from . import field
-from .relay import GlobalID, connection, node
 from .type import input
 
 _T = TypeVar("_T")
@@ -20,7 +19,7 @@ _T = TypeVar("_T")
 def _normalize_value(value: Any):
     if isinstance(value, list):
         return [_normalize_value(v) for v in value]
-    if isinstance(value, GlobalID):
+    if isinstance(value, relay.GlobalID):
         return value.node_id
 
     return value
@@ -74,8 +73,8 @@ _filters.build_filter_kwargs = _build_filter_kwargs
     field_specifiers=(
         StrawberryField,
         _field,
-        node,
-        connection,
+        relay.node,
+        relay.connection,
         field.field,
         field.node,
         field.connection,

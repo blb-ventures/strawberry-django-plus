@@ -31,6 +31,7 @@ from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
+from strawberry import relay
 from strawberry.extensions import SchemaExtension
 from strawberry.lazy_type import LazyType
 from strawberry.schema.schema import Schema
@@ -44,7 +45,6 @@ from strawberry_django.fields.types import resolve_model_field_name
 from typing_extensions import TypeAlias, assert_never, assert_type
 
 from .descriptors import ModelProperty
-from .relay import Connection, Edge, NodeType
 from .utils import resolvers
 from .utils.inspect import (
     PrefetchInspector,
@@ -115,8 +115,14 @@ def _get_model_hints(
 
     # In case this is a relay field, find the selected edges/nodes, the selected fields
     # are actually inside edges -> node selection...
-    if type_def.concrete_of and issubclass(type_def.concrete_of.origin, Connection):
-        n_type = type_def.type_var_map[NodeType]
+    if type_def.concrete_of and issubclass(type_def.concrete_of.origin, relay.Connection):
+        # TODO: Connections are mostly used for pagination so it doesn't make sense for
+        # us to optimize those, as our prefetch would be thrown away causing an extra
+        # useless query. Is there a way for us to properly optimize this in the future?
+        if level > 0:
+            return None
+
+        n_type = type_def.type_var_map[cast(TypeVar, relay.NodeType)]
         if isinstance(n_type, LazyType):
             n_type = n_type.resolve_type()
 
@@ -126,7 +132,7 @@ def _get_model_hints(
             if edges.name != "edges":
                 continue
 
-            e_type = Edge._type_definition.resolve_generic(Edge[n_type])  # type: ignore
+            e_type = relay.Edge._type_definition.resolve_generic(relay.Edge[n_type])  # type: ignore
             e_typename = schema.config.name_converter.from_object(e_type._type_definition)
             for node in get_selections(edges, typename=e_typename).values():
                 if node.name != "node":

@@ -1,8 +1,9 @@
 import pytest
+from strawberry.relay import to_base64
 
-from strawberry_django_plus.relay import to_base64
+from demo.models import Favorite
 
-from .faker import MilestoneFactory, ProjectFactory, UserFactory
+from .faker import FavoriteFactory, IssueFactory, MilestoneFactory, ProjectFactory, UserFactory
 from .utils import GraphQLTestClient
 
 
@@ -132,8 +133,13 @@ def test_node_multiple(db, gql_client: GraphQLTestClient):
     }
 
     # The ids are correct, but the type is not
-    res = gql_client.query(query, {"ids": [to_base64("IssueType", m.pk) for m in milestones]})
-    assert res.data == {"milestones": []}
+    res = gql_client.query(
+        query,
+        {"ids": [to_base64("IssueType", m.pk) for m in milestones]},
+        asserts_errors=False,
+    )
+    assert res.errors is not None
+    assert res.data is None
 
 
 @pytest.mark.django_db(transaction=True)
@@ -334,7 +340,6 @@ def test_node_queryset(db, gql_client: GraphQLTestClient):
       query TestQuery ($id: GlobalID!) {
         staff(id: $id) {
           id
-          username
           isStaff
         }
       }
@@ -349,7 +354,6 @@ def test_node_queryset(db, gql_client: GraphQLTestClient):
     assert res.data == {
         "staff": {
             "id": to_base64("StaffType", staff.username),
-            "username": staff.username,
             "isStaff": True,
         },
     }
@@ -361,7 +365,6 @@ def test_node_multiple_queryset(db, gql_client: GraphQLTestClient):
       query TestQuery ($ids: [GlobalID!]!) {
         staffList(ids: $ids) {
           id
-          username
           isStaff
         }
       }
@@ -375,9 +378,9 @@ def test_node_multiple_queryset(db, gql_client: GraphQLTestClient):
     )
     assert res.data == {
         "staffList": [
+            None,
             {
                 "id": to_base64("StaffType", staff.username),
-                "username": staff.username,
                 "isStaff": True,
             },
         ],
@@ -392,7 +395,6 @@ def test_connection_queryset(db, gql_client: GraphQLTestClient):
           edges {
             node {
               id
-              username
               isStaff
             }
           }
@@ -409,7 +411,6 @@ def test_connection_queryset(db, gql_client: GraphQLTestClient):
                 {
                     "node": {
                         "id": to_base64("StaffType", staff.username),
-                        "username": staff.username,
                         "isStaff": True,
                     },
                 },
@@ -633,3 +634,46 @@ def test_connection_queryset_with_filter_order_and_first(db, gql_client: GraphQL
             ],
         },
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_connection_get_queryset(db, gql_client: GraphQLTestClient):
+    query = """
+    query Issue ($id: GlobalID!){
+        issue(id: $id) {
+            favoriteSet {
+                edges { node {
+                    name
+                    user { id }
+                } }
+            }
+        }
+    }
+    """
+
+    user_a = UserFactory.create()
+    user_b = UserFactory.create()
+
+    issue = IssueFactory.create()
+
+    favorite_a1 = FavoriteFactory.create(user=user_a, issue=issue)
+    favorite_a2 = FavoriteFactory.create(user=user_a, issue=issue)
+    FavoriteFactory.create(user=user_b, issue=issue)
+
+    with gql_client.login(user_a):
+        res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+        assert res.data
+        assert isinstance(res.data["issue"], dict)
+        nodes = [i["node"] for i in res.data["issue"]["favoriteSet"]["edges"]]
+        assert nodes == [
+            {
+                "name": favorite_a1.name,
+                "user": {"id": to_base64("UserType", user_a.username)},
+            },
+            {
+                "name": favorite_a2.name,
+                "user": {"id": to_base64("UserType", user_a.username)},
+            },
+        ]
+
+    assert Favorite.objects.all().count() == 3

@@ -24,15 +24,16 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Model, QuerySet
 from graphql.type.definition import GraphQLResolveInfo
+from strawberry import Schema, relay
 from strawberry.django.context import StrawberryDjangoContext
 from strawberry.private import Private
+from strawberry.schema.schema_converter import GraphQLCoreConverter
 from strawberry.schema_directive import Location
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Self, assert_never, final
 
 from .directives import SchemaDirectiveHelper, SchemaDirectiveWithResolver
-from .relay import Connection, GlobalID
 from .types import OperationInfo, OperationMessage
 from .utils import aio, resolvers
 from .utils.query import filter_for_user
@@ -166,7 +167,7 @@ def get_with_perms(
 
 @overload
 def get_with_perms(
-    pk: GlobalID,
+    pk: relay.GlobalID,
     info: Info,
     *,
     required: Literal[True],
@@ -177,7 +178,7 @@ def get_with_perms(
 
 @overload
 def get_with_perms(
-    pk: GlobalID,
+    pk: relay.GlobalID,
     info: Info,
     *,
     required: bool = ...,
@@ -188,7 +189,7 @@ def get_with_perms(
 
 @overload
 def get_with_perms(
-    pk: GlobalID,
+    pk: relay.GlobalID,
     info: Info,
     *,
     required: Literal[True],
@@ -198,7 +199,7 @@ def get_with_perms(
 
 @overload
 def get_with_perms(
-    pk: GlobalID,
+    pk: relay.GlobalID,
     info: Info,
     *,
     required: bool = ...,
@@ -207,7 +208,7 @@ def get_with_perms(
 
 
 def get_with_perms(pk, info, *, required=False, model=None):
-    if isinstance(pk, GlobalID):
+    if isinstance(pk, relay.GlobalID):
         instance = pk.resolve_node(info, required=required, ensure_type=model)
         if aio.is_awaitable(instance, info=info):
             instance = resolvers.resolve_sync(instance)
@@ -347,9 +348,20 @@ class AuthDirective(SchemaDirectiveWithResolver):
             if (
                 type_def
                 and type_def.concrete_of
-                and issubclass(type_def.concrete_of.origin, Connection)
+                and issubclass(type_def.concrete_of.origin, relay.Connection)
             ):
-                return cast(Connection, type_def.origin).from_nodes([], total_count=0)
+                strawberry_schema: Schema = info.schema.extensions[
+                    GraphQLCoreConverter.DEFINITION_BACKREF
+                ]
+                field = strawberry_schema.get_field_for_type(info.field_name, info.parent_type.name)
+                assert field is not None
+                return cast(relay.Connection, type_def.origin).resolve_connection(
+                    [],
+                    info=Info(
+                        _raw_info=info,
+                        _field=field,
+                    ),
+                )
 
         # In last case, raise an error
         raise PermissionDenied(self.message)

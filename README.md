@@ -34,7 +34,8 @@ for information on how to use this lib.
 - [Mutations for Django](https://blb-ventures.github.io/strawberry-django-plus/mutations/),
   with CRUD support and automatic errors validation.
 - [Relay support](https://blb-ventures.github.io/strawberry-django-plus/quickstart/#relay-support)
-  for queries, connections and input mutations, all integrated with django types directly.
+  for queries, connections and input mutations, using the official strawberry's
+  [relay integration](https://strawberry.rocks/docs/guides/relay)
 - [Django Debug Toolbar integration](https://blb-ventures.github.io/strawberry-django-plus/debug-toolbar/)
   with graphiql to display metrics like SQL queries
 - Improved sync/async resolver that priorizes the model's cache to avoid have to use

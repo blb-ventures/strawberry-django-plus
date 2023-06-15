@@ -1,10 +1,10 @@
 from typing import Any, List, cast
 
 import pytest
+from strawberry.relay import to_base64
 
 from demo.models import Assignee
 from strawberry_django_plus.optimizer import DjangoOptimizerExtension
-from strawberry_django_plus.relay import to_base64
 
 from .faker import (
     IssueFactory,
@@ -22,7 +22,6 @@ def test_user_query(db, gql_client: GraphQLTestClient):
       query TestQuery {
         me {
           id
-          username
           email
           fullName
         }
@@ -42,7 +41,6 @@ def test_user_query(db, gql_client: GraphQLTestClient):
         assert res.data == {
             "me": {
                 "id": to_base64("UserType", user.username),
-                "username": user.username,
                 "email": user.email,
                 "fullName": "John Snow",
             },
@@ -559,7 +557,7 @@ def test_query_connection_nested(db, gql_client: GraphQLTestClient):
     for issue in t2_issues:
         t2.issues.add(issue)
 
-    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
+    with assert_num_queries(5):
         res = gql_client.query(query)
 
     assert res.data == {
@@ -647,7 +645,7 @@ def test_query_nested_fragments(db, gql_client: GraphQLTestClient):
             },
         )
 
-    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 8):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 7):
         res = gql_client.query(query)
 
     assert res.data == expected

@@ -19,27 +19,25 @@ from strawberry import (
     interface,
     lazy,
     mutation,
+    relay,
     scalar,
     schema_directive,
     subscription,
     type,
     union,
 )
-
-from strawberry_django_plus import relay
-from strawberry_django_plus.descriptors import model_cached_property, model_property
-from strawberry_django_plus.relay import (
+from strawberry.relay import (
     Connection,
     Node,
     connection,
-    input_mutation,
     node,
 )
+
+from strawberry_django_plus.descriptors import model_cached_property, model_property
 from strawberry_django_plus.types import (
     ListInput,
     NodeInput,
     NodeInputPartial,
-    NodeType,
     OperationInfo,
     OperationMessage,
 )
@@ -80,10 +78,8 @@ __all__ = [
     "Connection",
     "node",
     "connection",
-    "input_mutation",
     # strawberry_django_plus
     "django",
-    "NodeType",
     "NodeInput",
     "NodeInputPartial",
     "ListInput",
@@ -93,4 +89,5 @@ __all__ = [
     "model_property",
     "resolvers",
     "aio",
+    "relay",
 ]

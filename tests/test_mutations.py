@@ -1,7 +1,7 @@
 import pytest
+from strawberry.relay import from_base64, to_base64
 
 from demo.models import Issue, Milestone, Project
-from strawberry_django_plus.relay import from_base64, to_base64
 from tests.faker import (
     IssueFactory,
     MilestoneFactory,
@@ -507,7 +507,7 @@ def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
           issueAssignees {
             owner
             user {
-              username
+              id
             }
           }
         }
@@ -574,11 +574,11 @@ def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
     assert {t["name"] for t in tags} == {"Foobar", "Foobin"}
 
     assert {
-        (r["user"]["username"], r["owner"]) for r in res.data["updateIssue"].pop("issueAssignees")
+        (r["user"]["id"], r["owner"]) for r in res.data["updateIssue"].pop("issueAssignees")
     } == {
-        (user_1.username, False),
-        (user_2.username, True),
-        (user_3.username, True),
+        (to_base64("UserType", user_1.username), False),
+        (to_base64("UserType", user_2.username), True),
+        (to_base64("UserType", user_3.username), True),
     }
 
     assert res.data == {
@@ -631,7 +631,7 @@ def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient
           issueAssignees {
             owner
             user {
-              username
+              id
             }
           }
         }
@@ -702,11 +702,11 @@ def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient
     assert {t["name"] for t in tags} == {"Foobar", "Foobin"}
 
     assert {
-        (r["user"]["username"], r["owner"]) for r in res.data["updateIssue"].pop("issueAssignees")
+        (r["user"]["id"], r["owner"]) for r in res.data["updateIssue"].pop("issueAssignees")
     } == {
-        (user_1.username, False),
-        (user_2.username, True),
-        (user_3.username, True),
+        (to_base64("UserType", user_1.username), False),
+        (to_base64("UserType", user_2.username), True),
+        (to_base64("UserType", user_3.username), True),
     }
 
     assert res.data == {
