@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.0.1](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.0...v3.0.1) (2023-06-17)
+
+
+### Bug Fixes
+
+* inject filters/order at once to avoid one of them missing also removing the other one ([84f540e](https://github.com/blb-ventures/strawberry-django-plus/commit/84f540ec8fe608a0bf93efb9ed692421f20e1501)), closes [#243](https://github.com/blb-ventures/strawberry-django-plus/issues/243)
+* loosen errors for unions of django types when checking for filters/ordering ([4a97839](https://github.com/blb-ventures/strawberry-django-plus/commit/4a97839e7190a32246cc2ea3d5297cf26a2bea37))
+
+
+### Documentation
+
+* fix a typo in the CHANGELOG ([f54507e](https://github.com/blb-ventures/strawberry-django-plus/commit/f54507e485d5ad831d71a5a01bd06be09de7300b))
+
 ## [3.0.0](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.4...v3.0.0) (2023-06-15)
 
 
