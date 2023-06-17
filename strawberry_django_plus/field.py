@@ -20,6 +20,7 @@ from typing import (
 )
 
 import strawberry
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
 from django.db.models.fields.related_descriptors import (
@@ -152,7 +153,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         order = super().get_order()
         if order in (None, UNSET):
             t_origin = self.type_origin
-            if (f_origin := getattr(t_origin, "_django_type", None)) is not None:
+            if t_origin and (f_origin := getattr(t_origin, "_django_type", None)) is not None:
                 order = f_origin.order
 
         return order
@@ -162,13 +163,13 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         filters = super().get_filters()
         if filters in (None, UNSET):
             t_origin = self.type_origin
-            if (f_origin := getattr(t_origin, "_django_type", None)) is not None:
+            if t_origin and (f_origin := getattr(t_origin, "_django_type", None)) is not None:
                 filters = f_origin.filters
 
         return filters
 
     @cached_property
-    def type_origin(self) -> Type:
+    def type_origin(self) -> Optional[Type]:
         origin = self.type
 
         tdef = cast(Optional[TypeDefinition], getattr(origin, "_type_definition", None))
@@ -189,14 +190,13 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 if hasattr(t, "_django_type"):
                     olist.append(t)
 
-            assert len(olist) == 1
-            origin = olist[0]
+            origin = olist[0] if len(olist) == 1 else None
 
         return origin
 
     @cached_property
-    def model(self) -> Type[models.Model]:
-        return self.type_origin._django_type.model
+    def model(self) -> Optional[Type[models.Model]]:
+        return (type_origin := self.type_origin) and type_origin._django_type.model
 
     @cached_property
     def safe_resolver(self):
@@ -219,7 +219,9 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         if not skip_base_resolver and self.base_resolver is not None:
             result = self.resolver(source, info, args, kwargs)
         elif source is None:
-            result = self.model._default_manager.all()
+            model = self.model
+            assert model is not None
+            result = model._default_manager.all()
         else:
             # Small optimization to async resolvers avoid having to call it in an sync_to_async
             # context if the value is already cached, since it will not hit the db anymore
@@ -327,7 +329,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
                 if isinstance(node, relay.GlobalID):
                     assert node.resolve_type(info) == unwrap_type(self.type)
                     qs = qs.filter(pk=node.node_id)
-        except self.model.DoesNotExist:
+        except ObjectDoesNotExist:
             if not self.is_optional:
                 raise
         else:
@@ -361,8 +363,17 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                     # to retrieve the queryset from its RelatedManager
                     retval = field.get_result(root, info, [], kwargs, skip_base_resolver=True)
                 else:
+                    if (type_origin := field.type_origin) is None:
+                        raise TypeError(
+                            (
+                                "Django connection without a resolver needs to define a connection "
+                                "for one and only one django type. To use it in a union, define "
+                                "your own resolver that handles each of those"
+                            ),
+                        )
+
                     retval = resolvers.resolve_model_nodes(
-                        field.type_origin,
+                        type_origin,
                         info=info,
                         required=True,
                         filter_perms=True,

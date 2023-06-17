@@ -231,12 +231,16 @@ class DjangoCreateMutationField(DjangoCUDMutationField):
         kwargs: Dict[str, Any],
     ) -> Any:
         assert data is not None
+
+        model = self.model
+        assert model is not None
+
         # Do not optimize anything while retrieving the object to update
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
             retval = resolvers.create(
                 info,
-                self.model,
+                model,
                 resolvers.parse_input(info, vars(data)),
                 full_clean=self.full_clean,
             )
@@ -270,10 +274,13 @@ class DjangoUpdateMutationField(DjangoCUDMutationField):
         if pk is UNSET:
             pk = vdata.pop("pk")
 
+        model = self.model
+        assert model
+
         # Do not optimize anything while retrieving the object to update
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
-            instance = get_with_perms(pk, info, required=True, model=self.model)
+            instance = get_with_perms(pk, info, required=True, model=model)
             retval = resolvers.update(
                 info,
                 instance,
@@ -310,10 +317,13 @@ class DjangoDeleteMutationField(DjangoCUDMutationField):
         if pk is UNSET:
             pk = vdata.pop("pk")
 
+        model = self.model
+        assert model is not None
+
         # Do not optimize anything while retrieving the object to delete
         token = DjangoOptimizerExtension.enabled.set(False)
         try:
-            instance = get_with_perms(pk, info, required=True, model=self.model)
+            instance = get_with_perms(pk, info, required=True, model=model)
             retval = resolvers.delete(info, instance, data=resolvers.parse_input(info, vdata))
         finally:
             DjangoOptimizerExtension.enabled.reset(token)
