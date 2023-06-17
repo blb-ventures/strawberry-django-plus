@@ -156,7 +156,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             if t_origin and (f_origin := getattr(t_origin, "_django_type", None)) is not None:
                 order = f_origin.order
 
-        return order
+        return order if order is not UNSET else None
 
     def get_filters(self) -> Optional[Type]:
         # FIXME: This should be done on strawberry-graphql-django
@@ -166,7 +166,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             if t_origin and (f_origin := getattr(t_origin, "_django_type", None)) is not None:
                 filters = f_origin.filters
 
-        return filters
+        return filters if filters is not UNSET else None
 
     @cached_property
     def type_origin(self) -> Optional[Type]:
@@ -344,12 +344,14 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
         # order/filters resolvers in here, so we need to add them by hand (unless they
         # are somewhat in there). We are not adding pagination because it doesn't make
         # sense together with a Connection
-        args_names = {a.python_name for a in field.arguments}
+        args: Dict[str, StrawberryArgument] = {a.python_name: a for a in field.arguments}
 
-        if "filters" not in args_names and (filters := field.get_filters()) not in (None, UNSET):
-            field.arguments = [*field.arguments, argument("filters", filters)]
-        if "order" not in args_names and (order := field.get_order()) not in (None, UNSET):
-            field.arguments = [*field.arguments, argument("order", order)]
+        if "filters" not in args and (filters := field.get_filters()) not in (None, UNSET):
+            args["filters"] = argument("filters", filters)
+        if "order" not in args and (order := field.get_order()) not in (None, UNSET):
+            args["order"] = argument("order", order)
+
+        field.arguments = list(args.values())
 
         if field.base_resolver is None:
 
