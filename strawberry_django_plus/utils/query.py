@@ -1,13 +1,22 @@
 import functools
-from typing import List, Optional, Set, Type, TypeVar
+from typing import List, Optional, Set, Type, TypeVar, cast
 
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Exists, F, Model, Q, QuerySet
 from django.db.models.functions import Cast
 from strawberry_django.utils import is_async
 
 from .typing import TypeOrIterable, UserType
+
+try:
+    from django.contrib.contenttypes.models import ContentType
+
+    has_contenttypes = True
+except (ImportError, RuntimeError):
+    # for pyright introduce an extra variable
+    # ContentType = None makes ContentType an invalid type
+    has_contenttypes = False
+
 
 try:
     from strawberry_django_plus.integrations.guardian import (
@@ -81,13 +90,14 @@ def filter_for_user_q(
     # Try to retrieve the ContentType from cache. If it is not there, we will
     # query it through the queryset
     ctype: Optional[ContentType] = None
-    try:
-        meta = model._meta
-        ctype = ContentType.objects._get_from_cache(meta)  # type: ignore
-    except KeyError:  # pragma:nocover
-        # If we are not running async, retrieve it
-        if not is_async():
-            ctype = ContentType.objects.get_for_model(model)
+    if has_contenttypes:
+        try:
+            meta = model._meta
+            ctype = cast(ContentType, ContentType.objects._get_from_cache(meta))  # type: ignore
+        except KeyError:  # pragma:nocover
+            # If we are not running async, retrieve it
+            if not is_async():
+                ctype = ContentType.objects.get_for_model(model)
 
     app_labels = set()
     perms_list = []

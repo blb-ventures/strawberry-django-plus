@@ -18,7 +18,6 @@ from typing import (
     cast,
 )
 
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.constants import LOOKUP_SEP
@@ -55,6 +54,14 @@ from .utils.inspect import (
     get_selections,
 )
 from .utils.typing import TypeOrSequence
+
+try:
+    from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+except (ImportError, RuntimeError):  # pragma:nocover
+    # for isinstance (crashes otherwise)
+    GenericForeignKey = type(None)
+    GenericRelation = type(None)
+
 
 __all__ = [
     "OptimizerConfig",

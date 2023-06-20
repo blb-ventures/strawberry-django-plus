@@ -17,15 +17,12 @@ from typing import (
 )
 
 import strawberry
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.exceptions import (
-    MissingFieldAnnotationError,
-)
+from strawberry.exceptions import MissingFieldAnnotationError
 from strawberry.field import StrawberryField
 from strawberry.private import is_private
 from strawberry.type import get_object_definition
@@ -48,6 +45,14 @@ from .utils.resolvers import (
     resolve_model_node,
     resolve_model_nodes,
 )
+
+try:
+    from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
+except (ImportError, RuntimeError):  # pragma:nocover
+    # for isinstance (crashes otherwise)
+    GenericForeignKey = type(None)
+    GenericRel = type(None)
+
 
 __all = [
     "StrawberryDjangoType",
