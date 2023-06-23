@@ -29,7 +29,7 @@ from strawberry.extensions import SchemaExtension
 from strawberry.field import StrawberryField
 from strawberry.private import Private
 from strawberry.schema.schema import Schema
-from strawberry.types.types import TypeDefinition
+from strawberry.types.types import StrawberryObjectDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import TypeAlias
 
@@ -39,7 +39,7 @@ try:
 except AttributeError:
     _cache = functools.lru_cache
 
-Origin: TypeAlias = Union[TypeDefinition, StrawberryField]
+Origin: TypeAlias = Union[StrawberryObjectDefinition, StrawberryField]
 
 _origin_cache: DefaultDict[Origin, List["SchemaDirectiveWithResolver"]] = defaultdict(list)
 
@@ -87,7 +87,7 @@ class SchemaDirectiveWithResolver:
 @dataclasses.dataclass
 class SchemaDirectiveHelperReturnType:
     ret_type: Union[GraphQLObjectType, GraphQLInterfaceType, GraphQLScalarType, GraphQLEnumType]
-    type_def: Optional[TypeDefinition] = dataclasses.field(default=None)
+    type_def: Optional[StrawberryObjectDefinition] = dataclasses.field(default=None)
 
 
 @dataclasses.dataclass
@@ -136,7 +136,7 @@ class SchemaDirectiveExtension(SchemaExtension):
         )
 
         type_def = schema.get_type_by_name(type_name)
-        if isinstance(type_def, TypeDefinition):
+        if isinstance(type_def, StrawberryObjectDefinition):
             field = next(
                 (
                     f

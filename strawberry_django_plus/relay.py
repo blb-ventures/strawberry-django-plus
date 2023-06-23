@@ -46,10 +46,15 @@ from strawberry.field import StrawberryField
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
-from strawberry.type import StrawberryContainer, StrawberryList, StrawberryOptional
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryList,
+    StrawberryOptional,
+    get_object_definition,
+)
 from strawberry.types import Info
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.types.types import TypeDefinition
+from strawberry.types.types import StrawberryObjectDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.str_converters import to_camel_case
@@ -108,7 +113,7 @@ def from_base64(value: str) -> Tuple[str, str]:
     return res[0], res[1]
 
 
-def to_base64(type_: Union[str, type, TypeDefinition], node_id: Any) -> str:
+def to_base64(type_: Union[str, type, StrawberryObjectDefinition], node_id: Any) -> str:
     """Encode the type name and node id to a base64 string.
 
     Args:
@@ -128,10 +133,11 @@ def to_base64(type_: Union[str, type, TypeDefinition], node_id: Any) -> str:
     try:
         if isinstance(type_, str):
             type_name = type_
-        elif isinstance(type_, TypeDefinition):
+        elif isinstance(type_, StrawberryObjectDefinition):
             type_name = type_.name
         elif isinstance(type_, type):
-            type_name = type_._type_definition.name  # type: ignore
+            type_def = get_object_definition(type_, strict=True)
+            type_name = type_def.name
     except Exception as e:  # noqa: BLE001
         raise ValueError(f"{type_} is not a valid GraphQL type or name") from e
 
@@ -223,7 +229,7 @@ class GlobalID:
 
         if origin is None:
             type_def = info.schema.get_type_by_name(self.type_name)
-            assert isinstance(type_def, TypeDefinition)
+            assert isinstance(type_def, StrawberryObjectDefinition)
             origin = type_def.origin
             if isinstance(origin, LazyType):
                 origin = origin.resolve_type()
@@ -420,7 +426,7 @@ class Node(abc.ABC):
             try:
                 parent_type = info._raw_info.parent_type
                 type_def = info.schema.get_type_by_name(parent_type.name)
-                if not isinstance(type_def, TypeDefinition):
+                if not isinstance(type_def, StrawberryObjectDefinition):
                     raise TypeError  # noqa: TRY301
 
                 resolve_id = cast(Node, type_def.origin).resolve_id
@@ -749,7 +755,7 @@ class Connection(Generic[NodeType]):
             expected = end - start
 
         # Overfetch by 1 to check if we have a next result
-        type_def = cast(TypeDefinition, cls._type_definition)  # type: ignore
+        type_def = get_object_definition(cls, strict=True)
         field_def = type_def.get_field("edges")
         assert field_def
 
@@ -1042,8 +1048,7 @@ class ConnectionField(RelayField):
 
             return_type = candidates[0]
 
-        type_def = return_type._type_definition  # type: ignore
-        assert isinstance(type_def, TypeDefinition)
+        type_def = get_object_definition(return_type, strict=True)
 
         field_type = type_def.type_var_map[NodeType]
         if isinstance(field_type, LazyType):

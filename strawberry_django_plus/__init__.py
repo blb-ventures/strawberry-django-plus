@@ -5,6 +5,7 @@ from strawberry import object_type
 from strawberry.enum import EnumDefinition
 from strawberry.field import StrawberryField
 from strawberry.schema.name_converter import NameConverter
+from strawberry.type import get_object_definition
 from strawberry.types.fields.resolver import StrawberryResolver
 
 _cls_docs = {}
@@ -32,9 +33,10 @@ def _process_type(cls, *args, **kwargs):
         kwargs["description"] = _cls_docs.get(cls)
     ret = _original_process_type(cls, *args, **kwargs)
 
-    for d in ret._type_definition.directives:
+    type_def = get_object_definition(ret, strict=True)
+    for d in type_def.directives or []:
         if isinstance(d, SchemaDirectiveWithResolver):
-            d.register(ret._type_definition)
+            d.register(type_def)
 
     return ret
 

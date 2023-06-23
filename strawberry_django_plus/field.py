@@ -33,10 +33,9 @@ from strawberry.arguments import StrawberryArgument
 from strawberry.extensions.field_extension import FieldExtension
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
-from strawberry.type import StrawberryContainer, StrawberryType
+from strawberry.type import StrawberryContainer, StrawberryType, get_object_definition
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
-from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
@@ -144,8 +143,11 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         if model:
             return model
 
-        tdef = cast(Optional[TypeDefinition], getattr(type_, "_type_definition", None))
-        if tdef and tdef.concrete_of and issubclass(tdef.concrete_of.origin, relay.Connection):
+        if (
+            (tdef := get_object_definition(type_))
+            and tdef.concrete_of
+            and issubclass(tdef.concrete_of.origin, relay.Connection)
+        ):
             n_type = tdef.type_var_map[relay.NodeType]  # type: ignore
             if isinstance(n_type, LazyType):
                 n_type = n_type.resolve_type()

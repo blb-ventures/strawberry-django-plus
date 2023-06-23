@@ -28,7 +28,7 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.extensions.field_extension import FieldExtension
 from strawberry.permission import BasePermission
-from strawberry.type import StrawberryType
+from strawberry.type import StrawberryType, get_object_definition
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
@@ -191,7 +191,7 @@ class DjangoInputMutationField(DjangoMutationField, relay.InputMutationField):
         self.input_type = input_type
         if self.input_type and not self.base_resolver:
             namespace = sys.modules[self.input_type.__module__].__dict__
-            type_def = getattr(input_type, "_type_definition", None)
+            type_def = get_object_definition(input_type)
             self.default_args["input"] = StrawberryArgument(
                 python_name="input",
                 graphql_name=None,

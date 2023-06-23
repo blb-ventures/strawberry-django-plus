@@ -275,7 +275,7 @@ class AuthDirective(SchemaDirectiveWithResolver):
             resolver,
             root,
             info,
-            cast(UserType, user),
+            user,
             **kwargs,
         )
 
