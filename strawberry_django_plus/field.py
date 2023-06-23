@@ -38,10 +38,9 @@ from strawberry.field import _RESOLVER_TYPE, UNRESOLVED, StrawberryField
 from strawberry.lazy_type import LazyType
 from strawberry.permission import BasePermission
 from strawberry.relay.types import NodeIterableType
-from strawberry.type import StrawberryContainer, StrawberryType
+from strawberry.type import StrawberryContainer, StrawberryType, get_object_definition
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
-from strawberry.types.types import TypeDefinition
 from strawberry.union import StrawberryUnion
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
@@ -172,9 +171,12 @@ class StrawberryDjangoField(_StrawberryDjangoField):
     def type_origin(self) -> Optional[Type]:
         origin = self.type
 
-        tdef = cast(Optional[TypeDefinition], getattr(origin, "_type_definition", None))
-        if tdef and tdef.concrete_of and issubclass(tdef.concrete_of.origin, relay.Connection):
-            origin = tdef.type_var_map[relay.NodeType]  # type: ignore
+        if (
+            (tdef := get_object_definition(origin))
+            and tdef.concrete_of
+            and issubclass(tdef.concrete_of.origin, relay.Connection)
+        ):
+            origin = tdef.type_var_map[cast(TypeVar, relay.NodeType)]
             if isinstance(origin, LazyType):
                 origin = origin.resolve_type()
 

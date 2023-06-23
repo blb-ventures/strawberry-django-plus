@@ -27,7 +27,7 @@ from strawberry.exceptions import (
 )
 from strawberry.field import StrawberryField
 from strawberry.private import is_private
-from strawberry.types.types import TypeDefinition
+from strawberry.type import get_object_definition
 from strawberry.unset import UnsetType
 from strawberry_django.fields.field import field as _field
 from strawberry_django.fields.types import get_model_field, resolve_model_field_name
@@ -175,9 +175,9 @@ def _process_type(
     strawberry.type(cls, **kwargs)
 
     # update annotations and fields
-    type_def = cast(TypeDefinition, cls._type_definition)  # type: ignore
+    type_def = get_object_definition(cls, strict=True)
     new_fields: List[StrawberryField] = []
-    for f in type_def._fields:
+    for f in type_def.fields:
         django_name: Optional[str] = getattr(f, "django_name", None) or f.name
         description: Optional[str] = getattr(f, "description", None)
         type_annotation: Optional[StrawberryAnnotation] = getattr(f, "type_annotation", None)
@@ -279,7 +279,8 @@ def _process_type(
         if f.base_resolver and f.python_name:
             setattr(cls, f.python_name, f)
 
-    cls._type_definition._fields = new_fields  # type: ignore
+    type_def = get_object_definition(cls, strict=True)
+    type_def._fields = new_fields
     cls._django_type = django_type  # type: ignore
 
     return cls

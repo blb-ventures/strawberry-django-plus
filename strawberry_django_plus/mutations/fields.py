@@ -29,7 +29,7 @@ from strawberry.arguments import StrawberryArgument
 from strawberry.extensions.field_extension import FieldExtension
 from strawberry.field_extensions import InputMutationExtension
 from strawberry.permission import BasePermission
-from strawberry.type import StrawberryType
+from strawberry.type import StrawberryType, get_object_definition
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
@@ -175,7 +175,7 @@ class DjangoCUDMutationField(DjangoMutationField):
     @property
     def arguments(self) -> List[StrawberryArgument]:
         namespace = sys.modules[self.input_type.__module__].__dict__
-        type_def = getattr(self.input_type, "_type_definition", None)
+        type_def = get_object_definition(self.input_type)
         return [
             StrawberryArgument(
                 python_name="input",

@@ -34,11 +34,12 @@ from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry import relay
 from strawberry.extensions import SchemaExtension
 from strawberry.lazy_type import LazyType
+from strawberry.object_type import StrawberryObjectDefinition
 from strawberry.schema.schema import Schema
+from strawberry.type import get_object_definition
 from strawberry.types.execution import ExecutionContext
 from strawberry.types.info import Info
 from strawberry.types.nodes import InlineFragment, Selection, convert_selections
-from strawberry.types.types import TypeDefinition
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.typing import eval_type
 from strawberry_django.fields.types import resolve_model_field_name
@@ -67,7 +68,14 @@ _T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
-_interfaces: "defaultdict[Schema, Dict[TypeDefinition, List[TypeDefinition]]]" = defaultdict(dict)
+_interfaces: """
+defaultdict[
+    Schema,
+    Dict[StrawberryObjectDefinition,
+    List[StrawberryObjectDefinition]],
+]""" = defaultdict(
+    dict,
+)
 
 
 PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], Prefetch]
@@ -100,7 +108,7 @@ def _get_prefetch_queryset(
 def _get_model_hints(
     model: Type[models.Model],
     schema: Schema,
-    type_def: TypeDefinition,
+    type_def: StrawberryObjectDefinition,
     selection: Selection,
     *,
     info: GraphQLResolveInfo,
@@ -126,14 +134,17 @@ def _get_model_hints(
         if isinstance(n_type, LazyType):
             n_type = n_type.resolve_type()
 
-        n_type_def = cast(TypeDefinition, n_type._type_definition)  # type: ignore
+        n_type_def = get_object_definition(n_type, strict=True)
 
         for edges in get_selections(selection, typename=typename).values():
             if edges.name != "edges":
                 continue
 
-            e_type = relay.Edge._type_definition.resolve_generic(relay.Edge[n_type])  # type: ignore
-            e_typename = schema.config.name_converter.from_object(e_type._type_definition)
+            e_type_def = get_object_definition(relay.Edge, strict=True)
+            e_type = e_type_def.resolve_generic(relay.Edge[cast(Type[relay.Node], n_type)])
+            e_typename = schema.config.name_converter.from_object(
+                get_object_definition(e_type, strict=True),
+            )
             for node in get_selections(edges, typename=e_typename).values():
                 if node.name != "node":
                     continue
@@ -377,7 +388,7 @@ def optimize(
 
                 for t in schema.schema_converter.type_map.values():
                     tdef = t.definition
-                    if not isinstance(tdef, TypeDefinition):
+                    if not isinstance(tdef, StrawberryObjectDefinition):
                         continue
 
                     if issubclass(tdef.origin, type_def.origin):

@@ -26,14 +26,19 @@ from django.db.models.query import Prefetch, QuerySet
 from django.db.models.sql.query import Query
 from django.db.models.sql.where import WhereNode
 from strawberry.lazy_type import LazyType
-from strawberry.type import StrawberryContainer, StrawberryType, StrawberryTypeVar
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryType,
+    StrawberryTypeVar,
+    get_object_definition,
+)
 from strawberry.types.nodes import (
     FragmentSpread,
     InlineFragment,
     SelectedField,
     Selection,
 )
-from strawberry.types.types import TypeDefinition
+from strawberry.types.types import StrawberryObjectDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
 from strawberry_django.fields.types import resolve_model_field_name
@@ -121,8 +126,8 @@ def get_django_type(type_, *, ensure_type=False):
 
 
 def get_possible_types(
-    gql_type: Union[TypeDefinition, StrawberryType, type],
-    type_def: Optional[TypeDefinition] = None,
+    gql_type: Union[StrawberryObjectDefinition, StrawberryType, type],
+    type_def: Optional[StrawberryObjectDefinition] = None,
 ) -> Generator[type, None, None]:
     """Resolve all possible types for gql_type.
 
@@ -137,7 +142,7 @@ def get_possible_types(
         All possibilities for the type
 
     """
-    if isinstance(gql_type, TypeDefinition):
+    if isinstance(gql_type, StrawberryObjectDefinition):
         yield from get_possible_types(gql_type.origin, type_def=gql_type)
     elif isinstance(gql_type, LazyType):
         yield from get_possible_types(gql_type.resolve_type())
@@ -167,8 +172,8 @@ def get_possible_types(
 
 
 def get_possible_type_definitions(
-    gql_type: Union[TypeDefinition, StrawberryType, type],
-) -> Generator[TypeDefinition, None, None]:
+    gql_type: Union[StrawberryObjectDefinition, StrawberryType, type],
+) -> Generator[StrawberryObjectDefinition, None, None]:
     """Resolve all possible type definitions for gql_type.
 
     Args:
@@ -179,15 +184,15 @@ def get_possible_type_definitions(
         All possibilities for the type
 
     """
-    if isinstance(gql_type, TypeDefinition):
+    if isinstance(gql_type, StrawberryObjectDefinition):
         yield gql_type
         return
 
     for t in get_possible_types(gql_type):
-        if isinstance(t, TypeDefinition):
+        if isinstance(t, StrawberryObjectDefinition):
             yield t
-        elif hasattr(t, "_type_definition"):
-            yield t._type_definition  # type: ignore
+        elif type_def := get_object_definition(t):
+            yield type_def
 
 
 def get_selections(
