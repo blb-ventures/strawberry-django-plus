@@ -69,7 +69,7 @@ jobs:
           cache: poetry
       - name: Install dependencies
         run: |
-          poetry install -E debug-toolbar -E enum
+          poetry install -E enum
           poetry run pip install "Django==${{ matrix.django-version }}"
       - name: Check for pyright errors
         uses: jakebailey/pyright-action@v1
