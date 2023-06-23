@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.0.2](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.1...v3.0.2) (2023-06-23)
+
+
+### Bug Fixes
+
+* fix a wrongly refactored code from previous commit ([fb0de57](https://github.com/blb-ventures/strawberry-django-plus/commit/fb0de5750dc466da9f14e3a5dc4f95eb3e28a1da))
+* fix class inherited fields not being evaluated correctly ([15b2dd8](https://github.com/blb-ventures/strawberry-django-plus/commit/15b2dd83a8a8b606d7455d1817966e7e9315c451)), closes [#247](https://github.com/blb-ventures/strawberry-django-plus/issues/247)
+* pyright tests should also not install debug-toolbar extras ([1f8600e](https://github.com/blb-ventures/strawberry-django-plus/commit/1f8600e78c6056255214497ad32728ce2a043ef2))
+
+
+### Code Refactoring
+
+* support for strawberry 0.187.5+ ([493a1ad](https://github.com/blb-ventures/strawberry-django-plus/commit/493a1ad69d1ab12562bf5d35ff34c2b8716ddf01))
+
+
+### Continuous Integration
+
+* also run release actions for release branches ([6d6c0f7](https://github.com/blb-ventures/strawberry-django-plus/commit/6d6c0f7d21d3ff4796e59b34512a23e1222c2d5e))
+* fix tests breaking due to not having a "debug-toolbar" extra anymore ([cd621f5](https://github.com/blb-ventures/strawberry-django-plus/commit/cd621f5bb81f1b6bba7d90e44108d049c2645ff7))
+* make sure release-please create release PRs for release branches ([c2d1a78](https://github.com/blb-ventures/strawberry-django-plus/commit/c2d1a78d0358962cdd5a0f6f9f1f01c8a821cb60))
+
 ## [3.0.1](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.0...v3.0.1) (2023-06-17)
 
 
