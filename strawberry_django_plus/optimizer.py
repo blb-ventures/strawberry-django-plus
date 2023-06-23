@@ -71,8 +71,7 @@ _sentinel = object()
 _interfaces: """
 defaultdict[
     Schema,
-    Dict[StrawberryObjectDefinition,
-    List[StrawberryObjectDefinition]],
+    Dict[StrawberryObjectDefinition, List[StrawberryObjectDefinition]],
 ]""" = defaultdict(
     dict,
 )

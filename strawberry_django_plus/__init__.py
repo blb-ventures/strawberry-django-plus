@@ -36,7 +36,7 @@ def _process_type(cls, *args, **kwargs):
     type_def = get_object_definition(ret, strict=True)
     for d in type_def.directives or []:
         if isinstance(d, SchemaDirectiveWithResolver):
-            d.register(ret)
+            d.register(type_def)
 
     return ret
 
