@@ -10,14 +10,12 @@ from .typing import TypeOrIterable, UserType
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
+    from django.contrib.contenttypes.models import ContentType as ContentTypeType
 try:
     from django.contrib.contenttypes.models import ContentType
 
-    has_contenttypes = True
 except (ImportError, RuntimeError):
-    # for pyright introduce an extra variable
-    # ContentType = None makes ContentType an invalid type
-    has_contenttypes = False
+    ContentType = None
 
 
 try:
@@ -39,7 +37,7 @@ def _filter(
     lookup: str = "",
     model: Type[Model],
     any_perm: bool = True,
-    ctype: Optional[ContentType] = None,
+    ctype: Optional["ContentTypeType"] = None,
 ) -> _Q:
     lookup = lookup and f"{lookup}__"
     ctype_attr = f"{lookup}content_type"
@@ -96,8 +94,8 @@ def filter_for_user_q(
     # We don't want to query the database here because this might not be async safe
     # Try to retrieve the ContentType from cache. If it is not there, we will
     # query it through the queryset
-    ctype: Optional[ContentType] = None
-    if has_contenttypes:
+    ctype: Optional["ContentTypeType"] = None
+    if ContentType is not None:
         try:
             meta = model._meta
             ctype = cast(ContentType, ContentType.objects._get_from_cache(meta))  # type: ignore
