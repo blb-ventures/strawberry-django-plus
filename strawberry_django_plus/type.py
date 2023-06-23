@@ -48,10 +48,10 @@ from .utils.resolvers import (
 
 try:
     from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
+
+    GenericTypes = (GenericForeignKey, GenericRel)
 except (ImportError, RuntimeError):  # pragma:nocover
-    # for isinstance (crashes otherwise)
-    GenericForeignKey = type(None)
-    GenericRel = type(None)
+    GenericTypes = ()
 
 
 __all = [
@@ -268,7 +268,7 @@ def _process_type(
                 )
 
             if description is None:
-                if isinstance(model_attr, (GenericRel, GenericForeignKey)):
+                if isinstance(model_attr, GenericTypes):
                     f_description = None
                 elif isinstance(model_attr, (ManyToOneRel, ManyToManyRel)):
                     f_description = model_attr.field.help_text

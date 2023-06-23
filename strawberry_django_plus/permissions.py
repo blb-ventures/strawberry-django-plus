@@ -133,7 +133,7 @@ def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
 
         qs = filter_for_user(
             qs,
-            cast(UserType, user),
+            user,
             [p.perm for p in check.permissions],
             any_perm=check.any,
             with_superuser=check.with_superuser,
@@ -227,7 +227,7 @@ def get_with_perms(pk, info, *, required=False, model=None):
     user = cast(StrawberryDjangoContext, info.context).request.user
     for check in checks:
         f = any if check.any else all
-        checker = check.obj_perm_checker(info, cast(UserType, user))
+        checker = check.obj_perm_checker(info, user)
         if not f(checker(p, instance) for p in check.permissions):
             raise PermissionDenied(check.message)
 
@@ -256,7 +256,7 @@ class AuthDirective(SchemaDirectiveWithResolver):
         context = cast(StrawberryDjangoContext, info.context)
         resolver = functools.partial(_next, root, info, *args, **kwargs)
 
-        user = cast(UserType, context.request.user)
+        user = context.request.user
         if not getattr(context, _user_ensured_attr, False):
             return aio.resolve(
                 cast(UserType, get_user_or_anonymous(user)),
