@@ -36,7 +36,7 @@ jobs:
           cache: poetry
       - name: Install dependencies
         run: |
-          poetry install -E debug-toolbar -E enum
+          poetry install -E enum
       - name: Check for pyright errors
         uses: jakebailey/pyright-action@v1
   tests:
