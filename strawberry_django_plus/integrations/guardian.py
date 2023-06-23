@@ -3,7 +3,7 @@ import dataclasses
 import weakref
 from typing import TYPE_CHECKING, Optional, Union, cast
 
-from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from guardian import backends as _guardian_backends
 from guardian.conf import settings as guardian_settings
@@ -41,7 +41,7 @@ def get_object_permission_models(model: models.Model):
 def get_user_or_anonymous(user: UserType) -> UserType:
     username = guardian_settings.ANONYMOUS_USER_NAME or ""
     if user.is_anonymous and user.get_username() != username:
-        with contextlib.suppress(get_user_model().DoesNotExist):
+        with contextlib.suppress(ObjectDoesNotExist):
             return cast(UserType, _get_anonymous_user())
     return user
 

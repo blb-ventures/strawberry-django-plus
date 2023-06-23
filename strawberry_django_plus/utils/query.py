@@ -1,7 +1,7 @@
 import functools
 from typing import TYPE_CHECKING, List, Optional, Set, Type, TypeVar, cast
 
-from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Exists, F, Model, Q, QuerySet
 from django.db.models.functions import Cast
 from strawberry_django.utils import is_async
@@ -81,6 +81,12 @@ def filter_for_user_q(
     if user.is_anonymous:
         return qs.none()
 
+    groups_field = None
+    try:
+        groups_field = cast("AbstractUser", user)._meta.get_field("groups")
+    except FieldDoesNotExist:
+        with_groups = False
+
     if isinstance(perms, str):
         perms = [perms]
 
@@ -137,7 +143,7 @@ def filter_for_user_q(
                 ),
             ),
         )
-    if with_groups and hasattr(user, "groups"):
+    if with_groups:
         q |= Q(
             Exists(
                 _filter(
@@ -173,7 +179,6 @@ def filter_for_user_q(
 
         if with_groups:
             group_model = perm_models.group
-            groups_field = get_user_model()._meta.get_field("groups")
             group_qs = _filter(
                 group_model.objects.filter(
                     **{
