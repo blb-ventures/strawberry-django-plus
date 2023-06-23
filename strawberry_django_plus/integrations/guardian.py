@@ -17,9 +17,8 @@ from strawberry_django_plus.utils.typing import UserType
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import Group
-else:
-    Group = None
-UserOrGroup: TypeAlias = Union[Group, UserType]
+
+UserOrGroup: TypeAlias = Union["Group", UserType]
 
 
 _cache = weakref.WeakKeyDictionary()
