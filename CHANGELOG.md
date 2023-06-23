@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.5](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.4...v2.6.5) (2023-06-23)
+
+
+### Code Refactoring
+
+* support for strawberry 0.187.5+ ([d1cec36](https://github.com/blb-ventures/strawberry-django-plus/commit/d1cec365cc8dfd357f96dc4a0f69cc4d0d0c863d))
+
 ## [2.6.4](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.3...v2.6.4) (2023-06-14)
 
 

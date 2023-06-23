@@ -17,7 +17,7 @@ _original_field_call = StrawberryField.__call__
 _original_enum_init = EnumDefinition.__init__
 _original_from_generic = NameConverter.from_generic
 
-__version__ = "2.6.4"  # x-release-please-version
+__version__ = "2.6.5"  # x-release-please-version
 
 
 def _get_doc(obj):
