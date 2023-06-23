@@ -1,3 +1,4 @@
+import copy
 import dataclasses
 import inspect
 import sys
@@ -88,12 +89,13 @@ def _process_type(
     is_filter: Union[Literal["lookups"], bool] = False,
     **kwargs,
 ) -> _O:
+    is_input = kwargs.get("is_input", False)
     django_type = StrawberryDjangoType(
         origin=cls,
         model=model,
         field_cls=field_cls,
         is_partial=partial,
-        is_input=kwargs.get("is_input", False),
+        is_input=is_input,
         is_filter=is_filter,
         filters=filters,
         order=order,
@@ -106,27 +108,51 @@ def _process_type(
         ),
     )
 
-    if django_type.is_input:
+    auto_fields: set[str] = set()
+    for field_name, field_annotation in get_annotations(cls).items():
+        annotation = field_annotation.annotation
+        if is_private(annotation):
+            continue
+
+        if is_auto(annotation):
+            auto_fields.add(field_name)
+
         # FIXME: For input types it is imported to set the default value to UNSET
         # Is there a better way of doing this?
-        seen_fields = set()
-        for attr_name, attr in cls.__dict__.items():
-            seen_fields.add(attr_name)
-            if isinstance(attr, dataclasses.Field) and attr.default is dataclasses.MISSING:
-                attr.default = UNSET
-                if isinstance(attr, StrawberryField):
-                    attr.default_value = UNSET
+        if is_input:
+            # First check if the field is defined in the class. If it is,
+            # then we just need to set its default value to UNSET in case
+            # it is MISSING
+            if field_name in cls.__dict__:
+                field = cls.__dict__[field_name]
+                if isinstance(field, dataclasses.Field) and field.default is dataclasses.MISSING:
+                    field.default = UNSET
+                    if isinstance(field, StrawberryField):
+                        field.default_value = UNSET
 
-        for field_name, field_annotation in get_annotations(cls).items():
-            if field_name in seen_fields:
-                continue
-
-            annotation = field_annotation.annotation
-            if is_private(annotation):
                 continue
 
             if not hasattr(cls, field_name):
-                setattr(cls, field_name, UNSET)
+                base_field = getattr(cls, "__dataclass_fields__", {}).get(field_name)
+                if base_field is not None and isinstance(base_field, StrawberryField):
+                    new_field = copy.copy(base_field)
+                    for attr in [
+                        "_arguments",
+                        "permission_classes",
+                        "directives",
+                        "extensions",
+                    ]:
+                        old_attr = getattr(base_field, attr)
+                        if old_attr is not None:
+                            setattr(new_field, attr, old_attr[:])
+                else:
+                    new_field = _field(default=UNSET)
+
+                new_field.type_annotation = field_annotation
+                new_field.default = UNSET
+                if isinstance(base_field, StrawberryField):
+                    new_field.default_value = UNSET
+                setattr(cls, field_name, new_field)
 
     # Make sure model is also considered a "virtual subclass" of cls
     if "is_type_of" not in cls.__dict__:
@@ -178,10 +204,23 @@ def _process_type(
     type_def = get_object_definition(cls, strict=True)
     new_fields: List[StrawberryField] = []
     for f in type_def.fields:
-        django_name: Optional[str] = getattr(f, "django_name", None) or f.name
+        django_name: Optional[str] = getattr(f, "django_name", None) or f.python_name or f.name
         description: Optional[str] = getattr(f, "description", None)
-        type_annotation: Optional[StrawberryAnnotation] = getattr(f, "type_annotation", None)
-        f_is_auto = type_annotation is not None and is_auto(type_annotation.annotation)
+        type_annotation: Optional[StrawberryAnnotation] = getattr(
+            f,
+            "type_annotation",
+            None,
+        )
+
+        if f.name in auto_fields:
+            f_is_auto = True
+            # Force the field to be auto again for it to be re-evaluated
+            if type_annotation:
+                type_annotation.annotation = strawberry.auto
+        else:
+            f_is_auto = type_annotation is not None and is_auto(
+                type_annotation.annotation,
+            )
 
         try:
             if django_name is None:
@@ -271,9 +310,9 @@ def _process_type(
                 extensions=getattr(f, "extensions", ()),
             )
 
+        f.django_name = django_name
         f.is_relation = is_relation
-        if f.origin_django_type is None:
-            f.origin_django_type = django_type  # type: ignore
+        f.origin_django_type = django_type  # type: ignore
 
         new_fields.append(f)
         if f.base_resolver and f.python_name:

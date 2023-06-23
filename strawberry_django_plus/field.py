@@ -2,6 +2,7 @@ import dataclasses
 import inspect
 from functools import cached_property
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -57,6 +58,9 @@ from .descriptors import ModelProperty
 from .permissions import filter_with_perms
 from .utils import resolvers
 from .utils.typing import TypeOrSequence
+
+if TYPE_CHECKING:
+    from strawberry_django_plus.type import StrawberryDjangoType
 
 __all__ = [
     "StrawberryDjangoField",
@@ -125,7 +129,26 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         if resolved is UNRESOLVED:
             return resolved
 
-        if isinstance(resolved, StrawberryAuto) and self.origin_django_type:
+        resolved_type = resolved
+        while isinstance(resolved_type, StrawberryContainer):
+            resolved_type = resolved_type.of_type
+        resolved_django_type: Optional["StrawberryDjangoType"] = getattr(
+            resolved_type,
+            "_django_type",
+            None,
+        )
+
+        if self.origin_django_type and (
+            # FIXME: Why does this come as Any sometimes when using future annotations?
+            resolved is Any
+            or isinstance(resolved, StrawberryAuto)
+            # If the resolved type is an input but the origin is not, or vice versa,
+            # resolve this again
+            or (
+                resolved_django_type
+                and resolved_django_type.is_input != self.origin_django_type.is_input
+            )
+        ):
             model_field = get_model_field(
                 self.origin_django_type.model,
                 self.django_name or self.name,
