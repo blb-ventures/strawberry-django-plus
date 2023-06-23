@@ -29,7 +29,6 @@ try:
 except (ImportError, RuntimeError):  # pragma:nocover
     has_guardian = False
 
-_M = TypeVar("_M", bound=Model)
 _Q = TypeVar("_Q", bound=QuerySet)
 
 
