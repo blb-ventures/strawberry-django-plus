@@ -49,7 +49,7 @@ try:
     from .integrations.guardian import get_user_or_anonymous
 
     get_user_or_anonymous = resolvers.async_safe(get_user_or_anonymous)
-except ImportError:
+except (ImportError, RuntimeError):
     # Access the user's id to force it to be loaded from the database
     get_user_or_anonymous = resolvers.async_safe(lambda u: (u, u.id)[0])
 
@@ -450,7 +450,7 @@ class IsStaff(ConditionDirective):
         user: UserType,
         **kwargs,
     ) -> bool:
-        return user.is_authenticated and user.is_staff
+        return user.is_authenticated and getattr(user, "is_staff", False)
 
 
 @strawberry.schema_directive(
@@ -470,7 +470,7 @@ class IsSuperuser(ConditionDirective):
         user: UserType,
         **kwargs,
     ) -> bool:
-        return user.is_authenticated and user.is_superuser
+        return user.is_authenticated and getattr(user, "is_superuser", False)
 
 
 @strawberry.input(description="Permission definition for schema directives.")
@@ -633,7 +633,7 @@ class HasPermDirective(AuthDirective):
         user: UserType,
         **kwargs,
     ):
-        if self.with_superuser and user.is_active and user.is_superuser:
+        if self.with_superuser and user.is_active and getattr(user, "is_superuser", False):
             return self.resolve_retval(helper, root, info, resolver, True)
         if self.with_anonymous and user.is_anonymous:
             return self.resolve_retval(helper, root, info, resolver, False)

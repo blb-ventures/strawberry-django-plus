@@ -1,5 +1,5 @@
 import functools
-from typing import List, Optional, Set, Type, TypeVar, cast
+from typing import TYPE_CHECKING, List, Optional, Set, Type, TypeVar, cast
 
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, F, Model, Q, QuerySet
@@ -8,6 +8,8 @@ from strawberry_django.utils import is_async
 
 from .typing import TypeOrIterable, UserType
 
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser
 try:
     from django.contrib.contenttypes.models import ContentType
 
@@ -24,7 +26,7 @@ try:
     )
 
     has_guardian = True
-except ImportError:  # pragma:nocover
+except (ImportError, RuntimeError):  # pragma:nocover
     has_guardian = False
 
 _M = TypeVar("_M", bound=Model)
@@ -73,7 +75,7 @@ def filter_for_user_q(
     with_groups: bool = True,
     with_superuser: bool = False,
 ):
-    if with_superuser and user.is_active and user.is_superuser:
+    if with_superuser and user.is_active and getattr(user, "is_superuser", False):
         return qs
 
     if user.is_anonymous:
@@ -82,9 +84,9 @@ def filter_for_user_q(
     if isinstance(perms, str):
         perms = [perms]
 
-    model = qs.model
+    model = cast(Type[Model], qs.model)
     if model._meta.concrete_model:
-        model = model._meta.concrete_model
+        model = cast(Type[Model], model._meta.concrete_model)
 
     # We don't want to query the database here because this might not be async safe
     # Try to retrieve the ContentType from cache. If it is not there, we will
@@ -123,21 +125,23 @@ def filter_for_user_q(
         if f(p in user_perms for p in perms_list):
             return qs
 
-    q = Q(
-        Exists(
-            _filter(
-                user.user_permissions,
-                perms_list,
-                model=model,
-                ctype=ctype,
-            ),
-        ),
-    )
-    if with_groups:
+    q = Q()
+    if hasattr(user, "user_permissions"):
         q |= Q(
             Exists(
                 _filter(
-                    user.groups,
+                    cast("AbstractUser", user).user_permissions,
+                    perms_list,
+                    model=model,
+                    ctype=ctype,
+                ),
+            ),
+        )
+    if with_groups and hasattr(user, "groups"):
+        q |= Q(
+            Exists(
+                _filter(
+                    cast("AbstractUser", user).groups,
                     perms_list,
                     lookup="permissions",
                     model=model,
@@ -162,7 +166,10 @@ def filter_for_user_q(
         else:
             user_qs = user_qs.annotate(object_pk=F("content_object"))
 
-        obj_qs = user_qs.values_list(Cast("object_pk", model._meta.pk), flat=True).distinct()
+        obj_qs = user_qs.values_list(
+            Cast("object_pk", cast(str, model._meta.pk)),
+            flat=True,
+        ).distinct()
 
         if with_groups:
             group_model = perm_models.group
@@ -184,7 +191,10 @@ def filter_for_user_q(
                 group_qs = group_qs.annotate(object_pk=F("content_object"))
 
             obj_qs = obj_qs.union(
-                group_qs.values_list(Cast("object_pk", model._meta.pk), flat=True).distinct(),
+                group_qs.values_list(
+                    Cast("object_pk", cast(str, model._meta.pk)),
+                    flat=True,
+                ).distinct(),
             )
 
         q |= Q(pk__in=obj_qs)
