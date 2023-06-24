@@ -2,7 +2,7 @@ import contextlib
 from typing import Any, Awaitable, Dict, Optional, cast
 
 from asgiref.sync import sync_to_async
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.test.client import AsyncClient, Client  # type: ignore
 from strawberry.test import BaseGraphQLTestClient
 from strawberry.test.client import Response
@@ -35,7 +35,7 @@ class TestClient(BaseGraphQLTestClient):
         )
 
     @contextlib.contextmanager
-    def login(self, user: AbstractUser):
+    def login(self, user: AbstractBaseUser):
         self.client.force_login(user)
         yield
         self.client.logout()
@@ -73,7 +73,7 @@ class AsyncTestClient(TestClient):
         return response
 
     @contextlib.asynccontextmanager
-    async def login(self, user: AbstractUser):
+    async def login(self, user: AbstractBaseUser):
         await sync_to_async(self.client.force_login)(user)
         yield
         await sync_to_async(self.client.logout)()
