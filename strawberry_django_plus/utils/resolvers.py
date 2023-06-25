@@ -560,6 +560,8 @@ def resolve_model_id_attr(source: Type) -> str:
 def resolve_model_id(
     source: Union[Type[relay.Node], Type[_M]],
     root: Model,
+    *,
+    info: Optional[Info] = None,
 ) -> AwaitableOrValue[str]:
     """Resolve the model id, ensuring it is retrieved in a sync context.
 
@@ -568,6 +570,8 @@ def resolve_model_id(
             The source model or the model type that implements the `Node` interface
         root:
             The source model object.
+        info:
+            Optional gql execution info
 
     Returns:
         The resolved object id

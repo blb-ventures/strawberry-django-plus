@@ -67,17 +67,6 @@ _O = TypeVar("_O", bound=type)
 _M = TypeVar("_M", bound=Model)
 
 
-def _has_own_node_resolver(cls, name: str) -> bool:
-    resolver = getattr(cls, name, None)
-    if resolver is None:
-        return False
-
-    if id(resolver.__func__) == id(getattr(relay.Node, name).__func__):
-        return False
-
-    return True
-
-
 def _process_type(
     cls: _O,
     model: Type[Model],
@@ -165,40 +154,21 @@ def _process_type(
 
     # Default querying methods for relay
     if issubclass(cls, relay.Node):
-        if not _has_own_node_resolver(cls, "resolve_node"):
-            cls.resolve_node = types.MethodType(resolve_model_node, cls)
+        for attr, func in [
+            ("resolve_id", resolve_model_id),
+            ("resolve_id_attr", resolve_model_id_attr),
+            ("resolve_node", resolve_model_node),
+            ("resolve_nodes", resolve_model_nodes),
+        ]:
+            existing_resolver = getattr(cls, attr, None)
+            if (
+                existing_resolver is None
+                or existing_resolver.__func__ is getattr(relay.Node, attr).__func__
+            ):
+                setattr(cls, attr, types.MethodType(func, cls))
 
-        if not _has_own_node_resolver(cls, "resolve_nodes"):
-            cls.resolve_nodes = types.MethodType(
-                lambda *args, **kwargs: resolve_model_nodes(
-                    *args,
-                    filter_perms=True,
-                    **kwargs,
-                ),
-                cls,
-            )
-
-        if not _has_own_node_resolver(cls, "resolve_id"):
-            cls.resolve_id = types.MethodType(
-                lambda cls, root, *args, **kwargs: resolve_model_id(cls, root),
-                cls,
-            )
-
-        if not _has_own_node_resolver(cls, "resolve_id"):
-            cls.resolve_id = types.MethodType(
-                lambda cls, root, *args, **kwargs: resolve_model_id(cls, root),
-                cls,
-            )
-
-        if not _has_own_node_resolver(cls, "resolve_id_attr"):
-            cls.resolve_id_attr = types.MethodType(
-                resolve_model_id_attr,
-                cls,
-            )
-
-        # Adjust types that inherit from other types/interfaces that implement Node
-        # to make sure they pass themselves as the node type
-        for attr in ["resolve_node", "resolve_nodes", "resolve_id"]:
+            # Adjust types that inherit from other types/interfaces that implement Node
+            # to make sure they pass themselves as the node type
             meth = getattr(cls, attr)
             if isinstance(meth, types.MethodType) and meth.__self__ is not cls:
                 setattr(cls, attr, types.MethodType(cast(classmethod, meth).__func__, cls))
