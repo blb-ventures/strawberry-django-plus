@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.0.3](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.2...v3.0.3) (2023-06-25)
+
+
+### Bug Fixes
+
+* missing return for the async resolver ([f1dacec](https://github.com/blb-ventures/strawberry-django-plus/commit/f1dacece01c8fccf966aabe6eded828ac5d0e1e2))
+
+
+### Code Refactoring
+
+* remove hard dependencies on contenttypes and auth framework ([#250](https://github.com/blb-ventures/strawberry-django-plus/issues/250)) ([b9428b0](https://github.com/blb-ventures/strawberry-django-plus/commit/b9428b08eeb8172cebd5423aaf1b39add3a47064))
+* simplify Node methods injection code ([127124e](https://github.com/blb-ventures/strawberry-django-plus/commit/127124ee8591c023e010e3097411da397cd9dba2))
+
 ## [3.0.2](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.1...v3.0.2) (2023-06-23)
 
 
