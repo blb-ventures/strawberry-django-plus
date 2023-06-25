@@ -463,8 +463,10 @@ def resolve_model_nodes(
 
     if inspect.isawaitable(retval):
 
-        async def resolver():
+        async def async_resolver():
             return await sync_to_async(map_results)(await retval)
+
+        return async_resolver()
 
     return map_results(cast(QuerySet[_M], retval))
 
