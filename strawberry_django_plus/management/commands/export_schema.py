@@ -13,10 +13,18 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("schema", nargs=1, type=str, help="The schema location")
         parser.add_argument("--path", nargs="?", type=str, help="Optional path to export")
+        parser.add_argument(
+            "--check",
+            action="store_true",
+            help=(
+                "Exit with a non-zero status if schema changes are missing and don't actually write"
+                " them"
+            ),
+        )
 
-    def handle(self, *args, **options):
+    def handle(self, schema, path, check, **kwargs):
         try:
-            schema_symbol = import_module_symbol(options["schema"][0], default_symbol_name="schema")
+            schema_symbol = import_module_symbol(schema[0], default_symbol_name="schema")
         except (ImportError, AttributeError) as e:
             raise CommandError(str(e)) from e
 
@@ -24,8 +32,18 @@ class Command(BaseCommand):
             raise CommandError("The `schema` must be an instance of strawberry.Schema")
 
         schema_output = print_schema(schema_symbol)
-        path = options.get("path")
-        if path:
+        if check:
+            if not path:
+                raise CommandError("--path must be specified when using --check")
+            try:
+                with pathlib.Path(path).open() as f:
+                    existing_schema = f.read()
+            except (FileNotFoundError, PermissionError) as e:
+                raise CommandError(str(e)) from e
+            if schema_output != existing_schema:
+                raise CommandError("GraphQL schema has changes")
+            print("Schema file is up to date")  # noqa: T201
+        elif path:
             with pathlib.Path(path).open("w") as f:
                 f.write(schema_output)
         else:
