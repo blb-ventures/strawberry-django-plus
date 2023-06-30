@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Mapping, Sequence, TypeVar, Union
 
 from django.contrib.auth.base_user import AbstractBaseUser
 from graphql.type.definition import GraphQLResolveInfo
@@ -14,6 +14,7 @@ _T = TypeVar("_T")
 
 DictTree: TypeAlias = Dict[str, "DictTree"]
 TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
+TypeOrMapping: TypeAlias = Union[_T, Mapping[str, _T]]
 TypeOrIterable: TypeAlias = Union[_T, Iterable[_T]]
 UserType: TypeAlias = Union[AbstractBaseUser, "AnonymousUser"]
 ResolverInfo: TypeAlias = Union[Info[StrawberryDjangoContext, Any], GraphQLResolveInfo]
