@@ -1,7 +1,16 @@
+!!! warning
+
+    All the extra features provided by this lib were contributed and merged directly
+    into the official
+    [strawberry-graphql-django](https://github.com/strawberry-graphql/strawberry-graphql-django)
+    lib. Since then this lib is deprecated and the official integration should be used instead.
+
+    If you were using this lib before, check out the
+    [migration guide](migration-guide#migrating-to-strawberry-django) for more information
+    on how to migrate your code.
 
 The automatic optimization is enabled by adding the `DjangoOptimizerExtension` to your
 strawberry's schema config.
-
 
 ```python
 import strawberry
@@ -18,8 +27,9 @@ schema = strawberry.Schema(
 
 Now consider the following:
 !!! Example
-    === "models"
-        ```python
+=== "models"
+
+````python
 
         class Artist(models.Model):
             name = models.CharField()
@@ -141,9 +151,9 @@ Now consider the following:
         ```
 
 !!! Note
-    Even though `album__release_date` field was not selected here, it got selected
-    in the prefetch query later. Since Django caches known objects, we have to select it here or
-    else it would trigger extra queries latter.
+Even though `album__release_date` field was not selected here, it got selected
+in the prefetch query later. Since Django caches known objects, we have to select it here or
+else it would trigger extra queries latter.
 
 ### Model property
 
@@ -168,7 +178,7 @@ class Song(models.Model):
 class SongType:
     name: auto
     name_with_album: str
-```
+````
 
 Another option would be to define that on the field itself:
 

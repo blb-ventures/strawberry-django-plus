@@ -1,5 +1,16 @@
 !!! warning
 
+    All the extra features provided by this lib were contributed and merged directly
+    into the official
+    [strawberry-graphql-django](https://github.com/strawberry-graphql/strawberry-graphql-django)
+    lib. Since then this lib is deprecated and the official integration should be used instead.
+
+    If you were using this lib before, check out the
+    [migration guide](migration-guide#migrating-to-strawberry-django) for more information
+    on how to migrate your code.
+
+!!! tip
+
     Since version 3.0.0 this feature was removed from this lib due to it being merged on
     [strawberry-graphql-django](https://github.com/strawberry-graphql/strawberry-graphql-django),
     and should now be used from there.
