@@ -20,8 +20,7 @@ ResolverInfo: TypeAlias = Union[Info[StrawberryDjangoContext, Any], GraphQLResol
 
 
 def is_auto(type_: Any) -> bool:
-    try:
-        return isinstance(type_, StrawberryAuto)
-    except NameError:
-        # This is to support "from __future__ import annotations" cases
-        return type_ == "strawberry.auto" or type_ == "gql.auto"
+    if isinstance(type_, str):
+        return type_ in ["strawberry.auto", "gql.auto", "auto"]
+
+    return isinstance(type_, StrawberryAuto)
