@@ -619,6 +619,7 @@ def field(
 def node(
     *,
     name: Optional[str] = None,
+    field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
     permission_classes: Optional[List[Type[BasePermission]]] = None,
@@ -662,6 +663,7 @@ def node(
     extensions = [*list(extensions), relay.NodeExtension()]
     return StrawberryDjangoField(
         python_name=None,
+        django_name=field_name,
         graphql_name=name,
         type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
@@ -685,6 +687,7 @@ def connection(
     graphql_type: Optional[Type[relay.Connection[relay.NodeType]]] = None,
     *,
     name: Optional[str] = None,
+    field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
     permission_classes: Optional[List[Type[BasePermission]]] = None,
@@ -710,6 +713,7 @@ def connection(
     *,
     resolver: Optional[_RESOLVER_TYPE[NodeIterableType[Any]]] = None,
     name: Optional[str] = None,
+    field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[True] = True,
@@ -735,6 +739,7 @@ def connection(
     *,
     resolver: Optional[_RESOLVER_TYPE[NodeIterableType[Any]]] = None,
     name: Optional[str] = None,
+    field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
     permission_classes: Optional[List[Type[BasePermission]]] = None,
@@ -808,6 +813,7 @@ def connection(
     extensions = [*list(extensions), StrawberryDjangoConnectionExtension()]
     f = StrawberryDjangoField(
         python_name=None,
+        django_name=field_name,
         graphql_name=name,
         type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
