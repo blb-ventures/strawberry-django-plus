@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.1.0](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.3...v3.1.0) (2023-07-05)
+
+
+### Features
+
+* mark this lib as deprecated and add a documentation on how to migrate to strawberry_django ([ed52efe](https://github.com/blb-ventures/strawberry-django-plus/commit/ed52efecc7d492d746466119985947e14b837089))
+
+
+### Bug Fixes
+
+* allow `field_name` to be passed for node and connections ([dc587c7](https://github.com/blb-ventures/strawberry-django-plus/commit/dc587c7face8f9a8bfe943fd1299b73f4dc9d283))
+* also support `auto` when checking for auto annotations ([b5b0141](https://github.com/blb-ventures/strawberry-django-plus/commit/b5b01413e7fdb6ea1ee60cc50134a5904ea38775))
+
 ## [3.0.3](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.2...v3.0.3) (2023-06-25)
 
 
