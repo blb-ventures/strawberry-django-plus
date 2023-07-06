@@ -9,8 +9,8 @@ Follow these steps to migrate your existing code:
 
 ### 1) Required dependencies
 
-Make sure you have `strawberry-graphql>=0.10.0` in your dependencies. After the migration
-is complete you can safely remove `strawberry-django-plus` from them.
+Make sure you have `strawberry-graphql-django>=0.10.0` in your dependencies.
+After the migration is complete you can safely remove `strawberry-django-plus` from them.
 
 ### 2) Replace your `gql.*` aliases
 
