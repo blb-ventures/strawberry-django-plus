@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.1](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.1.0...v3.1.1) (2023-07-07)
+
+
+### Bug Fixes
+
+* typo in docs ([#261](https://github.com/blb-ventures/strawberry-django-plus/issues/261)) ([72d43e5](https://github.com/blb-ventures/strawberry-django-plus/commit/72d43e5eac9d0bebe07234010745fd19432d9d1c))
+
+
+### Miscellaneous
+
+* **deps:** mark strawberry-graphql-django 0.10.0+ as not compatible ([2ee73d7](https://github.com/blb-ventures/strawberry-django-plus/commit/2ee73d70d29ecaef58d6420bc7038464704a4b81))
+
 ## [3.1.0](https://github.com/blb-ventures/strawberry-django-plus/compare/v3.0.3...v3.1.0) (2023-07-05)
 
 
