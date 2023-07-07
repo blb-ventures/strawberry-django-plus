@@ -57,7 +57,7 @@ from . import optimizer
 from .descriptors import ModelProperty
 from .permissions import filter_with_perms
 from .utils import resolvers
-from .utils.typing import TypeOrSequence
+from .utils.typing import TypeOrMapping, TypeOrSequence
 
 if TYPE_CHECKING:
     from strawberry_django_plus.type import StrawberryDjangoType
@@ -87,6 +87,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
         only: Optional[TypeOrSequence[str]] = None,
         select_related: Optional[TypeOrSequence[str]] = None,
         prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+        annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
         disable_optimization: bool = False,
         **kwargs,
     ):
@@ -95,6 +96,7 @@ class StrawberryDjangoField(_StrawberryDjangoField):
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
+            annotate=annotate,
         )
         super().__init__(*args, **kwargs)
 
@@ -486,6 +488,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
     extensions: List[FieldExtension] = (),  # type: ignore
 ) -> _T:
@@ -513,6 +516,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
     extensions: List[FieldExtension] = (),  # type: ignore
 ) -> Any:
@@ -540,6 +544,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
     extensions: List[FieldExtension] = (),  # type: ignore
 ) -> StrawberryDjangoField:
@@ -566,6 +571,7 @@ def field(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
     extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
@@ -606,6 +612,7 @@ def field(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        annotate=annotate,
         disable_optimization=disable_optimization,
         extensions=extensions,
     )
@@ -632,6 +639,7 @@ def node(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
     extensions: List[FieldExtension] = (),  # type: ignore
     # This init parameter is used by pyright to determine whether this field
@@ -677,6 +685,7 @@ def node(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        annotate=annotate,
         disable_optimization=disable_optimization,
         extensions=extensions,
     )
@@ -702,6 +711,7 @@ def connection(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
 ) -> Any:
     ...
@@ -729,6 +739,7 @@ def connection(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
 ) -> Any:
     ...
@@ -754,6 +765,7 @@ def connection(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[optimizer.PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[optimizer.AnnotateType]] = None,
     disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -829,6 +841,7 @@ def connection(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        annotate=annotate,
         disable_optimization=disable_optimization,
         extensions=extensions,
     )
