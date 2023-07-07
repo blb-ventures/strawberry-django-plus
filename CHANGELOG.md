@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.6](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.5...v2.6.6) (2023-07-07)
+
+
+### Miscellaneous
+
+* **deps:** chore(deps): mark strawberry-graphql-django 0.10.0+ as not compatible ([db5b636](https://github.com/blb-ventures/strawberry-django-plus/commit/db5b636dadf913b997a6e507d2819d5b60dde2c9))
+
 ## [2.6.5](https://github.com/blb-ventures/strawberry-django-plus/compare/v2.6.4...v2.6.5) (2023-06-23)
 
 
